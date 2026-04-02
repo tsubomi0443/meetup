@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="cupcake">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bun + Tailwind v3 Stack</title>
+    <link href="./dist/output.css" rel="stylesheet">
+    
+    <!-- Alpine.js & htmx (node_modulesから読み込む設定) -->
+    <script defer src="./node_modules/htmx.org/dist/htmx.min.js"></script>
+    <script defer src="./node_modules/alpinejs/dist/cdn.min.js"></script>
+</head>
+<body class="p-10 flex flex-col gap-5 items-center bg-base-200 min-h-screen">
+
+    <div class="card w-96 bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-primary">Tailwind v3 + daisyUI</h2>
+            
+            <!-- Alpine.js: カウンター -->
+            <div x-data="{ count: 0 }" class="py-4">
+                <button @click="count++" class="btn btn-outline w-full">
+                    Alpine.js Count: <span x-text="count" class="badge badge-secondary"></span>
+                </button>
+            </div>
+
+            <!-- htmx: ボタンクリックで自分自身を書き換え -->
+            <button hx-get="https://jokeapi.dev" 
+                    hx-target="#joke-result" 
+                    class="btn btn-primary">
+                htmx でジョークを取得
+            </button>
+            <div id="joke-result" class="mt-4 text-sm italic opacity-70 text-center">
+                (ここに結果が表示されます)
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
