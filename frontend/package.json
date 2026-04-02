@@ -18,7 +18,9 @@
     "htmx.org": "^2.0.8"
   },
   "scripts": {
-  "dev": "bunx tailwindcss -i ./src/input.css -o ./dist/output.css --watch",
-  "serve": "bun run --hot index.html"
-}
+    "dev": "tailwindcss -i ./src/input.css -o ../static/css/output.css --watch",
+    "build:css": "tailwindcss -i ./src/input.css -o ../static/css/output.css",
+    "copy:vendor": "cp ./node_modules/htmx.org/dist/htmx.min.js ../static/vendor/htmx.min.js && cp ./node_modules/alpinejs/dist/cdn.min.js ../static/vendor/alpine.min.js",
+    "build": "tailwindcss -i ./src/input.css -o ../static/css/output.css && cp ./node_modules/htmx.org/dist/htmx.min.js ../static/vendor/htmx.min.js && cp ./node_modules/alpinejs/dist/cdn.min.js ../static/vendor/alpine.min.js"
+  }
 }

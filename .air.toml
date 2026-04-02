@@ -1,0 +1,18 @@
+[misc]
+  # 終了時に一時ファイルを削除
+  clean_on_exit = true
+
+[build]
+  # 起動前にTailwindをビルド + vendorコピー
+  pre_cmd = ["bun run --cwd frontend build"]
+  # Goのビルド
+  cmd = "go build -o ./tmp/main ."
+  # プロセス停止時の待機時間（ミリ秒）
+  kill_delay = 1000
+
+[color]
+  app = ""
+  build = "yellow"
+  main = "magenta"
+  runner = "green"
+  watcher = "cyan"
