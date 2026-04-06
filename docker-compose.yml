@@ -1,0 +1,45 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    ports:
+      - "${PORT}:1323"
+    volumes:
+      - .:/app                  # ローカル↔コンテナのファイル同期
+      - go_modules:/go/pkg/mod  # Go モジュールキャッシュを永続化
+    env_file:
+      - .env
+    working_dir: /app
+    depends_on:
+      - postgresql
+      - dynamodb
+    command: ["air"]
+
+  postgresql:
+    build:
+      context: .
+      dockerfile: docker/database/postgresql/Dockerfile
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-meetup}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  dynamodb:
+    build:
+      context: .
+      dockerfile: docker/database/dynamodb/Dockerfile
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
+    volumes:
+      - dynamodb_data:/home/dynamodblocal/data
+
+volumes:
+  go_modules:
+  postgres_data:
+  dynamodb_data:
