@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
@@ -48,6 +49,17 @@ func main() {
 		// サンプルレスポンス
 		return c.HTML(http.StatusOK, `<div class="alert alert-success">サンプルジョーク: なぜプログラマーはハロウィンが好きか？クリスマスが怖いから（Oct 31 == Dec 25）</div>`)
 	})
+
+	// SSE Hub
+	hub := NewHub()
+	go hub.Run()
+	go func() {
+		for t := range time.Tick(1 * time.Second) {
+			hub.Broadcast <- Event{Event: "time-tick", Data: fmt.Sprintf(`<div>%s</div>`, t.Format("15:04:05"))}
+		}
+	}()
+
+	e.GET("/sse", sseHandler(hub))
 
 	// サーバー起動
 	port := os.Getenv("PORT")
