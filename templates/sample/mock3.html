@@ -41,6 +41,7 @@
                 availableTags: ['諸手当', '休暇', '規程', '健康診断'],
                 searchQuery: '',
                 statusFilter: 'all',
+                sortOrder: 'date_desc', // 並び替え用ステート
                 
                 // 関連する質問の検索用ステート
                 relatedSearchQuery: '',
@@ -50,6 +51,7 @@
                     detail: '質問詳細',
                     notice: '通知センター',
                     users: 'ユーザー管理',
+                    categories: 'カテゴリ管理',
                     settings: 'プロフィール設定'
                 },
 
@@ -78,7 +80,7 @@
                 ],
 
                 get filteredQuestions() {
-                    return this.questions.filter(q => {
+                    let result = this.questions.filter(q => {
                         const matchesTag = this.selectedTags.length === 0 || q.tags.some(tag => this.selectedTags.includes(tag));
                         const matchesSearch = q.title.includes(this.searchQuery) || q.content.includes(this.searchQuery) || q.sender.includes(this.searchQuery);
                         let matchesStatus = true;
@@ -88,6 +90,22 @@
                         else if (this.statusFilter === 'completed') matchesStatus = q.status === '完了';
                         return matchesTag && matchesSearch && matchesStatus;
                     });
+
+                    // 並び替えロジック
+                    result.sort((a, b) => {
+                        if (this.sortOrder === 'date_desc') {
+                            return new Date(b.date) - new Date(a.date);
+                        } else if (this.sortOrder === 'date_asc') {
+                            return new Date(a.date) - new Date(b.date);
+                        } else if (this.sortOrder === 'dueDate_asc') {
+                            return new Date(a.dueDate) - new Date(b.dueDate);
+                        } else if (this.sortOrder === 'dueDate_desc') {
+                            return new Date(b.dueDate) - new Date(a.dueDate);
+                        }
+                        return 0;
+                    });
+
+                    return result;
                 },
 
                 // 関連する質問の検索・フィルタリング
@@ -125,7 +143,7 @@
 
                 openDetail(q) {
                     this.activeQuestion = q;
-                    this.relatedSearchQuery = ''; // 詳細を開く際に検索クエリをリセット
+                    this.relatedSearchQuery = '';
                     this.setView('detail');
                 },
 
@@ -148,7 +166,6 @@
                     }
                 },
 
-                // 関連する質問の追加・削除
                 toggleRelatedQuestion(qId) {
                     if (!this.activeQuestion.relatedQuestions) {
                         this.activeQuestion.relatedQuestions = [];
@@ -235,6 +252,12 @@
                 
                 <div class="my-4 border-t border-gray-100" x-show="isManager"></div>
 
+                <button @click="setView('categories')" x-show="isManager" class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors"
+                        :class="[currentView === 'categories' ? 'bg-slate-100 text-slate-800' : 'text-gray-600 hover:bg-gray-50', isSidebarOpen ? 'px-3' : 'justify-center']">
+                    <i data-lucide="tags" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">カテゴリ管理</span>
+                </button>
+
                 <button @click="setView('users')" x-show="isManager" class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors"
                         :class="[currentView === 'users' ? 'bg-slate-100 text-slate-800' : 'text-gray-600 hover:bg-gray-50', isSidebarOpen ? 'px-3' : 'justify-center']">
                     <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
@@ -318,24 +341,34 @@
                         </div>
                     </div>
 
-                    <!-- ステータス・クイックフィルタ -->
-                    <div class="flex flex-wrap items-center gap-2">
-                        <div class="flex items-center gap-1 bg-gray-200 p-1 rounded-xl w-max shadow-inner overflow-x-auto no-scrollbar">
-                            <button @click="statusFilter = 'all'" :class="statusFilter === 'all' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">すべて</button>
-                            <button @click="statusFilter = 'unanswered'" :class="statusFilter === 'unanswered' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">未対応のみ</button>
-                            <button @click="statusFilter = 'progress'" :class="statusFilter === 'progress' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">対応中のみ</button>
-                            <button @click="statusFilter = 'open'" :class="statusFilter === 'open' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">未対応と対応中</button>
-                            <button @click="statusFilter = 'completed'" :class="statusFilter === 'completed' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">完了のみ</button>
+                    <!-- ステータス・クイックフィルタと並び替え -->
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex items-center gap-1 bg-gray-200 p-1 rounded-xl w-max shadow-inner overflow-x-auto no-scrollbar">
+                                <button @click="statusFilter = 'all'" :class="statusFilter === 'all' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">すべて</button>
+                                <button @click="statusFilter = 'unanswered'" :class="statusFilter === 'unanswered' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">未対応のみ</button>
+                                <button @click="statusFilter = 'progress'" :class="statusFilter === 'progress' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">対応中のみ</button>
+                                <button @click="statusFilter = 'open'" :class="statusFilter === 'open' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">未対応と対応中</button>
+                                <button @click="statusFilter = 'completed'" :class="statusFilter === 'completed' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">完了のみ</button>
+                            </div>
+                            
+                            <div x-show="selectedTags.length > 0" class="flex flex-wrap gap-1 items-center ml-2">
+                                <template x-for="tag in selectedTags" :key="tag">
+                                    <span class="badge bg-slate-100 border-slate-200 text-slate-800 font-bold gap-1 px-2 py-2 text-[10px] shadow-sm">
+                                        <span x-text="tag"></span>
+                                        <i data-lucide="x" class="w-2.5 h-2.5 cursor-pointer hover:text-red-500" @click="toggleTag(tag); refreshIcons()"></i>
+                                    </span>
+                                </template>
+                            </div>
                         </div>
-                        
-                        <div x-show="selectedTags.length > 0" class="flex flex-wrap gap-1 items-center ml-2">
-                            <template x-for="tag in selectedTags" :key="tag">
-                                <span class="badge bg-slate-100 border-slate-200 text-slate-800 font-bold gap-1 px-2 py-2 text-[10px] shadow-sm">
-                                    <span x-text="tag"></span>
-                                    <i data-lucide="x" class="w-2.5 h-2.5 cursor-pointer hover:text-red-500" @click="toggleTag(tag); refreshIcons()"></i>
-                                </span>
-                            </template>
-                        </div>
+
+                        <!-- 並び替えドロップダウン -->
+                        <select x-model="sortOrder" class="select select-bordered select-sm text-xs font-bold text-gray-600 focus:outline-none focus:border-slate-800 shadow-sm bg-white">
+                            <option value="date_desc">質問日時 (新しい順)</option>
+                            <option value="date_asc">質問日時 (古い順)</option>
+                            <option value="dueDate_asc">回答期日 (近い順)</option>
+                            <option value="dueDate_desc">回答期日 (遠い順)</option>
+                        </select>
                     </div>
 
                     <!-- カード表示 -->
@@ -355,8 +388,12 @@
                                 <h3 class="text-base font-bold text-gray-800 mb-1 group-hover:text-slate-900" x-text="q.title"></h3>
                                 <p class="text-sm text-gray-500 mb-4 flex-1 line-clamp-2" x-text="q.content"></p>
                                 <div class="flex items-center justify-between pt-4 border-t border-gray-50 text-[10px] font-bold">
-                                    <span class="bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase" x-text="q.tags[0]"></span>
-                                    <div class="flex items-center gap-1" :class="q.daysLeft <= 1 && q.status !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                                    <div class="flex gap-1 flex-wrap">
+                                        <template x-for="tag in (q.tags || [])" :key="tag">
+                                            <span class="bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase" x-text="tag"></span>
+                                        </template>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0" :class="q.daysLeft <= 1 && q.status !== '完了' ? 'text-red-500' : 'text-gray-400'">
                                         <i data-lucide="clock" class="w-3.5 h-3.5"></i> 
                                         <span x-text="q.status === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
                                     </div>
@@ -376,7 +413,11 @@
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 w-16 text-center" :class="statusColorMap[q.status]" x-text="q.status"></span>
                                 <h3 class="text-sm font-bold text-gray-800 truncate w-48 shrink-0 group-hover:text-slate-900" x-text="q.title"></h3>
                                 <p class="text-xs text-gray-500 truncate flex-1 font-medium" x-text="q.content"></p>
-                                <span class="text-[10px] font-bold bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 shrink-0 uppercase" x-text="q.tags[0]"></span>
+                                <div class="flex gap-1 shrink-0">
+                                    <template x-for="tag in (q.tags || [])" :key="tag">
+                                        <span class="text-[10px] font-bold bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase" x-text="tag"></span>
+                                    </template>
+                                </div>
                                 <div class="text-[10px] font-bold shrink-0 flex items-center gap-1 w-16 justify-end" :class="q.daysLeft <= 1 && q.status !== '完了' ? 'text-red-500' : 'text-gray-400'">
                                     <i data-lucide="clock" class="w-3.5 h-3.5"></i> 
                                     <span x-text="q.status === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
@@ -386,7 +427,7 @@
                     </div>
                 </div>
 
-                <!-- [View: DETAIL] -->
+                <!-- [View: DETAIL] 質問詳細 -->
                 <div x-show="currentView === 'detail'" class="space-y-6" style="display: none;">
                     <div class="flex items-center justify-between">
                         <button class="btn btn-ghost btn-sm gap-2 font-bold text-gray-500 hover:text-gray-800" @click="setView('home')">
@@ -395,6 +436,7 @@
                     </div>
                     <div class="flex flex-col lg:flex-row gap-6">
                         
+                        <!-- 左側：チャットエリア -->
                         <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px]">
                             <div class="bg-gray-50 p-6 flex-1 space-y-6 overflow-y-auto">
                                 <div class="flex gap-4">
@@ -424,7 +466,7 @@
                             </div>
                         </div>
 
-                        <!-- 詳細プロパティパネル -->
+                        <!-- 右側：プロパティパネル -->
                         <div class="w-full lg:w-80 space-y-4 shrink-0">
                             <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm space-y-6">
                                 
@@ -456,6 +498,7 @@
                                         </select>
                                     </div>
 
+                                    <!-- カテゴリ (マルチセレクト) -->
                                     <div>
                                         <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">カテゴリ</h4>
                                         <div class="relative w-full" x-data="{ isCategoryOpen: false }" @click.outside="isCategoryOpen = false">
@@ -494,7 +537,7 @@
                                 </div>
                             </div>
                             
-                            <!-- 関連する質問 (新設) -->
+                            <!-- 関連する質問 -->
                             <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm mt-4">
                                 <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">関連する質問</h4>
                                 
@@ -569,6 +612,46 @@
                             </div>
                         </div>
                     </template>
+                </div>
+
+                <!-- [View: CATEGORIES] -->
+                <div x-show="currentView === 'categories'" class="space-y-6" style="display: none;">
+                    <div class="flex justify-between items-center">
+                        <div class="relative w-80">
+                            <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
+                            <input type="text" placeholder="カテゴリ検索..." class="input input-bordered w-full pl-10 h-10 text-sm focus:border-slate-800 shadow-sm" />
+                        </div>
+                        <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="alert('カテゴリを追加します（モック）')">+ カテゴリ追加</button>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="table w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">カテゴリ名</th>
+                                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">使用数</th>
+                                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="tag in availableTags" :key="tag">
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td>
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center font-bold text-slate-600 text-xs">
+                                                    <i data-lucide="tag" class="w-4 h-4"></i>
+                                                </div>
+                                                <div class="font-bold text-sm" x-text="tag"></div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-sm font-bold bg-slate-100 text-slate-800 border-slate-200" x-text="questions.filter(q => q.tags && q.tags.includes(tag)).length + '件'"></span>
+                                        </td>
+                                        <td><button class="text-gray-400 hover:text-slate-800"><i data-lucide="edit-2" class="w-4 h-4"></i></button></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- [View: USERS] -->
