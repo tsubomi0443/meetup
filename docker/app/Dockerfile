@@ -12,6 +12,10 @@ RUN go install github.com/air-verse/air@latest
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH="/root/.bun/bin:$PATH"
 
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/*.lock .
+RUN bun install
+
 WORKDIR /app
 
 # Go モジュールをビルド時にキャッシュ（ボリュームマウント対象の /app 外に保存されるため上書きされない）

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -37,8 +38,9 @@ func main() {
 	})
 
 	// ルート
-	e.GET("/mock", func(c *echo.Context) error {
-		return c.Render(http.StatusOK, "mock.html", nil)
+	e.GET("/mock/:id", func(c *echo.Context) error {
+		id := c.Param("id")
+		return c.Render(http.StatusOK, fmt.Sprintf("mock%s.html", id), nil)
 	})
 
 	// HTMX API エンドポイント

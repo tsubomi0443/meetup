@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: "app"
     build:
       context: .
       dockerfile: docker/app/Dockerfile
@@ -17,6 +18,7 @@ services:
     command: ["air"]
 
   postgresql:
+    container_name: "postgres"
     build:
       context: .
       dockerfile: docker/database/postgresql/Dockerfile
@@ -27,9 +29,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
-      - postgres_data:/var/lib/postgres
+      - ./docker/database/postgresql/postgres_data:/var/lib/postgres
 
   dynamodb:
+    container_name: "dynamodb"
     build:
       context: .
       dockerfile: docker/database/dynamodb/Dockerfile
