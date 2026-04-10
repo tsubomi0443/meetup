@@ -29,7 +29,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
-      - ./docker/database/postgresql/postgres_data:/var/lib/postgres
+      - postgres_data:/var/lib/postgres
 
   dynamodb:
     container_name: "dynamodb"
