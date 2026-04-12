@@ -33,7 +33,7 @@ func main() {
 
 	// ルート
 	e.GET("/", func(c *echo.Context) error {
-		return c.Render(http.StatusOK, "index.new.html", map[string]any{
+		return c.Render(http.StatusOK, "index.html", map[string]any{
 			"Title": "Go + Echo + HTMX + Alpine.js",
 		})
 	})
