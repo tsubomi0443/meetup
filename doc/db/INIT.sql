@@ -42,10 +42,10 @@ CREATE TABLE supports (
 
 CREATE TABLE questions (
     id BIGSERIAL PRIMARY KEY,
-    message_id BIGINT,
     origin_question_id BIGINT,
     support_id BIGINT,
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(255),
+    content TEXT NOT NULL,
     due TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_questions_origin
@@ -230,10 +230,10 @@ INSERT INTO supports (user_id, support_status_id) VALUES
 
 -- questions
 -- origin_question_id は自己参照なので親→子の順で入れています
-INSERT INTO questions (message_id, origin_question_id, support_id, title, due, created_at) VALUES
-(1001, NULL, 1, 'First Question', '2026-04-30 12:00:00', CURRENT_TIMESTAMP),
-(1002, 1,    2, 'Follow-up Question', '2026-05-01 12:00:00', CURRENT_TIMESTAMP),
-(1003, NULL, 3, 'Health Check Schedule', '2026-05-10 09:00:00', CURRENT_TIMESTAMP);
+INSERT INTO questions (origin_question_id, support_id, title, content, due, created_at) VALUES
+(NULL, 1, 'First Question', 'First question body', '2026-04-30 12:00:00', CURRENT_TIMESTAMP),
+(1,    2, 'Follow-up Question', 'Follow-up body', '2026-05-01 12:00:00', CURRENT_TIMESTAMP),
+(NULL, 3, 'Health Check Schedule', 'Health check schedule details', '2026-05-10 09:00:00', CURRENT_TIMESTAMP);
 
 -- answers
 INSERT INTO answers (user_id, question_id, content, answered_at, created_at) VALUES

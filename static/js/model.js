@@ -339,13 +339,13 @@ export class Escalation {
 // ---------------------------------------------------------------------------
 export class Question {
   /**
-   * @param {number}         id
-   * @param {number|null}    messageId
-   * @param {number|null}    originQuestionId
-   * @param {number|null}    supportId
-   * @param {string}         title
-   * @param {string|null}    due              ISO8601 文字列 or null
-   * @param {string}         createdAt        ISO8601 文字列
+ * @param {number}         id
+ * @param {number|null}    originQuestionId
+ * @param {number|null}    supportId
+ * @param {string}         title
+ * @param {string}         content
+ * @param {string|null}    due              ISO8601 文字列 or null
+ * @param {string}         createdAt        ISO8601 文字列
    * @param {Question|null}  [originQuestion]
    * @param {Question[]}     [subQuestions]
    * @param {Support|null}   [support]
@@ -356,16 +356,16 @@ export class Question {
    * @param {Escalation[]}   [escalationsTo]
    */
   constructor(
-    id, messageId, originQuestionId, supportId, title, due, createdAt,
+    id, originQuestionId, supportId, title, content, due, createdAt,
     originQuestion = null, subQuestions = [], support = null,
     answers = [], memos = [], tags = [],
     escalationsFrom = [], escalationsTo = [],
   ) {
     this.id               = id;
-    this.messageId        = messageId;
     this.originQuestionId = originQuestionId;
     this.supportId        = supportId;
     this.title            = title;
+    this.content          = content;
     this.due              = due ? new Date(due) : null;
     this.createdAt        = new Date(createdAt);
     this.originQuestion   = originQuestion;
@@ -382,10 +382,10 @@ export class Question {
   static fromJSON(json) {
     return new Question(
       json.ID,
-      json.MessageID        ?? null,
       json.OriginQuestionID ?? null,
       json.SupportID        ?? null,
       json.Title,
+      json.Content,
       json.Due     ?? null,
       json.CreatedAt,
       json.OriginQuestion ? Question.fromJSON(json.OriginQuestion) : null,
