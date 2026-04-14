@@ -36,6 +36,11 @@ func main() {
 		})
 	})
 
+	// ルート
+	e.GET("/mock", func(c *echo.Context) error {
+		return c.Render(http.StatusOK, "mock.html", nil)
+	})
+
 	// HTMX API エンドポイント
 	e.GET("/api/joke", func(c *echo.Context) error {
 		// サンプルレスポンス
