@@ -1,0 +1,17 @@
+{{define "mock5_header"}}
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
+                <div class="flex items-center gap-4">
+                    <button @click="toggleSidebar()" class="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <h1 class="text-lg font-bold text-gray-800 tracking-tight" x-text="titleMap[currentView] || 'HR Assist'"></h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer bg-gray-100 px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest" x-text="isManager ? 'Manager Mode' : 'Creator Mode'"></span>
+                        <input type="checkbox" x-model="isManager" class="toggle toggle-sm toggle-success" />
+                    </label>
+                    <button @click="logout()" class="text-xs font-bold text-gray-400 hover:text-red-600 transition-colors uppercase tracking-widest">ログアウト</button>
+                </div>
+            </header>
+{{end}}

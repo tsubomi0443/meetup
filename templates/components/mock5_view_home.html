@@ -1,0 +1,125 @@
+{{define "mock5_view_home"}}
+                <div x-show="currentView === 'home'" class="space-y-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-2 flex-1 min-w-[300px]">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
+                                <input type="text" x-model="searchQuery" placeholder="キーワード検索..." class="input input-bordered w-full pl-10 h-10 text-sm border-gray-300 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-sm" />
+                            </div>
+                            
+                            <div class="dropdown dropdown-end">
+                                <label tabindex="0" class="btn btn-outline btn-sm border-gray-300 normal-case h-10 px-4 font-bold text-gray-600 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800">
+                                    <i data-lucide="filter" class="w-4 h-4 mr-2"></i>
+                                    カテゴリ
+                                    <span x-show="selectedTags.length > 0" class="ml-2 badge bg-slate-800 text-white border-none badge-xs" x-text="selectedTags.length"></span>
+                                </label>
+                                <div tabindex="0" class="dropdown-content z-[50] card card-compact w-64 p-2 shadow-xl bg-white border border-gray-200 mt-2">
+                                    <div class="card-body">
+                                        <h3 class="font-bold text-xs uppercase text-gray-400 tracking-widest mb-2 border-b pb-1">カテゴリ絞り込み</h3>
+                                        <div class="flex flex-col gap-1 max-h-64 overflow-y-auto no-scrollbar">
+                                            <template x-for="tag in availableTags" :key="tag">
+                                                <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group">
+                                                    <input type="checkbox" :checked="selectedTags.includes(tag)" @change="toggleTag(tag)" class="checkbox checkbox-sm checkbox-primary border-gray-300" />
+                                                    <span class="text-sm font-bold text-gray-700 group-hover:text-slate-900" x-text="tag"></span>
+                                                </label>
+                                            </template>
+                                        </div>
+                                        <div class="divider my-1"></div>
+                                        <button @click="selectedTags = []" class="btn btn-ghost btn-xs text-red-500 font-bold" :disabled="selectedTags.length === 0">リセット</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-200 p-1 rounded-lg flex items-center shadow-inner">
+                            <button @click="viewMode = 'card'" class="p-1.5 rounded-md transition-all" :class="viewMode === 'card' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'">
+                                <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                            </button>
+                            <button @click="viewMode = 'list'" class="p-1.5 rounded-md transition-all" :class="viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'">
+                                <i data-lucide="list" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex items-center gap-1 bg-gray-200 p-1 rounded-xl w-max shadow-inner overflow-x-auto no-scrollbar">
+                                <button @click="statusFilter = 'all'" :class="statusFilter === 'all' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">すべて</button>
+                                <button @click="statusFilter = 'unanswered'" :class="statusFilter === 'unanswered' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">未対応のみ</button>
+                                <button @click="statusFilter = 'progress'" :class="statusFilter === 'progress' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">対応中のみ</button>
+                                <button @click="statusFilter = 'open'" :class="statusFilter === 'open' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">未対応と対応中</button>
+                                <button @click="statusFilter = 'completed'" :class="statusFilter === 'completed' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">完了のみ</button>
+                            </div>
+                            
+                            <div x-show="selectedTags.length > 0" class="flex flex-wrap gap-1 items-center ml-2">
+                                <template x-for="tag in selectedTags" :key="tag">
+                                    <span class="badge bg-slate-100 border-slate-200 text-slate-800 font-bold gap-1 px-2 py-2 text-[10px] shadow-sm">
+                                        <span x-text="tag"></span>
+                                        <i data-lucide="x" class="w-2.5 h-2.5 cursor-pointer hover:text-red-500" @click="toggleTag(tag); refreshIcons()"></i>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+
+                        <select x-model="sortOrder" class="select select-bordered select-sm text-xs font-bold text-gray-600 focus:outline-none focus:border-slate-800 shadow-sm bg-white">
+                            <option value="date_desc">質問日時 (新しい順)</option>
+                            <option value="date_asc">質問日時 (古い順)</option>
+                            <option value="dueDate_asc">回答期日 (近い順)</option>
+                            <option value="dueDate_desc">回答期日 (遠い順)</option>
+                        </select>
+                    </div>
+
+                    <div x-show="viewMode === 'card'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="q in filteredQuestions" :key="q.id">
+                            <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200 cursor-pointer hover:shadow-md hover:border-slate-300 transition-all flex flex-col group" @click="openDetail(q)">
+                                <div class="flex justify-between mb-3 items-start">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600 text-sm group-hover:bg-slate-100 group-hover:text-slate-800 transition-colors shrink-0" x-text="q.sender.charAt(0)"></div>
+                                        <div class="min-w-0">
+                                            <div class="text-sm font-bold text-gray-900 truncate" x-text="q.sender"></div>
+                                            <div class="text-[10px] text-gray-400 font-bold uppercase" x-text="q.department"></div>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold shadow-sm" :class="statusColorMap[q.status]" x-text="q.status"></span>
+                                </div>
+                                <h3 class="text-base font-bold text-gray-800 mb-1 group-hover:text-slate-900" x-text="q.title"></h3>
+                                <p class="text-sm text-gray-500 mb-4 flex-1 line-clamp-2" x-text="q.content"></p>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-50 text-[10px] font-bold">
+                                    <div class="flex gap-1 flex-wrap">
+                                        <template x-for="tag in (q.tags || [])" :key="tag">
+                                            <span class="bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase" x-text="tag"></span>
+                                        </template>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0" :class="q.daysLeft <= 1 && q.status !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                                        <i data-lucide="clock" class="w-3.5 h-3.5"></i> 
+                                        <span x-text="q.status === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="filteredQuestions.length === 0" class="col-span-full py-16 text-center">
+                            <i data-lucide="search-x" class="w-12 h-12 text-gray-200 mx-auto mb-4"></i>
+                            <p class="text-gray-400 font-bold">条件に一致する質問は見つかりませんでした。</p>
+                        </div>
+                    </div>
+
+                    <div x-show="viewMode === 'list'" class="flex flex-col gap-2 w-full" style="display: none;">
+                        <template x-for="q in filteredQuestions" :key="q.id">
+                            <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4 group" @click="openDetail(q)">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 w-16 text-center" :class="statusColorMap[q.status]" x-text="q.status"></span>
+                                <h3 class="text-sm font-bold text-gray-800 truncate w-48 shrink-0 group-hover:text-slate-900" x-text="q.title"></h3>
+                                <p class="text-xs text-gray-500 truncate flex-1 font-medium" x-text="q.content"></p>
+                                <div class="flex gap-1 shrink-0">
+                                    <template x-for="tag in (q.tags || [])" :key="tag">
+                                        <span class="text-[10px] font-bold bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase" x-text="tag"></span>
+                                    </template>
+                                </div>
+                                <div class="text-[10px] font-bold shrink-0 flex items-center gap-1 w-16 justify-end" :class="q.daysLeft <= 1 && q.status !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5"></i> 
+                                    <span x-text="q.status === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+{{end}}

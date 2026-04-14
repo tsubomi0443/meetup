@@ -1,0 +1,21 @@
+{{define "mock5_modal_invite_user"}}
+    <div class="modal" :class="{'modal-open': showAddUserModal}">
+        <div class="modal-box bg-white rounded-2xl shadow-2xl">
+            <h3 class="font-bold text-lg mb-6 tracking-tight">新規ユーザーを招待</h3>
+            <div class="space-y-4">
+                <input type="text" placeholder="氏名" class="input input-bordered w-full text-sm shadow-inner" />
+                <input type="email" placeholder="メールアドレス" class="input input-bordered w-full text-sm shadow-inner" />
+                <select class="select select-bordered w-full text-sm font-bold shadow-inner">
+                    <option disabled selected>役割を選択</option>
+                    <option>Manager</option>
+                    <option>Creator</option>
+                </select>
+            </div>
+            <div class="modal-action">
+                <button class="btn btn-ghost font-bold" @click="showAddUserModal = false">キャンセル</button>
+                <button class="btn bg-slate-800 border-none font-bold px-8 shadow-md" @click="showAddUserModal = false; alert('ユーザーを招待しました')">招待を送信</button>
+            </div>
+        </div>
+        <div class="modal-backdrop bg-gray-900 bg-opacity-50" @click="showAddUserModal = false"></div>
+    </div>
+{{end}}
