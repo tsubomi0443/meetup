@@ -20,7 +20,7 @@ func main() {
 
 	// テンプレートの設定
 	e.Renderer = &echo.TemplateRenderer{
-		Template: template.Must(template.ParseGlob("templates/*.html")),
+		Template: template.Must(template.ParseGlob("templates/**/*.html")),
 	}
 
 	// ミドルウェア
