@@ -33,6 +33,7 @@
                 showAddUserModal: false,
                 unreadNotices: 1,
                 activeQuestion: {},
+                isConnect: false,
 
                 selectedTags: [],
                 availableTags: ['諸手当', '休暇', '規程', '健康診断'],
@@ -115,6 +116,10 @@
 
                 init() {
                     this.refreshIcons();
+
+                    document.addEventListener('connect disconnect', (event) => {
+                        this.isConnect = event.detail;
+                    })
 
                     document.addEventListener('sse-notice', (event) => {
                         const notice = event.detail;
@@ -270,6 +275,18 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const es = new EventSource('/sse');
+
+            es.onopen = (_, event) => {
+                document.dispatchEvent(new CustomeEvent('connect', {
+                    detail: true,
+                }))
+            }
+
+            es.onerror = (_, event) => {
+                document.dispatchEvent(new CustomeEvent('disconnect', {
+                    detail: false,
+                }))
+            }
 
             es.addEventListener('notice', (event) => {
                 try {
