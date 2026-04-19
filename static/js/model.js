@@ -1,6 +1,6 @@
 /**
  * model.js
- * Go の internal/infrastracture/model/ 配下の構造体に対応する
+ * Go の _mac_infrastructure（entity）に対応する
  * クライアントサイドクラス定義。
  * SSE 経由で受信した JSON オブジェクトを fromJSON() で復元できます。
  *
@@ -35,6 +35,15 @@ export class Role {
       (json.Users ?? []).map(User.fromJSON),
     );
   }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:       form.id,
+      RoleName: form.roleName,
+      Users:    (form.users ?? []).map((user) => User.toModel(user)),
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -59,6 +68,15 @@ export class SupportStatus {
       json.Title,
       (json.Supports ?? []).map(Support.fromJSON),
     );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:       form.id,
+      Title:    form.title,
+      Supports: (form.supports ?? []).map((support) => Support.toModel(support)),
+    };
   }
 }
 
@@ -93,6 +111,18 @@ export class Support {
       json.SupportStatus ? SupportStatus.fromJSON(json.SupportStatus) : null,
       (json.Questions ?? []).map(Question.fromJSON),
     );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:              form.id,
+      UserID:          form.userId,
+      SupportStatusID: form.supportStatusId,
+      User:            form.user ? User.toModel(form.user) : null,
+      SupportStatus:   form.supportStatus ? SupportStatus.toModel(form.supportStatus) : null,
+      Questions:       (form.questions ?? []).map((question) => Question.toModel(question)),
+    };
   }
 }
 
@@ -134,6 +164,21 @@ export class User {
       (json.Memos    ?? []).map(Memo.fromJSON),
     );
   }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:        form.id,
+      Name:      form.name,
+      Email:     form.email,
+      Passwordd: form.password,
+      RoleID:    form.roleId,
+      Role:      form.role ? Role.toModel(form.role) : null,
+      Supports:  (form.supports ?? []).map((support) => Support.toModel(support)),
+      Answers:   (form.answers  ?? []).map((answer) => Answer.toModel(answer)),
+      Memos:     (form.memos    ?? []).map((memo) => Memo.toModel(memo)),
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +203,15 @@ export class Category {
       json.CategoryName,
       (json.Tags ?? []).map(Tag.fromJSON),
     );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:           form.id,
+      CategoryName: form.categoryName,
+      Tags:         (form.tags ?? []).map((tag) => Tag.toModel(tag)),
+    };
   }
 }
 
@@ -193,6 +247,18 @@ export class Tag {
       (json.Questions ?? []).map(Question.fromJSON),
     );
   }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:         form.id,
+      Title:      form.title,
+      Usage:      form.usage,
+      CategoryID: form.categoryId,
+      Category:   form.category ? Category.toModel(form.category) : null,
+      Questions:  (form.questions ?? []).map((question) => Question.toModel(question)),
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -220,6 +286,16 @@ export class Refer {
       json.URL,
       (json.Answers ?? []).map(Answer.fromJSON),
     );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:      form.id,
+      Title:   form.title,
+      URL:     form.url,
+      Answers: (form.answers ?? []).map((answer) => Answer.toModel(answer)),
+    };
   }
 }
 
@@ -254,6 +330,18 @@ export class Memo {
       json.Question ? Question.fromJSON(json.Question) : null,
       json.User     ? User.fromJSON(json.User)         : null,
     );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:         form.id,
+      QuestionID: form.questionId,
+      UserID:     form.userId,
+      Content:    form.content,
+      Question:   form.question ? Question.toModel(form.question) : null,
+      User:       form.user ? User.toModel(form.user) : null,
+    };
   }
 }
 
@@ -298,6 +386,21 @@ export class Answer {
       (json.Refers ?? []).map(Refer.fromJSON),
     );
   }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:         form.id,
+      UserID:     form.userId,
+      QuestionID: form.questionId,
+      Content:    form.content,
+      AnsweredAt: form.answeredAt ? form.answeredAt.toISOString() : null,
+      CreatedAt:  form.createdAt ? form.createdAt.toISOString() : null,
+      User:       form.user ? User.toModel(form.user) : null,
+      Question:   form.question ? Question.toModel(form.question) : null,
+      Refers:     (form.refers ?? []).map((refer) => Refer.toModel(refer)),
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -332,6 +435,18 @@ export class Escalation {
       json.ToQuestion   ? Question.fromJSON(json.ToQuestion)   : null,
     );
   }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:             form.id,
+      FromQuestionID: form.fromQuestionId,
+      ToQuestionID:   form.toQuestionId,
+      EscalatedAt:    form.escalatedAt ? form.escalatedAt.toISOString() : null,
+      FromQuestion:   form.fromQuestion ? Question.toModel(form.fromQuestion) : null,
+      ToQuestion:     form.toQuestion ? Question.toModel(form.toQuestion) : null,
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -339,13 +454,13 @@ export class Escalation {
 // ---------------------------------------------------------------------------
 export class Question {
   /**
- * @param {number}         id
- * @param {number|null}    originQuestionId
- * @param {number|null}    supportId
- * @param {string}         title
- * @param {string}         content
- * @param {string|null}    due              ISO8601 文字列 or null
- * @param {string}         createdAt        ISO8601 文字列
+   * @param {number}         id
+   * @param {number|null}    originQuestionId
+   * @param {number|null}    supportId
+   * @param {string}         title
+   * @param {string}         content
+   * @param {string|null}    due              ISO8601 文字列 or null
+   * @param {string}         createdAt        ISO8601 文字列
    * @param {Question|null}  [originQuestion]
    * @param {Question[]}     [subQuestions]
    * @param {Support|null}   [support]
@@ -398,6 +513,27 @@ export class Question {
       (json.EscalationsTo   ?? []).map(Escalation.fromJSON),
     );
   }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:               form.id,
+      OriginQuestionID: form.originQuestionId,
+      SupportID:        form.supportId,
+      Title:            form.title,
+      Content:          form.content,
+      Due:              form.due ? form.due.toISOString() : null,
+      CreatedAt:        form.createdAt ? form.createdAt.toISOString() : null,
+      OriginQuestion:   form.originQuestion ? Question.toModel(form.originQuestion) : null,
+      SubQuestions:     (form.subQuestions    ?? []).map((question) => Question.toModel(question)),
+      Support:          form.support ? Support.toModel(form.support) : null,
+      Answers:          (form.answers         ?? []).map((answer) => Answer.toModel(answer)),
+      Memos:            (form.memos           ?? []).map((memo) => Memo.toModel(memo)),
+      Tags:             (form.tags            ?? []).map((tag) => Tag.toModel(tag)),
+      EscalationsFrom:  (form.escalationsFrom ?? []).map((escalation) => Escalation.toModel(escalation)),
+      EscalationsTo:    (form.escalationsTo   ?? []).map((escalation) => Escalation.toModel(escalation)),
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -429,6 +565,17 @@ export class ReferManager {
       json.Refer  ? Refer.fromJSON(json.Refer)   : null,
     );
   }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:       form.id,
+      AnswerID: form.answerId,
+      ReferID:  form.referId,
+      Answer:   form.answer ? Answer.toModel(form.answer) : null,
+      Refer:    form.refer ? Refer.toModel(form.refer) : null,
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -459,5 +606,16 @@ export class TagManager {
       json.Tag      ? Tag.fromJSON(json.Tag)           : null,
       json.Question ? Question.fromJSON(json.Question) : null,
     );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return {
+      ID:         form.id,
+      TagID:      form.tagId,
+      QuestionID: form.questionId,
+      Tag:        form.tag ? Tag.toModel(form.tag) : null,
+      Question:   form.question ? Question.toModel(form.question) : null,
+    };
   }
 }

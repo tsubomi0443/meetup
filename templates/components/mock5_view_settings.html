@@ -1,25 +1,35 @@
 {{define "mock5_view_settings"}}
-                <div x-show="currentView === 'settings'" class="max-w-2xl mx-auto" style="display: none;">
-                    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-                        <div class="p-6 border-b border-gray-100 bg-gray-50/50 text-center lg:text-left">
-                            <h2 class="text-lg font-bold text-gray-800 tracking-tight">プロフィール設定</h2>
-                        </div>
-                        <div class="p-8 space-y-6">
-                            <div class="flex flex-col sm:flex-row items-center gap-8">
-                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=eff6ff" class="w-24 h-24 rounded-2xl border-2 border-white shadow-lg" />
-                                <button class="btn btn-sm btn-outline font-bold shadow-sm">画像をアップロード</button>
-                            </div>
-                            <div class="space-y-4">
-                                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">氏名</label><input type="text" value="自分" class="input input-bordered w-full text-sm font-bold shadow-inner" /></div>
-                                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">メールアドレス</label><input type="email" value="jinji.taro@example.com" class="input input-bordered w-full text-sm font-bold shadow-inner" /></div>
-                                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">新しいパスワード</label><input type="password" placeholder="変更する場合のみ入力" class="input input-bordered w-full text-sm font-bold shadow-inner" /></div>
-                                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">自己紹介・メモ</label><textarea class="textarea textarea-bordered w-full h-24 text-sm font-bold shadow-inner" placeholder="管理担当のメモなど..."></textarea></div>
-                            </div>
-                        </div>
-                        <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
-                            <button class="btn btn-ghost font-bold text-gray-500" @click="setView('home')">キャンセル</button>
-                            <button class="btn bg-slate-800 text-white border-none font-bold px-10 shadow-md" @click="setView('home'); alert('設定を保存しました')">保存する</button>
-                        </div>
-                    </div>
+<div x-show="currentView === 'settings'" class="max-w-2xl mx-auto" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 bg-gray-50/50 text-center lg:text-left">
+            <h2 class="text-lg font-bold text-gray-800 tracking-tight">プロフィール設定</h2>
+        </div>
+        <div class="p-8 space-y-6">
+            <div class="flex flex-col sm:flex-row items-center gap-8">
+                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=eff6ff"
+                    class="w-24 h-24 rounded-2xl border-2 border-white shadow-lg" />
+                <button class="btn btn-sm btn-outline font-bold shadow-sm">画像をアップロード</button>
+            </div>
+            <div class="space-y-4">
+                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">氏名</label><input
+                        type="text" value="自分" class="input input-bordered w-full text-sm font-bold shadow-inner" />
                 </div>
+                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">メールアドレス</label><input
+                        type="email" value="jinji.taro@example.com"
+                        class="input input-bordered w-full text-sm font-bold shadow-inner" /></div>
+                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">新しいパスワード</label><input
+                        type="password" placeholder="変更する場合のみ入力"
+                        class="input input-bordered w-full text-sm font-bold shadow-inner" /></div>
+                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">自己紹介・メモ</label><textarea
+                        class="textarea textarea-bordered w-full h-24 text-sm font-bold shadow-inner"
+                        placeholder="管理担当のメモなど..."></textarea></div>
+            </div>
+        </div>
+        <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            <button class="btn btn-ghost font-bold text-gray-500" @click="setView('home')">キャンセル</button>
+            <button class="btn bg-slate-800 text-white border-none font-bold px-10 shadow-md"
+                @click="setView('home'); alert('設定を保存しました')">保存する</button>
+        </div>
+    </div>
+</div>
 {{end}}

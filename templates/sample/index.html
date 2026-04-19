@@ -30,13 +30,13 @@
                 questionDetail: {},
 
                 async getQuestionDetail(id) {
-                    const res = await fetch(`/api/question/${id}`);
+                    const res = await fetch(`/api/v1/question/${id}`);
                     const body = await res.json();
                     this.questionDetail = Question.fromJSON(body);
                 },
 
                 async deleteQuestion(id) {
-                    const res = await fetch(`/api/question/${id}`, {
+                    const res = await fetch(`/api/v1/question/${id}`, {
                         method: "DELETE"
                     }).then(v => {
                         if (v.status == 200) {
@@ -50,7 +50,6 @@
 
                 openDetail(id) {
                     this.getQuestionDetail(id)
-                    this.drawCommunication(id)
                     document.getElementById('question-detail-modal').showModal();
                 },
                 closeDetail() {
@@ -75,7 +74,7 @@
                     try {
                         const body = { content: this.form.content.trim(), title: this.form.title.trim() };
                         if (this.form.due) body.due = `${this.form.due}:00+09:00`;
-                        const res = await fetch('/api/questions', {
+                        const res = await fetch('/api/v1/question', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(body),
