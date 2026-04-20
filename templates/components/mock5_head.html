@@ -15,7 +15,7 @@
 <!-- 4. htmx ext sse -->
 <script src="/static/vendor/sse.min.js"></script>
 
-<!-- 5. lodash.isEqual(１機能のみインポート) -->
+<!-- 5. estoolkit -->
 <script src="/static/vendor/es-toolkit-global.js"></script>
 
 <style>
@@ -42,7 +42,7 @@
 </style>
 
 <script type="module">
-    import { Question, User } from '/static/js/model.js';
+    import { Question, User, Tag } from '/static/js/model.js';
 
     document.addEventListener('alpine:init', () => {
         Alpine.data('hrAppData', () => ({
@@ -51,8 +51,11 @@
             viewMode: 'card',
             isManager: true,
             showAddUserModal: false,
+            showEditUserModal: false,
+            showTagModal: false,
             unreadNotices: 1,
-            activeQuestion: {}, // 関連する質問の有効質問
+            activeQuestion: {},
+            activeUser: {},
             isConnect: false,
 
             selectedTags: [],
@@ -68,7 +71,7 @@
                 detail: '質問詳細',
                 notice: '通知センター',
                 users: 'ユーザー管理',
-                categories: 'カテゴリ管理',
+                tags: 'タグ管理',
                 settings: 'プロフィール設定'
             },
 
@@ -90,11 +93,8 @@
                 { id: 2, type: 'info', title: 'システムアップデート完了', time: '1時間前', content: 'FAQ検索エンジンの精度を向上させるアップデートを適用しました。' }
             ],
 
-            users: [
-                { name: '自分', email: 'jinji.taro@example.com', role: 'Manager' },
-                { name: '鈴木 一郎', email: 'suzuki@example.com', role: 'Creator' },
-                { name: '田中 花子', email: 'tanaka@example.com', role: 'Creator' }
-            ],
+            users: [],
+            tags: [],
 
             get filteredQuestions() {
                 let result = this.questions.filter(q => {
@@ -150,18 +150,19 @@
                     if (notice.type === 'alert') this.unreadNotices += 1;
                 });
 
-                // let prevQuestion = {};
                 document.addEventListener('sse-question', (event) => {
                     const question = this.toQuestionViewModel(event.detail);
                     const index = this.questions.findIndex(q => q.id === question.id);
                     if (index === -1) {
                         this.questions.unshift(question);
+                        this.refreshIcons();
                     } else {
                         if (!_.isEqual(this.questions[index], question)) {
                             this.questions.splice(index, 1, {
                                 ...this.questions[index],
                                 ...question,
                             });
+                            this.refreshIcons();
                         }
                     }
 
@@ -172,13 +173,41 @@
                         );
                         this.unreadNotices = Math.max(0, this.unreadNotices - (before - this.notices.length));
                     }
+                });
 
-                    // if (!_.isEqual(this.activeQuestion, question)) {
-                    //     this.activeQuestion = {
-                    //         ...this.activeQuestion,
-                    //         ...question,
-                    //     };
-                    // }
+                document.addEventListener('sse-user', (event) => {
+                    const user = event.detail;
+                    const index = this.users.findIndex(q => q.id === user.id);
+                    if (index === -1) {
+                        this.users.unshift(user);
+                        this.refreshIcons();
+                    } else {
+                        if (!_.isEqual(this.users[index], user)) {
+                            this.users.splice(index, 1, {
+                                ...this.users[index],
+                                ...user,
+                            });
+                            this.refreshIcons();
+                        }
+                    }
+                });
+
+                document.addEventListener('sse-tag', (event) => {
+                    const tag = event.detail;
+                    console.log(tag);
+                    const index = this.tags.findIndex(q => q.id === tag.id);
+                    if (index === -1) {
+                        this.tags.unshift(tag);
+                        this.refreshIcons();
+                    } else {
+                        if (!_.isEqual(this.tags[index], tag)) {
+                            this.tags.splice(index, 1, {
+                                ...this.tags[index],
+                                ...tag,
+                            });
+                            this.refreshIcons();
+                        }
+                    }
                 });
             },
 
@@ -238,7 +267,6 @@
             openDetail(q) {
                 this.activeQuestion = q;
                 this.relatedSearchQuery = '';
-                console.log(this.activeQuestion)
                 this.setView('detail');
                 return
             },
@@ -252,9 +280,6 @@
             },
 
             toggleQuestionTag(tag) {
-                // if (!this.activeQuestion.tags) {
-                //     this.activeQuestion.tags = [];
-                // }
                 if (this.activeQuestion.tags.includes(tag)) {
                     this.activeQuestion.tags = this.activeQuestion.tags.filter(t => t !== tag);
                 } else {
@@ -263,9 +288,6 @@
             },
 
             toggleRelatedQuestion(qId) {
-                // if (!this.activeQuestion.relatedQuestions) {
-                //     this.activeQuestion.relatedQuestions = [];
-                // }
                 if (this.activeQuestion.relatedQuestions.includes(qId)) {
                     this.activeQuestion.relatedQuestions = this.activeQuestion.relatedQuestions.filter(id => id !== qId);
                 } else {
@@ -275,15 +297,57 @@
 
             async updateQuestion() {
                 const question = this.questions.filter(q => q.id === this.activeQuestion.id)[0];
-                console.log(question)
                 if (!_.isEqual(question, this.activeQuestion)) {
-                    const res = await fetch("/api/v1/question", {
+                    await fetch("/api/v1/question", {
                         method: "PUT",
                         body: JSON.stringify(Question.toModel(this.activeQuestion))
-                    })
-                    const json = await res.json()
-                    console.log(json)
+                    });
                 }
+            },
+
+            async getUsers() {
+                const res = await fetch('/api/v1/user');
+                const json = await res.json();
+                this.users = Array.isArray(json) ? json.map((u) => User.fromJSON(u)) : [User.fromJSON(json)];
+            },
+
+            async deleteUser(id) {
+                await fetch(`/api/v1/user/${id}`, {
+                    method: "DELETE"
+                }).then(res => {
+                    if (res.ok) {
+                        this.users = [...this.users.filter(u => u.id !== id)]
+                    }
+                })
+            },
+
+            openUser(u) {
+                this.activeUser = u;
+            },
+
+            async updateUser() {
+                const data = JSON.stringify(User.toModel(this.activeUser));
+                await fetch("/api/v1/user", {
+                    method: "PUT",
+                    body: data
+                })
+            },
+
+            async getTags() {
+                const res = await fetch("/api/v1/tag");
+                const json = await res.json();
+                const list = Array.isArray(json) ? json : [json];
+                this.availableTags = list.map((t) => Tag.fromJSON(t));
+            },
+
+            async registerTag(name, cateogryId) {
+                const data = Tag.toModel({name: name, categoryId: cateogryId});
+                const res = await fetch('/api/v1/tag', {
+                    method: "POST",
+                    body: JSON.stringify(data)
+                });
+                const json = await res.json();
+                console.log(json);
             },
 
             toggleSidebar() {
@@ -291,7 +355,7 @@
             },
 
             async registerUser(email, name, pass, role) {
-                const data = User.toModel({email: email, name: name, password: pass, roleId: role})
+                const data = User.toModel({email: email, name: name, password: pass, roleId: role});
                 await fetch("/api/v1/user", {
                     method: "POST",
                     body: JSON.stringify(data),
@@ -311,7 +375,7 @@
 </script>
 
 <script type="module">
-    import { Question } from '/static/js/model.js';
+    import { Question, User, Tag } from '/static/js/model.js';
 
     document.addEventListener('DOMContentLoaded', () => {
         const es = new EventSource('/sse');
@@ -343,6 +407,24 @@
                     detail: question,
                 }));
             } catch (_) { }
+        });
+
+        es.addEventListener('user', (event) => {
+            try {
+                const user = User.fromJSON(JSON.parse(event.data));
+                document.dispatchEvent(new CustomEvent('sse-user', {
+                    detail: user,
+                }));
+            } catch (fail) { console.log(fail) }
+        });
+
+        es.addEventListener('tag', (event) => {
+            try {
+                const tag = Tag.fromJSON(JSON.parse(event.data));
+                document.dispatchEvent(new CustomEvent('sse-tag', {
+                    detail: tag,
+                }));
+            } catch (fail) { console.log(fail) }
         });
     });
 </script>

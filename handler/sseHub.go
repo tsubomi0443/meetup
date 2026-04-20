@@ -99,6 +99,42 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 		}
 	}()
 
+	go func() {
+		for range tickHalfSecond.C {
+			models, err := getUsers(ctx, db)
+			if err != nil {
+				hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
+				continue
+			}
+			for _, model := range models {
+				if data, err := json.Marshal(model); err != nil {
+					hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
+					continue
+				} else {
+					hub.Broadcast <- Event{Event: "user", Data: string(data)}
+				}
+			}
+		}
+	}()
+
+	go func() {
+		for range tickHalfSecond.C {
+			models, err := getTags(ctx, db)
+			if err != nil {
+				hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
+				continue
+			}
+			for _, model := range models {
+				if data, err := json.Marshal(model); err != nil {
+					hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
+					continue
+				} else {
+					hub.Broadcast <- Event{Event: "tag", Data: string(data)}
+				}
+			}
+		}
+	}()
+
 	<-ctx.Done()
 	return nil
 }

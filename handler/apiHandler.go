@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"meetup/_mac_infrastructure"
+	infrastructure "meetup/_mac_infrastructure"
 	"net/http"
 	"strconv"
 
@@ -24,12 +24,30 @@ func (hm *HandlerManager) SetAPIHandler() (routeInfos []echo.RouteInfo) {
 		// サンプルレスポンス
 		return c.HTML(http.StatusOK, `<div class="alert alert-success">サンプルジョーク: なぜプログラマーはハロウィンが好きか？クリスマスが怖いから（Oct 31 == Dec 25）</div>`)
 	}))
-	routeInfos = append(routeInfos, hm.e.POST(apiPath+"/user", hm.registerUser()))
-	routeInfos = append(routeInfos, hm.e.GET(apiPath+"/question/:id", hm.getQuestionByID()))
-	routeInfos = append(routeInfos, hm.e.POST(apiPath+"/question", hm.registerQuestion()))
-	routeInfos = append(routeInfos, hm.e.DELETE(apiPath+"/question/:id", hm.deleteQuestionByID()))
-	routeInfos = append(routeInfos, hm.e.PUT(apiPath+"/question", hm.updateQuestionByID()))
+	routeInfos = append(routeInfos, hm.setupUserHandler()...)
+	routeInfos = append(routeInfos, hm.setupQuestionHandler()...)
 
+	return
+}
+
+func (hm *HandlerManager) setupUserHandler() (routeInfos []echo.RouteInfo) {
+	const uri = apiPath + "/user"
+	const uriWithID = uri + "/:id"
+
+	routeInfos = append(routeInfos, hm.e.POST(uri, hm.registerUser()))
+	routeInfos = append(routeInfos, hm.e.PUT(uri, hm.updateUserByID()))
+	routeInfos = append(routeInfos, hm.e.DELETE(uriWithID, hm.deleteUserByID()))
+	return
+}
+
+func (hm *HandlerManager) setupQuestionHandler() (routeInfos []echo.RouteInfo) {
+	const uri = apiPath + "/question"
+	const uriWithID = uri + "/:id"
+
+	routeInfos = append(routeInfos, hm.e.POST(uri, hm.registerQuestion()))
+	routeInfos = append(routeInfos, hm.e.GET(uriWithID, hm.getQuestionByID()))
+	routeInfos = append(routeInfos, hm.e.DELETE(uriWithID, hm.deleteQuestionByID()))
+	routeInfos = append(routeInfos, hm.e.PUT(uri, hm.updateQuestionByID()))
 	return
 }
 
@@ -46,7 +64,7 @@ func (hm *HandlerManager) registerUser() echo.HandlerFunc {
 			return err
 		}
 		fmt.Println(data)
-		return registerUser(c.Request().Context(), hm.db, &data)
+		return register(c.Request().Context(), hm.db, &data)
 	}
 }
 
@@ -64,7 +82,33 @@ func (hm *HandlerManager) registerQuestion() echo.HandlerFunc {
 			return err
 		}
 
-		return registerQuestion(c.Request().Context(), hm.db, &data)
+		return register(c.Request().Context(), hm.db, &data)
+	}
+}
+
+func (hm *HandlerManager) registerTag() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		body, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			return err
+		}
+		defer c.Request().Body.Close()
+
+		model := infrastructure.Tag{}
+		if err := json.Unmarshal(body, &model); err != nil {
+			return err
+		}
+		return register(c.Request().Context(), hm.db, model)
+	}
+}
+
+func (hm *HandlerManager) getUsers() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		users, err := getUsers(c.Request().Context(), hm.db)
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, users)
 	}
 }
 
@@ -87,22 +131,17 @@ func (hm *HandlerManager) getQuestionByID() echo.HandlerFunc {
 
 func (hm *HandlerManager) updateQuestionByID() echo.HandlerFunc {
 	return func(c *echo.Context) error {
-		fmt.Println("IN")
 		updatedModel := infrastructure.Question{}
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 		defer c.Request().Body.Close()
-		fmt.Println("READBODY")
-		fmt.Println(string(body))
 		if err := json.Unmarshal(body, &updatedModel); err != nil {
-			fmt.Println("UNMARSHAL")
 			return err
 		}
 
-		if _, err := gorm.G[infrastructure.Question](hm.db).Updates(c.Request().Context(), updatedModel); err != nil {
+		if _, err := updates(c.Request().Context(), hm.db, updatedModel); err != nil {
 			return err
 		}
 		return c.JSON(http.StatusOK, nil)
@@ -124,13 +163,64 @@ func (hm *HandlerManager) deleteQuestionByID() echo.HandlerFunc {
 	}
 }
 
-func registerUser(ctx context.Context, db *gorm.DB, user *infrastructure.User) error {
-	return gorm.G[infrastructure.User](db).Create(ctx, user)
+func (hm *HandlerManager) deleteUserByID() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		idStr := c.Param("id")
+		id, err := strconv.ParseInt(idStr, 0, 10)
+		if err != nil {
+			return err
+		}
+		if err := deleteUser(c.Request().Context(), hm.db, id); err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, nil)
+	}
+}
+
+func (hm *HandlerManager) updateUserByID() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		body, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			return err
+		}
+		defer c.Request().Body.Close()
+
+		updatedModel := infrastructure.User{}
+		if err := json.Unmarshal(body, &updatedModel); err != nil {
+			return err
+		}
+
+		updatedModel.Role = infrastructure.Role{}
+		fmt.Println(updatedModel)
+		if _, err := updates(c.Request().Context(), hm.db, updatedModel, "Role"); err != nil {
+			return c.JSON(http.StatusInternalServerError, err)
+		}
+		return c.JSON(http.StatusOK, nil)
+	}
 }
 
 func getUsers(ctx context.Context, db *gorm.DB) (models []infrastructure.User, err error) {
-	models, err = gorm.G[infrastructure.User](db).Find(ctx)
+	models, err = gorm.G[infrastructure.User](db).
+		Preload("Role", nil).
+		Select("id, name, email, role_id").Find(ctx)
 	return
+}
+
+func register[T any](ctx context.Context, db *gorm.DB, model T, preloads ...string) error {
+	var v = gorm.G[T](db)
+	for _, preload := range preloads {
+		v.Preload(preload, nil)
+	}
+	return v.Create(ctx, &model)
+}
+
+func updates[T any](ctx context.Context, db *gorm.DB, model T, preloads ...string) (int, error) {
+	var v = gorm.G[T](db)
+	for _, preload := range preloads {
+		v.Preload(preload, nil)
+	}
+	return v.Updates(ctx, model)
 }
 
 func deleteQuestion(ctx context.Context, db *gorm.DB, id int64) error {
@@ -150,6 +240,16 @@ func deleteQuestion(ctx context.Context, db *gorm.DB, id int64) error {
 		Preload("Support.User", nil).
 		Preload("Support.User.Role", nil).
 		Preload("Support.SupportStatus", nil).
+		Where("id = ?", id).
+		Delete(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteUser(ctx context.Context, db *gorm.DB, id int64) error {
+	if _, err := gorm.G[infrastructure.User](db).
+		Preload("Role", nil).
 		Where("id = ?", id).
 		Delete(ctx); err != nil {
 		return err
@@ -218,6 +318,9 @@ func getQuestions(ctx context.Context, db *gorm.DB) (models []infrastructure.Que
 	return
 }
 
-func registerQuestion(ctx context.Context, db *gorm.DB, body *infrastructure.Question) error {
-	return gorm.G[infrastructure.Question](db).Create(ctx, body)
+func getTags(ctx context.Context, db *gorm.DB) (models []infrastructure.Tag, err error) {
+	models, err = gorm.G[infrastructure.Tag](db).
+		Preload("Category", nil).
+		Find(ctx)
+	return
 }

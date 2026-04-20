@@ -19,7 +19,7 @@
                 </tr>
             </thead>
             <tbody>
-                <template x-for="u in users" :key="u.email">
+                <template x-for="u in users" :key="u.id">
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td>
                             <div class="flex items-center gap-3">
@@ -32,9 +32,9 @@
                             </div>
                         </td>
                         <td><span class="badge badge-sm font-bold"
-                                :class="u.role === 'Manager' ? 'badge-info bg-slate-100 text-slate-800 border-slate-200' : 'badge-ghost'"
-                                x-text="u.role"></span></td>
-                        <td><button class="text-gray-400 hover:text-slate-800"><i data-lucide="edit-2"
+                                :class="u.roleId === 2 ? 'badge-info bg-slate-100 text-slate-800 border-slate-200' : 'badge-ghost'"
+                                x-text="(u.role && u.role.roleName) || ''"></span></td>
+                        <td><button class="text-gray-400 hover:text-slate-800" @click="showEditUserModal = true; openUser(u)"><i data-lucide="edit-2"
                                     class="w-4 h-4"></i></button></td>
                     </tr>
                 </template>

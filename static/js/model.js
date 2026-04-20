@@ -172,7 +172,7 @@ export class User {
       Name:      form.name,
       Email:     form.email,
       Passwordd: form.password,
-      RoleID:    form.roleId,
+      RoleID:    form.roleId ? parseInt(form.roleId) : null,
       Role:      form.role ? Role.toModel(form.role) : null,
       Supports:  (form.supports ?? []).map((support) => Support.toModel(support)),
       Answers:   (form.answers  ?? []).map((answer) => Answer.toModel(answer)),

@@ -6,7 +6,7 @@
   # 起動前にTailwindをビルド + vendorコピー
   pre_cmd = ["bun run --cwd frontend build"]
   include_file = ["frontend/package.json", "./.env", "./.air.toml"]
-  exclude_dir = ["frontend/node_modules"]
+  exclude_dir = ["frontend/node_modules", "static/vendor"]
   # Goのビルド
   cmd = "go build -o ./tmp/main ."
   # プロセス停止時の待機時間（ミリ秒）
