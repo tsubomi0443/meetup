@@ -1,8 +1,7 @@
 /**
  * model.js
- * Go の _mac_infrastructure（entity）に対応する
- * クライアントサイドクラス定義。
- * SSE 経由で受信した JSON オブジェクトを fromJSON() で復元できます。
+ * Go の _mac_infrastructure（Form / entity）に対応するクライアント側クラス。
+ * サーバは camelCase の Form JSON を返す。SSE / API の JSON を fromJSON() で復元する。
  *
  * 使用例:
  *   const es = new EventSource('/sse');
@@ -11,6 +10,23 @@
  *     console.log(q.title);
  *   });
  */
+
+// ---------------------------------------------------------------------------
+// JSON helpers (camelCase + ISO8601)
+// ---------------------------------------------------------------------------
+
+/**
+ * API 送信用のプレーンオブジェクト（Date は ISO8601）。
+ * @param {object} form
+ * @returns {Object}
+ */
+export function formToApiJson(form) {
+  return JSON.parse(
+    JSON.stringify(form, (_key, value) =>
+      value instanceof Date ? value.toISOString() : value,
+    ),
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Role
@@ -30,19 +46,15 @@ export class Role {
   /** @param {Object} json @returns {Role} */
   static fromJSON(json) {
     return new Role(
-      json.ID,
-      json.RoleName,
-      (json.Users ?? []).map(User.fromJSON),
+      json.id,
+      json.roleName,
+      (json.users ?? []).map(User.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:       form.id,
-      RoleName: form.roleName,
-      Users:    (form.users ?? []).map((user) => User.toModel(user)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -64,19 +76,15 @@ export class SupportStatus {
   /** @param {Object} json @returns {SupportStatus} */
   static fromJSON(json) {
     return new SupportStatus(
-      json.ID,
-      json.Title,
-      (json.Supports ?? []).map(Support.fromJSON),
+      json.id,
+      json.title,
+      (json.supports ?? []).map(Support.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:       form.id,
-      Title:    form.title,
-      Supports: (form.supports ?? []).map((support) => Support.toModel(support)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -104,25 +112,18 @@ export class Support {
   /** @param {Object} json @returns {Support} */
   static fromJSON(json) {
     return new Support(
-      json.ID,
-      json.UserID,
-      json.SupportStatusID,
-      json.User          ? User.fromJSON(json.User)                 : null,
-      json.SupportStatus ? SupportStatus.fromJSON(json.SupportStatus) : null,
-      (json.Questions ?? []).map(Question.fromJSON),
+      json.id,
+      json.userId,
+      json.supportStatusId,
+      json.user ? User.fromJSON(json.user) : null,
+      json.supportStatus ? SupportStatus.fromJSON(json.supportStatus) : null,
+      (json.questions ?? []).map(Question.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:              form.id,
-      UserID:          form.userId,
-      SupportStatusID: form.supportStatusId,
-      User:            form.user ? User.toModel(form.user) : null,
-      SupportStatus:   form.supportStatus ? SupportStatus.toModel(form.supportStatus) : null,
-      Questions:       (form.questions ?? []).map((question) => Question.toModel(question)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -154,30 +155,20 @@ export class User {
   /** @param {Object} json @returns {User} */
   static fromJSON(json) {
     return new User(
-      json.ID,
-      json.Name,
-      json.Email,
-      json.RoleID,
-      json.Role     ? Role.fromJSON(json.Role)               : null,
-      (json.Supports ?? []).map(Support.fromJSON),
-      (json.Answers  ?? []).map(Answer.fromJSON),
-      (json.Memos    ?? []).map(Memo.fromJSON),
+      json.id,
+      json.name,
+      json.email,
+      json.roleId,
+      json.role ? Role.fromJSON(json.role) : null,
+      (json.supports ?? []).map(Support.fromJSON),
+      (json.answers ?? []).map(Answer.fromJSON),
+      (json.memos ?? []).map(Memo.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:        form.id,
-      Name:      form.name,
-      Email:     form.email,
-      Passwordd: form.password,
-      RoleID:    form.roleId ? parseInt(form.roleId) : null,
-      Role:      form.role ? Role.toModel(form.role) : null,
-      Supports:  (form.supports ?? []).map((support) => Support.toModel(support)),
-      Answers:   (form.answers  ?? []).map((answer) => Answer.toModel(answer)),
-      Memos:     (form.memos    ?? []).map((memo) => Memo.toModel(memo)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -199,19 +190,15 @@ export class Category {
   /** @param {Object} json @returns {Category} */
   static fromJSON(json) {
     return new Category(
-      json.ID,
-      json.CategoryName,
-      (json.Tags ?? []).map(Tag.fromJSON),
+      json.id,
+      json.categoryName,
+      (json.tags ?? []).map(Tag.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:           form.id,
-      CategoryName: form.categoryName,
-      Tags:         (form.tags ?? []).map((tag) => Tag.toModel(tag)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -239,25 +226,18 @@ export class Tag {
   /** @param {Object} json @returns {Tag} */
   static fromJSON(json) {
     return new Tag(
-      json.ID,
-      json.Title,
-      json.Usage,
-      json.CategoryID,
-      json.Category  ? Category.fromJSON(json.Category)         : null,
-      (json.Questions ?? []).map(Question.fromJSON),
+      json.id,
+      json.title,
+      json.usage,
+      json.categoryId,
+      json.category ? Category.fromJSON(json.category) : null,
+      (json.questions ?? []).map(Question.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:         form.id,
-      Title:      form.title,
-      Usage:      form.usage,
-      CategoryID: form.categoryId,
-      Category:   form.category ? Category.toModel(form.category) : null,
-      Questions:  (form.questions ?? []).map((question) => Question.toModel(question)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -281,21 +261,16 @@ export class Refer {
   /** @param {Object} json @returns {Refer} */
   static fromJSON(json) {
     return new Refer(
-      json.ID,
-      json.Title,
-      json.URL,
-      (json.Answers ?? []).map(Answer.fromJSON),
+      json.id,
+      json.title,
+      json.url,
+      (json.answers ?? []).map(Answer.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:      form.id,
-      Title:   form.title,
-      URL:     form.url,
-      Answers: (form.answers ?? []).map((answer) => Answer.toModel(answer)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -323,25 +298,18 @@ export class Memo {
   /** @param {Object} json @returns {Memo} */
   static fromJSON(json) {
     return new Memo(
-      json.ID,
-      json.QuestionID,
-      json.UserID,
-      json.Content,
-      json.Question ? Question.fromJSON(json.Question) : null,
-      json.User     ? User.fromJSON(json.User)         : null,
+      json.id,
+      json.questionId,
+      json.userId,
+      json.content,
+      json.question ? Question.fromJSON(json.question) : null,
+      json.user ? User.fromJSON(json.user) : null,
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:         form.id,
-      QuestionID: form.questionId,
-      UserID:     form.userId,
-      Content:    form.content,
-      Question:   form.question ? Question.toModel(form.question) : null,
-      User:       form.user ? User.toModel(form.user) : null,
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -375,31 +343,21 @@ export class Answer {
   /** @param {Object} json @returns {Answer} */
   static fromJSON(json) {
     return new Answer(
-      json.ID,
-      json.UserID,
-      json.QuestionID,
-      json.Content,
-      json.AnsweredAt ?? null,
-      json.CreatedAt,
-      json.User     ? User.fromJSON(json.User)         : null,
-      json.Question ? Question.fromJSON(json.Question) : null,
-      (json.Refers ?? []).map(Refer.fromJSON),
+      json.id,
+      json.userId,
+      json.questionId,
+      json.content,
+      json.answeredAt ?? null,
+      json.createdAt,
+      json.user ? User.fromJSON(json.user) : null,
+      json.question ? Question.fromJSON(json.question) : null,
+      (json.refers ?? []).map(Refer.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:         form.id,
-      UserID:     form.userId,
-      QuestionID: form.questionId,
-      Content:    form.content,
-      AnsweredAt: form.answeredAt ? form.answeredAt.toISOString() : null,
-      CreatedAt:  form.createdAt ? form.createdAt.toISOString() : null,
-      User:       form.user ? User.toModel(form.user) : null,
-      Question:   form.question ? Question.toModel(form.question) : null,
-      Refers:     (form.refers ?? []).map((refer) => Refer.toModel(refer)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -427,25 +385,18 @@ export class Escalation {
   /** @param {Object} json @returns {Escalation} */
   static fromJSON(json) {
     return new Escalation(
-      json.ID,
-      json.FromQuestionID,
-      json.ToQuestionID,
-      json.EscalatedAt,
-      json.FromQuestion ? Question.fromJSON(json.FromQuestion) : null,
-      json.ToQuestion   ? Question.fromJSON(json.ToQuestion)   : null,
+      json.id,
+      json.fromQuestionId,
+      json.toQuestionId,
+      json.escalatedAt ?? new Date().toISOString(),
+      json.fromQuestion ? Question.fromJSON(json.fromQuestion) : null,
+      json.toQuestion ? Question.fromJSON(json.toQuestion) : null,
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:             form.id,
-      FromQuestionID: form.fromQuestionId,
-      ToQuestionID:   form.toQuestionId,
-      EscalatedAt:    form.escalatedAt ? form.escalatedAt.toISOString() : null,
-      FromQuestion:   form.fromQuestion ? Question.toModel(form.fromQuestion) : null,
-      ToQuestion:     form.toQuestion ? Question.toModel(form.toQuestion) : null,
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -496,43 +447,27 @@ export class Question {
   /** @param {Object} json @returns {Question} */
   static fromJSON(json) {
     return new Question(
-      json.ID,
-      json.OriginQuestionID ?? null,
-      json.SupportID        ?? null,
-      json.Title,
-      json.Content,
-      json.Due     ?? null,
-      json.CreatedAt,
-      json.OriginQuestion ? Question.fromJSON(json.OriginQuestion) : null,
-      (json.SubQuestions    ?? []).map(Question.fromJSON),
-      json.Support          ? Support.fromJSON(json.Support)       : null,
-      (json.Answers         ?? []).map(Answer.fromJSON),
-      (json.Memos           ?? []).map(Memo.fromJSON),
-      (json.Tags            ?? []).map(Tag.fromJSON),
-      (json.EscalationsFrom ?? []).map(Escalation.fromJSON),
-      (json.EscalationsTo   ?? []).map(Escalation.fromJSON),
+      json.id,
+      json.originQuestionId ?? null,
+      json.supportId ?? null,
+      json.title,
+      json.content,
+      json.due ?? null,
+      json.createdAt,
+      json.originQuestion ? Question.fromJSON(json.originQuestion) : null,
+      (json.subQuestions ?? []).map(Question.fromJSON),
+      json.support ? Support.fromJSON(json.support) : null,
+      (json.answers ?? []).map(Answer.fromJSON),
+      (json.memos ?? []).map(Memo.fromJSON),
+      (json.tags ?? []).map(Tag.fromJSON),
+      (json.escalationsFrom ?? []).map(Escalation.fromJSON),
+      (json.escalationsTo ?? []).map(Escalation.fromJSON),
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:               form.id,
-      OriginQuestionID: form.originQuestionId,
-      SupportID:        form.supportId,
-      Title:            form.title,
-      Content:          form.content,
-      Due:              form.due ? form.due.toISOString() : null,
-      CreatedAt:        form.createdAt ? form.createdAt.toISOString() : null,
-      OriginQuestion:   form.originQuestion ? Question.toModel(form.originQuestion) : null,
-      SubQuestions:     (form.subQuestions    ?? []).map((question) => Question.toModel(question)),
-      Support:          form.support ? Support.toModel(form.support) : null,
-      Answers:          (form.answers         ?? []).map((answer) => Answer.toModel(answer)),
-      Memos:            (form.memos           ?? []).map((memo) => Memo.toModel(memo)),
-      Tags:             (form.tags            ?? []).map((tag) => Tag.toModel(tag)),
-      EscalationsFrom:  (form.escalationsFrom ?? []).map((escalation) => Escalation.toModel(escalation)),
-      EscalationsTo:    (form.escalationsTo   ?? []).map((escalation) => Escalation.toModel(escalation)),
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -558,23 +493,17 @@ export class ReferManager {
   /** @param {Object} json @returns {ReferManager} */
   static fromJSON(json) {
     return new ReferManager(
-      json.ID,
-      json.AnswerID,
-      json.ReferID,
-      json.Answer ? Answer.fromJSON(json.Answer) : null,
-      json.Refer  ? Refer.fromJSON(json.Refer)   : null,
+      json.id,
+      json.answerId,
+      json.referId,
+      json.answer ? Answer.fromJSON(json.answer) : null,
+      json.refer ? Refer.fromJSON(json.refer) : null,
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:       form.id,
-      AnswerID: form.answerId,
-      ReferID:  form.referId,
-      Answer:   form.answer ? Answer.toModel(form.answer) : null,
-      Refer:    form.refer ? Refer.toModel(form.refer) : null,
-    };
+    return formToApiJson(form);
   }
 }
 
@@ -600,22 +529,16 @@ export class TagManager {
   /** @param {Object} json @returns {TagManager} */
   static fromJSON(json) {
     return new TagManager(
-      json.ID,
-      json.TagID,
-      json.QuestionID,
-      json.Tag      ? Tag.fromJSON(json.Tag)           : null,
-      json.Question ? Question.fromJSON(json.Question) : null,
+      json.id,
+      json.tagId,
+      json.questionId,
+      json.tag ? Tag.fromJSON(json.tag) : null,
+      json.question ? Question.fromJSON(json.question) : null,
     );
   }
 
   /** @returns {Object} */
   static toModel(form) {
-    return {
-      ID:         form.id,
-      TagID:      form.tagId,
-      QuestionID: form.questionId,
-      Tag:        form.tag ? Tag.toModel(form.tag) : null,
-      Question:   form.question ? Question.toModel(form.question) : null,
-    };
+    return formToApiJson(form);
   }
 }

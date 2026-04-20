@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	infrastructure "meetup/_mac_infrastructure"
+
 	"gorm.io/gorm"
 )
 
@@ -89,7 +91,8 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 				continue
 			}
 			for _, model := range models {
-				if data, err := json.Marshal(model); err != nil {
+				qf := infrastructure.QuestionFromEntity(model)
+				if data, err := json.Marshal(qf); err != nil {
 					hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
 					continue
 				} else {
@@ -107,7 +110,8 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 				continue
 			}
 			for _, model := range models {
-				if data, err := json.Marshal(model); err != nil {
+				uf := infrastructure.UserFromEntity(model)
+				if data, err := json.Marshal(uf); err != nil {
 					hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
 					continue
 				} else {
@@ -125,7 +129,8 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 				continue
 			}
 			for _, model := range models {
-				if data, err := json.Marshal(model); err != nil {
+				tf := infrastructure.TagFromEntity(model)
+				if data, err := json.Marshal(tf); err != nil {
 					hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
 					continue
 				} else {

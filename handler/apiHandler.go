@@ -59,10 +59,11 @@ func (hm *HandlerManager) registerUser() echo.HandlerFunc {
 		}
 		defer c.Request().Body.Close()
 
-		data := infrastructure.User{}
-		if err := json.Unmarshal(body, &data); err != nil {
+		var form infrastructure.UserForm
+		if err := json.Unmarshal(body, &form); err != nil {
 			return err
 		}
+		data := infrastructure.UserToEntity(form)
 		fmt.Println(data)
 		return register(c.Request().Context(), hm.db, &data)
 	}
@@ -76,12 +77,12 @@ func (hm *HandlerManager) registerQuestion() echo.HandlerFunc {
 		}
 		defer c.Request().Body.Close()
 
-		data := infrastructure.Question{}
-		if err := json.Unmarshal(body, &data); err != nil {
+		var form infrastructure.QuestionForm
+		if err := json.Unmarshal(body, &form); err != nil {
 			fmt.Println(err.Error())
 			return err
 		}
-
+		data := infrastructure.QuestionToEntity(form)
 		return register(c.Request().Context(), hm.db, &data)
 	}
 }
@@ -94,11 +95,12 @@ func (hm *HandlerManager) registerTag() echo.HandlerFunc {
 		}
 		defer c.Request().Body.Close()
 
-		model := infrastructure.Tag{}
-		if err := json.Unmarshal(body, &model); err != nil {
+		var form infrastructure.TagForm
+		if err := json.Unmarshal(body, &form); err != nil {
 			return err
 		}
-		return register(c.Request().Context(), hm.db, model)
+		model := infrastructure.TagToEntity(form)
+		return register(c.Request().Context(), hm.db, &model)
 	}
 }
 
@@ -108,7 +110,7 @@ func (hm *HandlerManager) getUsers() echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, users)
+		return c.JSON(http.StatusOK, infrastructure.UserFormsFromEntities(users))
 	}
 }
 
@@ -125,22 +127,22 @@ func (hm *HandlerManager) getQuestionByID() echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		return c.JSON(http.StatusOK, model)
+		return c.JSON(http.StatusOK, infrastructure.QuestionFromEntity(model))
 	}
 }
 
 func (hm *HandlerManager) updateQuestionByID() echo.HandlerFunc {
 	return func(c *echo.Context) error {
-		updatedModel := infrastructure.Question{}
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
 			return err
 		}
 		defer c.Request().Body.Close()
-		if err := json.Unmarshal(body, &updatedModel); err != nil {
+		var form infrastructure.QuestionForm
+		if err := json.Unmarshal(body, &form); err != nil {
 			return err
 		}
-
+		updatedModel := infrastructure.QuestionToEntity(form)
 		if _, err := updates(c.Request().Context(), hm.db, updatedModel); err != nil {
 			return err
 		}
@@ -186,11 +188,11 @@ func (hm *HandlerManager) updateUserByID() echo.HandlerFunc {
 		}
 		defer c.Request().Body.Close()
 
-		updatedModel := infrastructure.User{}
-		if err := json.Unmarshal(body, &updatedModel); err != nil {
+		var form infrastructure.UserForm
+		if err := json.Unmarshal(body, &form); err != nil {
 			return err
 		}
-
+		updatedModel := infrastructure.UserToEntity(form)
 		updatedModel.Role = infrastructure.Role{}
 		fmt.Println(updatedModel)
 		if _, err := updates(c.Request().Context(), hm.db, updatedModel, "Role"); err != nil {
