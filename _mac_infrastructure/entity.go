@@ -1,6 +1,8 @@
 package infrastructure
 
-import "time"
+import (
+	"time"
+)
 
 // =====================
 // ROLE

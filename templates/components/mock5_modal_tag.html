@@ -1,12 +1,12 @@
 {{define "mock5_modal_tag"}}
 <div class="modal" :class="{'modal-open': showTagModal}"
-    x-data="{ name: '', categoryId: 0 }">
+    x-data="{ title: '', categoryId: '0' }">
     <div class="modal-box bg-white rounded-2xl shadow-2xl">
         <h3 class="font-bold text-lg mb-6 tracking-tight">タグの管理</h3>
         <div class="space-y-4">
             <input type="text" placeholder="タグ名" class="input input-bordered w-full text-sm shadow-inner"
-                x-model="name" />
-            <select class="select select-bordered w-full text-sm font-bold shadow-inner" x-model="categoryId">
+                x-model="title" />
+            <select class="select select-bordered w-full text-sm shadow-inner" x-model="categoryId">
                 <option value="0" selected disabled>カテゴリを選択</option>
                 <option value="1">総務</option>
                 <option value="2">人事</option>
@@ -15,8 +15,8 @@
         </div>
         <div class="modal-action">
             <button class="btn btn-ghost font-bold" @click="showTagModal = false">キャンセル</button>
-            <button class="btn bg-slate-800 border-none font-bold px-8 shadow-md" :disabled="(name && categoryId) ? false : true"
-                @click="showTagModal = false; registerTag(name, categoryId); pass=''; role=0; alert('タグを登録しました')">タグを追加</button>
+            <button class="btn bg-slate-400 border-none font-bold px-8 shadow-md" :disabled="(title && categoryId !== '0') ? false : true"
+                @click="showTagModal = false; registerTag(title, categoryId); alert('タグを登録しました'); title=''; categoryId='0'">タグを追加</button>
         </div>
     </div>
 </div>

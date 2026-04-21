@@ -19,35 +19,44 @@ const (
 )
 
 func (hm *HandlerManager) SetAPIHandler() (routeInfos []echo.RouteInfo) {
-	// HTMX API エンドポイント
-	routeInfos = append(routeInfos, hm.e.GET(apiPath+"/joke", func(c *echo.Context) error {
-		// サンプルレスポンス
-		return c.HTML(http.StatusOK, `<div class="alert alert-success">サンプルジョーク: なぜプログラマーはハロウィンが好きか？クリスマスが怖いから（Oct 31 == Dec 25）</div>`)
-	}))
 	routeInfos = append(routeInfos, hm.setupUserHandler()...)
 	routeInfos = append(routeInfos, hm.setupQuestionHandler()...)
+	routeInfos = append(routeInfos, hm.setupTagHandler()...)
 
 	return
 }
 
 func (hm *HandlerManager) setupUserHandler() (routeInfos []echo.RouteInfo) {
-	const uri = apiPath + "/user"
+	const uri = "/user"
 	const uriWithID = uri + "/:id"
+	var api = hm.e.Group(apiPath, GetJWTConfig())
 
-	routeInfos = append(routeInfos, hm.e.POST(uri, hm.registerUser()))
-	routeInfos = append(routeInfos, hm.e.PUT(uri, hm.updateUserByID()))
-	routeInfos = append(routeInfos, hm.e.DELETE(uriWithID, hm.deleteUserByID()))
+	routeInfos = append(routeInfos, api.POST(uri, hm.registerUser()))
+	routeInfos = append(routeInfos, api.PUT(uri, hm.updateUserByID()))
+	routeInfos = append(routeInfos, api.DELETE(uriWithID, hm.deleteUserByID()))
 	return
 }
 
 func (hm *HandlerManager) setupQuestionHandler() (routeInfos []echo.RouteInfo) {
-	const uri = apiPath + "/question"
+	const uri = "/question"
 	const uriWithID = uri + "/:id"
+	var api = hm.e.Group(apiPath, GetJWTConfig())
 
-	routeInfos = append(routeInfos, hm.e.POST(uri, hm.registerQuestion()))
-	routeInfos = append(routeInfos, hm.e.GET(uriWithID, hm.getQuestionByID()))
-	routeInfos = append(routeInfos, hm.e.DELETE(uriWithID, hm.deleteQuestionByID()))
-	routeInfos = append(routeInfos, hm.e.PUT(uri, hm.updateQuestionByID()))
+	routeInfos = append(routeInfos, api.POST(uri, hm.registerQuestion()))
+	routeInfos = append(routeInfos, api.GET(uriWithID, hm.getQuestionByID()))
+	routeInfos = append(routeInfos, api.DELETE(uriWithID, hm.deleteQuestionByID()))
+	routeInfos = append(routeInfos, api.PUT(uri, hm.updateQuestionByID()))
+	return
+}
+
+func (hm *HandlerManager) setupTagHandler() (routeInfos []echo.RouteInfo) {
+	const uri = "/tag"
+	const uriWithID = uri + "/:id"
+	var api = hm.e.Group(apiPath, GetJWTConfig())
+
+	routeInfos = append(routeInfos, api.POST(uri, hm.registerTag()))
+	routeInfos = append(routeInfos, api.PUT(uri, hm.updateTag()))
+	routeInfos = append(routeInfos, api.DELETE(uriWithID, hm.deleteTagByID()))
 	return
 }
 
@@ -63,7 +72,7 @@ func (hm *HandlerManager) registerUser() echo.HandlerFunc {
 		if err := json.Unmarshal(body, &form); err != nil {
 			return err
 		}
-		data := infrastructure.UserToEntity(form)
+		data := infrastructure.UserToEntityNoRole(form)
 		fmt.Println(data)
 		return register(c.Request().Context(), hm.db, &data)
 	}
@@ -101,6 +110,43 @@ func (hm *HandlerManager) registerTag() echo.HandlerFunc {
 		}
 		model := infrastructure.TagToEntity(form)
 		return register(c.Request().Context(), hm.db, &model)
+	}
+}
+
+func (hm *HandlerManager) updateTag() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		body, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			return err
+		}
+		defer c.Request().Body.Close()
+
+		var form infrastructure.TagForm
+		if err := json.Unmarshal(body, &form); err != nil {
+			return err
+		}
+		model := infrastructure.TagToEntityNoRelations(form)
+		fmt.Println(model)
+		if _, err := updates(c.Request().Context(), hm.db, model); err != nil {
+			fmt.Println(err)
+			return err
+		}
+		return c.JSON(http.StatusOK, nil)
+	}
+}
+
+func (hm *HandlerManager) deleteTagByID() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		idStr := c.Param("id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			return err
+		}
+
+		if err := deleteTag(c.Request().Context(), hm.db, id); err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, nil)
 	}
 }
 
@@ -192,8 +238,7 @@ func (hm *HandlerManager) updateUserByID() echo.HandlerFunc {
 		if err := json.Unmarshal(body, &form); err != nil {
 			return err
 		}
-		updatedModel := infrastructure.UserToEntity(form)
-		updatedModel.Role = infrastructure.Role{}
+		updatedModel := infrastructure.UserToEntityNoRole(form)
 		fmt.Println(updatedModel)
 		if _, err := updates(c.Request().Context(), hm.db, updatedModel, "Role"); err != nil {
 			return c.JSON(http.StatusInternalServerError, err)
@@ -325,4 +370,11 @@ func getTags(ctx context.Context, db *gorm.DB) (models []infrastructure.Tag, err
 		Preload("Category", nil).
 		Find(ctx)
 	return
+}
+
+func deleteTag(ctx context.Context, db *gorm.DB, id int64) error {
+	if _, err := gorm.G[infrastructure.Tag](db).Where("id = ?", id).Delete(ctx); err != nil {
+		return err
+	}
+	return nil
 }

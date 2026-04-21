@@ -1,0 +1,79 @@
+package handler
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	infrastructure "meetup/_mac_infrastructure"
+	"meetup/env"
+	"net/http"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	echojwt "github.com/labstack/echo-jwt/v5"
+	"github.com/labstack/echo/v5"
+	"gorm.io/gorm"
+)
+
+// TODO; 基本的なJWT認証の一部。まだ本実装には進まない
+func GetJWTConfig() echo.MiddlewareFunc {
+	return echojwt.WithConfig(echojwt.Config{
+		SigningKey: []byte(env.GetJWTKey()),
+		ErrorHandler: func(c *echo.Context, err error) error {
+			return c.Redirect(http.StatusFound, "/login")
+		},
+	})
+}
+
+func (hm *HandlerManager) SetupAuthHandler() (routeInfos []echo.RouteInfo) {
+	routeInfos = append(routeInfos, hm.e.POST("/login", hm.loginHandler()))
+	return
+}
+
+func (hm *HandlerManager) loginHandler() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		body, err := io.ReadAll(c.Request().Body)
+		if err != nil {
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		}
+		defer c.Request().Body.Close()
+
+		var info struct {
+			E string `json:"email"`
+			P string `json:"pass"`
+		}
+
+		if err := json.Unmarshal(body, &info); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		user, err := getUserInfo(c.Request().Context(), hm.db, info.E, info.P)
+		if err != nil {
+			fmt.Println("User not found")
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
+		}
+
+		claims := jwt.MapClaims{
+			"sub":   user.ID,
+			"email": user.Email,
+			"exp":   time.Now().Add(1 * time.Hour).Unix(),
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signed, err := token.SignedString([]byte(env.GetJWTKey()))
+		if err != nil {
+			fmt.Println("Signed Error")
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		return c.JSON(http.StatusOK, map[string]string{
+			"token":    signed,
+			"redirect": "/mock/5",
+		})
+	}
+}
+
+func getUserInfo(ctx context.Context, db *gorm.DB, email, pass string) (user infrastructure.User, err error) {
+	user, err = gorm.G[infrastructure.User](db).Where("email = ? AND passwordd = ?", email, pass).First(ctx)
+	return
+}

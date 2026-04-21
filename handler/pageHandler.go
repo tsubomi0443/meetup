@@ -11,7 +11,7 @@ func (hm *HandlerManager) SetPageHandler() (routeInfos []echo.RouteInfo) {
 	// 静的ファイル配信
 	routeInfos = append(routeInfos, hm.e.Static("/static", "static"))
 	routeInfos = append(routeInfos, hm.e.GET("/login", hm.loginPage()))
-	routeInfos = append(routeInfos, hm.e.GET("/", hm.homePage(), GetJWTConfig()))
+	routeInfos = append(routeInfos, hm.e.GET("/", hm.homePage()))
 	routeInfos = append(routeInfos, hm.e.GET("/mock/:id", hm.mockup()))
 	return
 }

@@ -82,13 +82,13 @@
                     </div>
 
                     <div>
-                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">カテゴリ</h4>
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">タグ</h4>
                         <div class="relative w-full" x-data="{ isCategoryOpen: false }"
                             @click.outside="isCategoryOpen = false">
                             <button type="button" @click="isCategoryOpen = !isCategoryOpen"
                                 class="btn btn-outline btn-sm border-gray-300 normal-case w-full justify-between font-bold text-gray-700 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800 shadow-sm bg-gray-50">
                                 <span class="truncate text-xs"
-                                    x-text="activeQuestion.tags && activeQuestion.tags.length > 0 ? activeQuestion.tags.join(', ') : 'カテゴリを選択'"></span>
+                                    x-text="activeQuestion.tags && activeQuestion.tags.length > 0 ? activeQuestion.tags.join(', ') : 'タグを選択'"></span>
                                 <i data-lucide="chevron-down" class="w-4 h-4 ml-2 shrink-0"></i>
                             </button>
                             <div x-show="isCategoryOpen" x-transition x-cloak

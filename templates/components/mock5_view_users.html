@@ -1,5 +1,5 @@
 {{define "mock5_view_users"}}
-<div x-show="currentView === 'users'" class="space-y-6" style="display: none;">
+<div x-show="currentView === 'users'" class="flex flex-col gap-6 h-[87vh]" style="display: none;">
     <div class="flex justify-between items-center">
         <div class="relative w-80">
             <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
@@ -9,8 +9,8 @@
         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showAddUserModal = true">+
             ユーザー追加</button>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table class="table w-full">
+    <div class="flex flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-96 overflow-y-auto min-h-0 no-scrollbar">
+        <table class="table w-full table-pin-rows">
             <thead>
                 <tr class="bg-gray-50">
                     <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">氏名</th>

@@ -1,16 +1,16 @@
 {{define "mock5_view_tag"}}
-<div x-show="currentView === 'tag'" class="space-y-6" style="display: none;">
+<div x-show="currentView === 'tag'" class="flex flex-col gap-6 h-[87vh]" style="display: none;">
     <div class="flex justify-between items-center">
         <div class="relative w-80">
             <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
-            <input type="text" placeholder="カテゴリ検索..."
+            <input type="text" placeholder="タグ検索..."
                 class="input input-bordered w-full pl-10 h-10 text-sm focus:border-slate-800 shadow-sm" />
         </div>
         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showTagModal = true">+
-            カテゴリ追加</button>
+            タグ追加</button>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table class="table w-full">
+    <div class="flex flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-96 overflow-y-auto min-h-0 no-scrollbar">
+        <table class="table w-full table-pin-rows">
             <thead>
                 <tr class="bg-gray-50">
                     <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">タグ名</th>
@@ -40,7 +40,9 @@
                             <span class="badge badge-sm font-bold bg-slate-100 text-slate-800 border-slate-200"
                                 x-text="questions.filter(q => q.tags && q.tags.includes(tag.title)).length + '件'"></span>
                         </td>
-                        <td><button class="text-gray-400 hover:text-slate-800"><i data-lucide="edit-2" class="w-4 h-4"></i></button></td>
+                        <td>
+                            <button class="text-gray-400 hover:text-slate-800"><i data-lucide="edit-2" @click="showEditTagModal = true; openEditTag(tag)" class="w-4 h-4"></i></button>
+                        </td>
                     </tr>
                 </template>
             </tbody>

@@ -33,7 +33,7 @@
             class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors"
             :class="[currentView === 'tag' ? 'bg-slate-100 text-slate-800' : 'text-gray-600 hover:bg-gray-50', isSidebarOpen ? 'px-3' : 'justify-center']">
             <i data-lucide="tags" class="w-5 h-5 shrink-0"></i>
-            <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">カテゴリ管理</span>
+            <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">タグ管理</span>
         </button>
 
         <button @click="setView('users')" x-show="isManager"

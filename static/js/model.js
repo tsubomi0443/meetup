@@ -154,11 +154,18 @@ export class User {
 
   /** @param {Object} json @returns {User} */
   static fromJSON(json) {
+    const rid = json.roleId;
+    const roleIdNum =
+      rid === null || rid === undefined || rid === ''
+        ? rid
+        : typeof rid === 'string'
+          ? parseInt(rid, 10)
+          : rid;
     return new User(
       json.id,
       json.name,
       json.email,
-      json.roleId,
+      roleIdNum,
       json.role ? Role.fromJSON(json.role) : null,
       (json.supports ?? []).map(Support.fromJSON),
       (json.answers ?? []).map(Answer.fromJSON),
@@ -225,11 +232,18 @@ export class Tag {
 
   /** @param {Object} json @returns {Tag} */
   static fromJSON(json) {
+    const cid = json.categoryId;
+    const categoryIdVal =
+      cid === null || cid === undefined || cid === ''
+        ? cid
+        : typeof cid === 'string'
+          ? parseInt(cid, 10)
+          : cid;
     return new Tag(
       json.id,
       json.title,
       json.usage,
-      json.categoryId,
+      categoryIdVal,
       json.category ? Category.fromJSON(json.category) : null,
       (json.questions ?? []).map(Question.fromJSON),
     );

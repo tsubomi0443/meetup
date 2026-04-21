@@ -1,6 +1,10 @@
 package infrastructure
 
-import "time"
+import (
+	"fmt"
+	"strconv"
+	"time"
+)
 
 // --- time helpers (ISO8601 / RFC3339) ---
 
@@ -133,7 +137,7 @@ func UserFromEntity(e User) UserForm {
 		ID:     e.ID,
 		Name:   e.Name,
 		Email:  e.Email,
-		RoleID: e.RoleID,
+		RoleID: strconv.FormatInt(e.RoleID, 10),
 	}
 	if e.Role.ID != 0 {
 		r := roleFromEntityShallow(e.Role)
@@ -148,18 +152,36 @@ func UserFromEntityNoRole(e User) UserForm {
 		ID:     e.ID,
 		Name:   e.Name,
 		Email:  e.Email,
-		RoleID: e.RoleID,
+		RoleID: strconv.FormatInt(e.RoleID, 10),
 	}
 }
 
-func UserToEntity(f UserForm) User {
+func UserToEntityNoRole(f UserForm) User {
 	e := User{
 		ID:     f.ID,
 		Name:   f.Name,
 		Email:  f.Email,
-		RoleID: f.RoleID,
+		RoleID: f.RoleIDInt64(),
 	}
-	if f.RoleID == 0 && f.Role != nil {
+	if f.RoleID == "0" && f.Role != nil {
+		e.RoleID = f.Role.ID
+	}
+	if f.Password != "" {
+		e.Passwordd = f.Password
+	}
+	e.Role = Role{}
+	return e
+}
+
+func UserToEntity(f UserForm) User {
+	fmt.Println(f)
+	e := User{
+		ID:     f.ID,
+		Name:   f.Name,
+		Email:  f.Email,
+		RoleID: f.RoleIDInt64(),
+	}
+	if f.RoleID == "0" && f.Role != nil {
 		e.RoleID = f.Role.ID
 	}
 	if f.Password != "" {
@@ -208,7 +230,7 @@ func tagFromEntityShallow(e Tag) TagForm {
 		ID:         e.ID,
 		Title:      e.Title,
 		Usage:      e.Usage,
-		CategoryID: e.CategoryID,
+		CategoryID: strconv.FormatInt(e.CategoryID, 10),
 	}
 	if e.Category.ID != 0 {
 		c := categoryFromEntityShallow(e.Category)
@@ -232,15 +254,14 @@ func TagToEntity(f TagForm) Tag {
 		ID:         f.ID,
 		Title:      f.Title,
 		Usage:      f.Usage,
-		CategoryID: f.CategoryID,
+		CategoryID: f.CategoryIDInt64(),
 	}
 	if f.Category != nil {
 		e.Category = CategoryToEntity(*f.Category)
 	}
-	tagID := f.ID
 	for _, qf := range f.Questions {
 		tm := TagManager{
-			TagID:      tagID,
+			TagID:      f.ID,
 			QuestionID: qf.ID,
 		}
 		if qf.ID != 0 {
@@ -248,6 +269,18 @@ func TagToEntity(f TagForm) Tag {
 		}
 		e.TagManagers = append(e.TagManagers, tm)
 	}
+	return e
+}
+
+func TagToEntityNoRelations(f TagForm) Tag {
+	e := Tag{
+		ID:         f.ID,
+		Title:      f.Title,
+		Usage:      f.Usage,
+		CategoryID: f.CategoryIDInt64(),
+	}
+	e.Category = Category{}
+
 	return e
 }
 

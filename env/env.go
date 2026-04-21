@@ -2,8 +2,11 @@ package env
 
 import (
 	"fmt"
+	"log"
 	"os"
 )
+
+const jwtkey = "JWK_KEY"
 
 // GetDSN builds a Postgres connection string from environment variables (see .env.example).
 func GetDSN() string {
@@ -24,4 +27,12 @@ func getenv(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func GetJWTKey() string {
+	_jwtKey := os.Getenv(jwtkey)
+	if _jwtKey == "" {
+		log.Fatalln(fmt.Errorf("configure to %s", jwtkey))
+	}
+	return _jwtKey
 }

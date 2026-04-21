@@ -20,7 +20,7 @@ func (hm *HandlerManager) SetSSEHandler() (routeInfos []echo.RouteInfo) {
 // sseHandler はSSEストリームを提供するEchoハンドラを返す。
 func (hm *HandlerManager) sseHandler() echo.HandlerFunc {
 	return func(c *echo.Context) error {
-		client := &Client{send: make(chan Event, 8)}
+		client := &Client{send: make(chan Event, 64)}
 		hm.hub.Register <- client
 		defer func() {
 			hm.hub.Unregister <- client
@@ -30,6 +30,7 @@ func (hm *HandlerManager) sseHandler() echo.HandlerFunc {
 		resWriter.Header().Set("Content-Type", "text/event-stream")
 		resWriter.Header().Set("Cache-Control", "no-cache")
 		resWriter.Header().Set("Connection", "keep-alive")
+		resWriter.Header().Set("Transfer-Encoding", "chunked")
 		resWriter.WriteHeader(http.StatusOK)
 
 		flusher, ok := resWriter.(http.Flusher)

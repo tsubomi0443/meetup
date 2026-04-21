@@ -21,6 +21,7 @@ func NewHandlerManager(db *gorm.DB, e *echo.Echo, hub *Hub) *HandlerManager {
 
 func (hm *HandlerManager) SetupHandlers() (routeInfos []echo.RouteInfo) {
 	routeInfos = append(routeInfos, hm.SetPageHandler()...)
+	routeInfos = append(routeInfos, hm.SetupAuthHandler()...)
 	routeInfos = append(routeInfos, hm.SetSSEHandler()...)
 	routeInfos = append(routeInfos, hm.SetAPIHandler()...)
 	return

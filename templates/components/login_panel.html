@@ -1,5 +1,5 @@
 {{define "login_panel"}}
-<div class="min-h-screen flex items-center justify-center p-4 bg-gray-100">
+<div class="min-h-screen flex items-center justify-center p-4 bg-gray-100" x-data="hrAppLogin">
     <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden transition-all">
         <div class="bg-slate-50 p-8 text-center border-b border-gray-100">
             <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4 shadow-inner">
@@ -21,13 +21,13 @@
                 社内アカウントでログイン
             </button>
             <div class="divider text-xs text-gray-400 font-bold uppercase">または</div>
-            <form method="post" action="/login" class="space-y-4">
-                <input type="email" name="email" placeholder="メールアドレス"
-                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" />
-                <input type="password" name="password" placeholder="パスワード"
-                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" />
-                <button type="submit"
-                    class="btn btn-primary w-full bg-slate-800 border-none hover:bg-slate-900 font-bold shadow-lg transition-transform active:scale-95">ログイン</button>
+            <form method="post" class="space-y-4" @submit.prevent>
+                <input type="email" placeholder="メールアドレス"
+                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" x-model="login.email"/>
+                <input type="password" placeholder="パスワード"
+                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" x-model="login.pass"/>
+                <button type="button"
+                    class="btn btn-primary w-full bg-slate-800 border-none hover:bg-slate-900 font-bold shadow-lg transition-transform active:scale-95" @click="doLogin()">ログイン</button>
             </form>
         </div>
     </div>

@@ -1,5 +1,7 @@
 package infrastructure
 
+import "strconv"
+
 // Form types mirror static/js/model.js (camelCase JSON for the UI layer).
 
 // RoleForm corresponds to Role.
@@ -11,9 +13,9 @@ type RoleForm struct {
 
 // SupportStatusForm corresponds to SupportStatus.
 type SupportStatusForm struct {
-	ID       int64          `json:"id"`
-	Title    string         `json:"title"`
-	Supports []SupportForm  `json:"supports,omitempty"`
+	ID       int64         `json:"id"`
+	Title    string        `json:"title"`
+	Supports []SupportForm `json:"supports,omitempty"`
 }
 
 // SupportForm corresponds to Support.
@@ -28,15 +30,22 @@ type SupportForm struct {
 
 // UserForm corresponds to User.
 type UserForm struct {
-	ID        int64          `json:"id"`
-	Name      string         `json:"name"`
-	Email     string         `json:"email"`
-	RoleID    int64          `json:"roleId"`
-	Role      *RoleForm      `json:"role,omitempty"`
-	Supports  []SupportForm  `json:"supports,omitempty"`
-	Answers   []AnswerForm   `json:"answers,omitempty"`
-	Memos     []MemoForm     `json:"memos,omitempty"`
-	Password  string         `json:"password,omitempty"`
+	ID       int64         `json:"id"`
+	Name     string        `json:"name"`
+	Email    string        `json:"email"`
+	RoleID   string        `json:"roleId"`
+	Role     *RoleForm     `json:"role,omitempty"`
+	Supports []SupportForm `json:"supports,omitempty"`
+	Answers  []AnswerForm  `json:"answers,omitempty"`
+	Memos    []MemoForm    `json:"memos,omitempty"`
+	Password string        `json:"password,omitempty"`
+}
+
+func (uf UserForm) RoleIDInt64() int64 {
+	if val, err := strconv.ParseInt(uf.RoleID, 10, 64); err == nil {
+		return val
+	}
+	return -1
 }
 
 // CategoryForm corresponds to Category.
@@ -51,9 +60,16 @@ type TagForm struct {
 	ID         int64          `json:"id"`
 	Title      string         `json:"title"`
 	Usage      int            `json:"usage"`
-	CategoryID int64          `json:"categoryId"`
+	CategoryID string         `json:"categoryId"`
 	Category   *CategoryForm  `json:"category,omitempty"`
 	Questions  []QuestionForm `json:"questions,omitempty"`
+}
+
+func (tf TagForm) CategoryIDInt64() int64 {
+	if val, err := strconv.ParseInt(tf.CategoryID, 10, 64); err == nil {
+		return val
+	}
+	return -1
 }
 
 // ReferForm corresponds to Refer.
@@ -66,35 +82,35 @@ type ReferForm struct {
 
 // MemoForm corresponds to Memo.
 type MemoForm struct {
-	ID         int64          `json:"id"`
-	QuestionID int64          `json:"questionId"`
-	UserID     int64          `json:"userId"`
-	Content    string         `json:"content"`
-	Question   *QuestionForm  `json:"question,omitempty"`
-	User       *UserForm      `json:"user,omitempty"`
+	ID         int64         `json:"id"`
+	QuestionID int64         `json:"questionId"`
+	UserID     int64         `json:"userId"`
+	Content    string        `json:"content"`
+	Question   *QuestionForm `json:"question,omitempty"`
+	User       *UserForm     `json:"user,omitempty"`
 }
 
 // AnswerForm corresponds to Answer.
 type AnswerForm struct {
-	ID         int64          `json:"id"`
-	UserID     int64          `json:"userId"`
-	QuestionID int64          `json:"questionId"`
-	Content    string         `json:"content"`
-	AnsweredAt *string        `json:"answeredAt,omitempty"`
-	CreatedAt  *string        `json:"createdAt,omitempty"`
-	User       *UserForm      `json:"user,omitempty"`
-	Question   *QuestionForm  `json:"question,omitempty"`
-	Refers     []ReferForm    `json:"refers,omitempty"`
+	ID         int64         `json:"id"`
+	UserID     int64         `json:"userId"`
+	QuestionID int64         `json:"questionId"`
+	Content    string        `json:"content"`
+	AnsweredAt *string       `json:"answeredAt,omitempty"`
+	CreatedAt  *string       `json:"createdAt,omitempty"`
+	User       *UserForm     `json:"user,omitempty"`
+	Question   *QuestionForm `json:"question,omitempty"`
+	Refers     []ReferForm   `json:"refers,omitempty"`
 }
 
 // EscalationForm corresponds to Escalation.
 type EscalationForm struct {
-	ID             int64          `json:"id"`
-	FromQuestionID int64          `json:"fromQuestionId"`
-	ToQuestionID   int64          `json:"toQuestionId"`
-	EscalatedAt    *string        `json:"escalatedAt,omitempty"`
-	FromQuestion   *QuestionForm  `json:"fromQuestion,omitempty"`
-	ToQuestion     *QuestionForm  `json:"toQuestion,omitempty"`
+	ID             int64         `json:"id"`
+	FromQuestionID int64         `json:"fromQuestionId"`
+	ToQuestionID   int64         `json:"toQuestionId"`
+	EscalatedAt    *string       `json:"escalatedAt,omitempty"`
+	FromQuestion   *QuestionForm `json:"fromQuestion,omitempty"`
+	ToQuestion     *QuestionForm `json:"toQuestion,omitempty"`
 }
 
 // QuestionForm corresponds to Question.
@@ -108,12 +124,12 @@ type QuestionForm struct {
 	CreatedAt        *string          `json:"createdAt,omitempty"`
 	OriginQuestion   *QuestionForm    `json:"originQuestion,omitempty"`
 	SubQuestions     []QuestionForm   `json:"subQuestions,omitempty"`
-	Support          *SupportForm      `json:"support,omitempty"`
-	Answers          []AnswerForm      `json:"answers,omitempty"`
-	Memos            []MemoForm        `json:"memos,omitempty"`
-	Tags             []TagForm         `json:"tags,omitempty"`
-	EscalationsFrom  []EscalationForm  `json:"escalationsFrom,omitempty"`
-	EscalationsTo    []EscalationForm  `json:"escalationsTo,omitempty"`
+	Support          *SupportForm     `json:"support,omitempty"`
+	Answers          []AnswerForm     `json:"answers,omitempty"`
+	Memos            []MemoForm       `json:"memos,omitempty"`
+	Tags             []TagForm        `json:"tags,omitempty"`
+	EscalationsFrom  []EscalationForm `json:"escalationsFrom,omitempty"`
+	EscalationsTo    []EscalationForm `json:"escalationsTo,omitempty"`
 }
 
 // ReferManagerForm corresponds to ReferManager.
@@ -127,9 +143,9 @@ type ReferManagerForm struct {
 
 // TagManagerForm corresponds to TagManager.
 type TagManagerForm struct {
-	ID         int64          `json:"id"`
-	TagID      int64          `json:"tagId"`
-	QuestionID int64          `json:"questionId"`
-	Tag        *TagForm       `json:"tag,omitempty"`
-	Question   *QuestionForm  `json:"question,omitempty"`
+	ID         int64         `json:"id"`
+	TagID      int64         `json:"tagId"`
+	QuestionID int64         `json:"questionId"`
+	Tag        *TagForm      `json:"tag,omitempty"`
+	Question   *QuestionForm `json:"question,omitempty"`
 }
