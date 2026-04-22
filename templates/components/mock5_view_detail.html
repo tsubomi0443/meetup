@@ -49,7 +49,7 @@
         <div class="w-full lg:w-80 space-y-4 shrink-0">
             <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm space-y-6">
                 <div>
-                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">質問者情報</h4>
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">質問者</h4>
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-sm shadow-inner shrink-0"
                             x-text="activeQuestion.sender?.charAt(0)"></div>
@@ -57,6 +57,17 @@
                             <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.sender"></div>
                             <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider"
                                 x-text="activeQuestion.department"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-0">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">対応情報</h4>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-sm shadow-inner shrink-0"
+                            x-text="activeQuestion.support?.user?.name?.charAt(0)"></div>
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.support?.user?.name"></div>
                         </div>
                     </div>
                 </div>
@@ -74,10 +85,10 @@
                         <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">ステータス</h4>
                         <select
                             class="select select-bordered select-sm w-full text-sm font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner"
-                            @change="updateQuestion()" x-model="activeQuestion.status">
-                            <option value="0">未対応</option>
-                            <option value="1">対応中</option>
-                            <option value="2">完了</option>
+                            @change="updateQuestion()" x-model="activeQuestion.support.supportStatusId">
+                            <option value="1">未対応</option>
+                            <option value="2">対応中</option>
+                            <option value="3">完了</option>
                         </select>
                     </div>
 
@@ -88,22 +99,22 @@
                             <button type="button" @click="isCategoryOpen = !isCategoryOpen"
                                 class="btn btn-outline btn-sm border-gray-300 normal-case w-full justify-between font-bold text-gray-700 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800 shadow-sm bg-gray-50">
                                 <span class="truncate text-xs"
-                                    x-text="activeQuestion.tags && activeQuestion.tags.length > 0 ? activeQuestion.tags.join(', ') : 'タグを選択'"></span>
+                                    x-text="activeQuestion.tags && activeQuestion.tags.length > 0 ? activeQuestion.tags.map(t => t.title).join(', ') : 'タグを選択'"></span>
                                 <i data-lucide="chevron-down" class="w-4 h-4 ml-2 shrink-0"></i>
                             </button>
                             <div x-show="isCategoryOpen" x-transition x-cloak
                                 class="absolute left-0 right-0 z-[50] card card-compact w-full p-2 shadow-xl bg-white border border-gray-200 mt-1">
                                 <div class="card-body p-2">
                                     <div class="flex flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
-                                        <template x-for="tag in availableTags" :key="tag">
+                                        <template x-for="tag in availableTags" :key="tag.id">
                                             <label
                                                 class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group">
                                                 <input type="checkbox"
-                                                    :checked="activeQuestion.tags && activeQuestion.tags.includes(tag)"
+                                                    :checked="activeQuestion.tags && activeQuestion.tags.filter(t => t.title == tag.title).length === 1"
                                                     @change="toggleQuestionTag(tag)"
                                                     class="checkbox checkbox-sm checkbox-primary border-gray-300 rounded" />
                                                 <span class="text-sm font-bold text-gray-700 group-hover:text-slate-900"
-                                                    x-text="tag"></span>
+                                                    x-text="tag.title"></span>
                                             </label>
                                         </template>
                                     </div>

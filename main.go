@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"log"
 	"log/slog"
-	infrastructure "meetup/_mac_infrastructure"
 	"meetup/env"
 	"meetup/handler"
 	"os"
@@ -62,24 +61,6 @@ func setupEcho() *echo.Echo {
 func setupDB() (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(env.GetDSN()))
 	if err != nil {
-		return nil, err
-	}
-
-	if err := db.AutoMigrate(
-		&infrastructure.Role{},
-		&infrastructure.Category{},
-		&infrastructure.SupportStatus{},
-		&infrastructure.User{},
-		&infrastructure.Support{},
-		&infrastructure.Question{},
-		&infrastructure.Answer{},
-		&infrastructure.Memo{},
-		&infrastructure.Refer{},
-		&infrastructure.Tag{},
-		&infrastructure.ReferManager{},
-		&infrastructure.TagManager{},
-		&infrastructure.Escalation{},
-	); err != nil {
 		return nil, err
 	}
 

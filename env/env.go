@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
-const jwtkey = "JWK_KEY"
+const (
+	jwtkey = "JWK_KEY"
+	modeIs = "MODE"
+)
 
 // GetDSN builds a Postgres connection string from environment variables (see .env.example).
 func GetDSN() string {
@@ -35,4 +39,22 @@ func GetJWTKey() string {
 		log.Fatalln(fmt.Errorf("configure to %s", jwtkey))
 	}
 	return _jwtKey
+}
+
+func IsDevelop() bool {
+	switch strings.ToUpper(os.Getenv(modeIs)) {
+	case "DEV", "DEVELOP":
+		return true
+	default:
+		return false
+	}
+}
+
+func IsProduct() bool {
+	switch strings.ToUpper(os.Getenv(modeIs)) {
+	case "PRO", "PROD", "PRODUCT":
+		return true
+	default:
+		return false
+	}
 }

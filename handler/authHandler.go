@@ -16,10 +16,15 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	COOKIE_NAME_TOKEN = "access_token"
+)
+
 // TODO; 基本的なJWT認証の一部。まだ本実装には進まない
 func GetJWTConfig() echo.MiddlewareFunc {
 	return echojwt.WithConfig(echojwt.Config{
-		SigningKey: []byte(env.GetJWTKey()),
+		SigningKey:  []byte(env.GetJWTKey()),
+		TokenLookup: "cookie:" + COOKIE_NAME_TOKEN,
 		ErrorHandler: func(c *echo.Context, err error) error {
 			return c.Redirect(http.StatusFound, "/login")
 		},
@@ -66,14 +71,36 @@ func (hm *HandlerManager) loginHandler() echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
+		c.SetCookie(&http.Cookie{
+			Name:     COOKIE_NAME_TOKEN,
+			Value:    signed,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   env.IsProduct(),
+			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().Add(1 * time.Hour),
+		})
+
 		return c.JSON(http.StatusOK, map[string]string{
-			"token":    signed,
 			"redirect": "/mock/5",
 		})
 	}
 }
 
+func logoutHandler() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		c.SetCookie(&http.Cookie{
+			Name:     COOKIE_NAME_TOKEN,
+			Value:    "",
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: true,
+		})
+		return c.Redirect(http.StatusSeeOther, "/login")
+	}
+}
+
 func getUserInfo(ctx context.Context, db *gorm.DB, email, pass string) (user infrastructure.User, err error) {
-	user, err = gorm.G[infrastructure.User](db).Where("email = ? AND passwordd = ?", email, pass).First(ctx)
+	user, err = gorm.G[infrastructure.User](db).Where("email = ? AND password = ?", email, pass).First(ctx)
 	return
 }

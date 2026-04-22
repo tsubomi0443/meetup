@@ -4,7 +4,7 @@ import "time"
 
 // Question maps to table questions.
 type Question struct {
-	ID               uint64 `gorm:"primaryKey"`
+	ID               uint64  `gorm:"primaryKey"`
 	OriginQuestionID *uint64 `gorm:"index:idx_questions_origin_question_id"`
 	SupportID        *uint64 `gorm:"index:idx_questions_support_id"`
 	Title            string  `gorm:"size:255"`

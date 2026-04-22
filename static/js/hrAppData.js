@@ -12,14 +12,13 @@ document.addEventListener('alpine:init', () => {
         showEditTagModal: false,
         unreadNotices: 1,
         activeQuestion: {},
+        originalQuestion: {},
         activeUser: {},
         activeTag: {},
-        // TODO; InitでTokenからTokenを取得し、通信のタイミングで投げるように変更する。
-        // authorizationHeader: { "Authorization": "Bearer " + token },
         isConnect: false,
 
         selectedTags: [],
-        availableTags: ['諸手当', '休暇', '規程', '健康診断'],
+        availableTags: [],
         searchQuery: '',
         statusFilter: 'all',
         sortOrder: 'date_desc',
@@ -42,10 +41,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         questions: [
-            { id: 1002, sender: '鈴木 一郎', department: 'ここに部署名', title: '通勤手当の経路変更について', content: '引越しに伴い、通勤経路が変更になります。申請手順と必要な書類を教えてください。', status: '未対応', tags: ['諸手当'], daysLeft: 1, date: '2026-04-08 09:30', dueDate: '2026-04-10', relatedQuestions: [] },
-            { id: 1003, sender: '田中 花子', department: 'ここに部署名', title: '育児休業の延長申請', content: '現在取得中の育休を半年間延長したいと考えています。手続きの流れを教えてください。', status: '対応中', tags: ['休暇'], daysLeft: 5, date: '2026-04-04 14:00', dueDate: '2026-04-14', relatedQuestions: [] },
-            { id: 1004, sender: '佐藤 次郎', department: 'ここに部署名', title: '健康診断の受診日変更', content: '指定された健康診断の日程ですが、出張と重なってしまいました。', status: '完了', tags: ['健康診断'], daysLeft: 0, date: '2026-04-01 11:15', dueDate: '2026-04-09', relatedQuestions: [] },
-            { id: 1005, sender: '高橋 三郎', department: 'ここに部署名', title: '慶弔休暇の適用範囲', content: '配偶者の祖父母が亡くなった場合、忌引休暇の対象になりますでしょうか？', status: '未対応', tags: ['規程'], daysLeft: 2, date: '2026-04-07 16:45', dueDate: '2026-04-11', relatedQuestions: [] }
+            { id: 1002, sender: '鈴木 一郎', department: 'ここに部署名', title: '通勤手当の経路変更について', content: '引越しに伴い、通勤経路が変更になります。申請手順と必要な書類を教えてください。', support: { supportStatusId: "1", supportStatus: { id: "1", title: '未対応' } }, tags: [{ id: 50, title: '諸手当' }], daysLeft: 1, date: '2026-04-08 09:30', dueDate: '2026-04-10', relatedQuestions: [] },
+            { id: 1003, sender: '田中 花子', department: 'ここに部署名', title: '育児休業の延長申請', content: '現在取得中の育休を半年間延長したいと考えています。手続きの流れを教えてください。', support: { supportStatusId: "2", supportStatus: { id: "2", title: '対応中' } }, tags: [{ id: 60, title: '休暇' }], daysLeft: 5, date: '2026-04-04 14:00', dueDate: '2026-04-14', relatedQuestions: [] },
+            { id: 1004, sender: '佐藤 次郎', department: 'ここに部署名', title: '健康診断の受診日変更', content: '指定された健康診断の日程ですが、出張と重なってしまいました。', support: { supportStatusId: "3", supportStatus: { id: "3", title: '完了' } }, tags: [{ id: 70, title: '健康診断' }], daysLeft: 0, date: '2026-04-01 11:15', dueDate: '2026-04-09', relatedQuestions: [] },
+            { id: 1005, sender: '高橋 三郎', department: 'ここに部署名', title: '慶弔休暇の適用範囲', content: '配偶者の祖父母が亡くなった場合、忌引休暇の対象になりますでしょうか？', support: { supportStatusId: "1", supportStatus: { id: "1", title: '未対応' } }, tags: [{ id: 80, title: '規程' }, { id: 70, title: '健康診断' }], daysLeft: 2, date: '2026-04-07 16:45', dueDate: '2026-04-11', relatedQuestions: [] }
         ],
 
         notices: [
@@ -58,13 +57,14 @@ document.addEventListener('alpine:init', () => {
 
         get filteredQuestions() {
             let result = this.questions.filter(q => {
-                const matchesTag = this.selectedTags.length === 0 || q.tags.some(tag => this.selectedTags.includes(tag));
+                const matchesTag = this.selectedTags.length === 0 || q.tags.some(tag => this.selectedTags.includes(tag.title));
                 const matchesSearch = q.title.includes(this.searchQuery) || q.content.includes(this.searchQuery) || q.sender.includes(this.searchQuery);
+                const st = q.support?.supportStatus?.title ?? '';
                 let matchesStatus = true;
-                if (this.statusFilter === 'unanswered') matchesStatus = q.status === '未対応';
-                else if (this.statusFilter === 'progress') matchesStatus = q.status === '対応中';
-                else if (this.statusFilter === 'open') matchesStatus = (q.status === '未対応' || q.status === '対応中');
-                else if (this.statusFilter === 'completed') matchesStatus = q.status === '完了';
+                if (this.statusFilter === 'unanswered') matchesStatus = st === '未対応';
+                else if (this.statusFilter === 'progress') matchesStatus = st === '対応中';
+                else if (this.statusFilter === 'open') matchesStatus = (st === '未対応' || st === '対応中');
+                else if (this.statusFilter === 'completed') matchesStatus = st === '完了';
                 return matchesTag && matchesSearch && matchesStatus;
             });
 
@@ -97,8 +97,6 @@ document.addEventListener('alpine:init', () => {
         apiHeaders(withJSON = true) {
             const h = {};
             if (withJSON) h['Content-Type'] = 'application/json';
-            const t = localStorage.getItem('access_token');
-            if (t) h['Authorization'] = 'Bearer ' + t;
             return h;
         },
 
@@ -121,33 +119,35 @@ document.addEventListener('alpine:init', () => {
 
             document.addEventListener('sse-question', (event) => {
                 const question = this.toQuestionViewModel(event.detail);
+                console.log(this.questions)
                 const index = this.questions.findIndex(q => q.id === question.id);
                 if (index === -1) {
                     this.questions.unshift(question);
-                    this.refreshIcons();
                 } else {
                     if (!_.isEqual(this.questions[index], question)) {
                         this.questions.splice(index, 1, {
                             ...this.questions[index],
                             ...question,
                         });
-                        this.refreshIcons();
                     }
                 }
 
-                if (question.status === '完了') {
-                    const before = this.notices.length;
-                    this.notices = this.notices.filter(
-                        n => !(n.type === 'alert' && n.title.includes(`#${question.id}`))
-                    );
-                    this.unreadNotices = Math.max(0, this.unreadNotices - (before - this.notices.length));
-                }
-
                 if (this.activeQuestion?.id === question.id) {
-                    this.activeQuestion = {
-                        ...this.activeQuestion,
-                        ...question,
-                    };
+                    if (!_.isEqual(this.activeQuestion, question)) {
+                        this.activeQuestion = _.mergeWith(
+                            _.cloneDeep(question),
+                            this.activeQuestion,
+                            (serverVal, localVal, key) => {
+                                const originalVal = _.get(this.originalQuestion, key);
+                                if (!_.isEqual(localVal, originalVal)) {
+                                    return localVal;
+                                }
+                                return serverVal;
+                            }
+                        );
+                        this.originalQuestion = _.cloneDeep(question);
+                        this.refreshIcons();
+                    }
                 }
 
                 this.refreshIcons();
@@ -175,7 +175,7 @@ document.addEventListener('alpine:init', () => {
                 const index = this.tags.findIndex(q => q.id === tag.id);
                 if (index === -1) {
                     this.tags.unshift(tag);
-                    this.availableTags = this.tags.map((t) => t.title);
+                    this.availableTags = this.tags.map((t) => Tag.fromJSON(t));
                     this.refreshIcons();
                 } else {
                     if (!_.isEqual(this.tags[index], tag)) {
@@ -183,11 +183,14 @@ document.addEventListener('alpine:init', () => {
                             ...this.tags[index],
                             ...tag,
                         });
-                        this.availableTags = this.tags.map((t) => t.title);
+                        this.availableTags = this.tags.map((t) => Tag.fromJSON(t));
                         this.refreshIcons();
                     }
                 }
             });
+        },
+
+        getIcon(name) {
         },
 
         toQuestionViewModel(question) {
@@ -207,12 +210,13 @@ document.addEventListener('alpine:init', () => {
                 department: 'ここに部署名',
                 title: question.title ?? '',
                 content: question.content ?? '',
-                status: question.support?.supportStatus?.title ?? '未対応',
-                tags: (question.tags ?? []).map(tag => tag.title),
+                support: question.support ?? null,
+                tags: question.tags,
                 daysLeft,
                 date: this.formatDateTime(createdAt),
                 dueDate: due ? this.formatDate(due) : '',
-                relatedQuestions: (question.subQuestions ?? []).map(q => q.id),
+                relatedQuestions: (question.subQuestions ?? []).map((sq) =>
+                    typeof sq === 'object' && sq !== null ? sq.id : sq),
             };
         },
 
@@ -233,7 +237,6 @@ document.addEventListener('alpine:init', () => {
         },
 
         logout() {
-            localStorage.removeItem("access_token");
             location.href = "/login";
         },
 
@@ -243,17 +246,21 @@ document.addEventListener('alpine:init', () => {
         },
 
         openDetail(q) {
-            this.activeQuestion = q;
+            const v = _.cloneDeep(q);
+            if (!v.support) {
+                v.support = { supportStatusId: '1', supportStatus: { id: '1', title: '未対応' }, user: { name: '' } };
+            }
+            this.originalQuestion = _.cloneDeep(v);
+            this.activeQuestion = v;
             this.relatedSearchQuery = '';
             this.setView('detail');
-            return
         },
 
         toggleTag(tag) {
-            if (this.selectedTags.includes(tag)) {
-                this.selectedTags = this.selectedTags.filter(t => t !== tag);
+            if (this.selectedTags.includes(tag.title)) {
+                this.selectedTags = this.selectedTags.filter(t => t !== tag.title);
             } else {
-                this.selectedTags.push(tag);
+                this.selectedTags.push(tag.title);
             }
             this.refreshIcons();
         },
@@ -262,8 +269,9 @@ document.addEventListener('alpine:init', () => {
             if (!this.activeQuestion.tags) {
                 this.activeQuestion.tags = [];
             }
-            if (this.activeQuestion.tags.includes(tag)) {
-                this.activeQuestion.tags = this.activeQuestion.tags.filter(t => t !== tag);
+            const idx = this.activeQuestion.tags.findIndex(t => t.id === tag.id);
+            if (idx !== -1) {
+                this.activeQuestion.tags = this.activeQuestion.tags.filter(t => t.id !== tag.id);
             } else {
                 this.activeQuestion.tags.push(tag);
             }
@@ -284,9 +292,8 @@ document.addEventListener('alpine:init', () => {
 
         async updateQuestion() {
             const question = this.questions.filter(q => q.id === this.activeQuestion.id)[0];
-            console.log(question, this.activeQuestion, _.isEqual(question, this.activeQuestion))
             if (!_.isEqual(question, this.activeQuestion)) {
-                console.log(JSON.stringify(Question.toModel(this.activeQuestion)))
+                console.log(Question.toModel(this.activeQuestion));
                 await fetch("/api/v1/question", {
                     method: "PUT",
                     headers: this.apiHeaders(),
@@ -307,9 +314,9 @@ document.addEventListener('alpine:init', () => {
                 headers: this.apiHeaders(false)
             }).then(res => {
                 if (res.ok) {
-                    this.users = [...this.users.filter(u => u.id !== id)]
+                    this.users = [...this.users.filter(u => u.id !== id)];
                 }
-            })
+            });
         },
 
         openUser(u) {
@@ -322,18 +329,19 @@ document.addEventListener('alpine:init', () => {
                 method: "PUT",
                 headers: this.apiHeaders(),
                 body: data
-            })
+            });
         },
 
         async getTags() {
             const res = await fetch("/api/v1/tag", { headers: this.apiHeaders(false) });
             const json = await res.json();
             const list = Array.isArray(json) ? json : [json];
+            this.tags = list.map((t) => Tag.fromJSON(t));
             this.availableTags = list.map((t) => Tag.fromJSON(t));
         },
 
         async registerTag(name, cateogryId) {
-            const data = Tag.toModel({title: name, categoryId: cateogryId, usage: 0});
+            const data = Tag.toModel({ title: name, categoryId: cateogryId, usage: 0 });
             const res = await fetch('/api/v1/tag', {
                 method: "POST",
                 headers: this.apiHeaders(),
@@ -349,11 +357,11 @@ document.addEventListener('alpine:init', () => {
                 headers: this.apiHeaders(false)
             }).then(res => {
                 if (res.ok) {
-                    const newTags = [...this.tags.filter(t => t.id !== id)]
-                    this.tags = newTags
-                    this.availableTags = newTags.map((t) => t.title);
+                    const newTags = [...this.tags.filter(t => t.id !== id)];
+                    this.tags = newTags;
+                    this.availableTags = newTags.map((t) => Tag.fromJSON(t));
                 }
-            })
+            });
         },
 
         openEditTag(t) {
@@ -369,7 +377,7 @@ document.addEventListener('alpine:init', () => {
                 method: 'PUT',
                 headers: this.apiHeaders(),
                 body: data
-            })
+            });
         },
 
         toggleSidebar() {
@@ -377,12 +385,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async registerUser(email, name, pass, role) {
-            const data = User.toModel({email: email, name: name, password: pass, roleId: role});
+            const data = User.toModel({ email: email, name: name, password: pass, roleId: role });
             await fetch("/api/v1/user", {
                 method: "POST",
                 body: JSON.stringify(data),
                 headers: this.apiHeaders(),
-            }).catch({})
+            }).catch({});
         },
 
         refreshIcons() {

@@ -8,6 +8,7 @@ import (
 	infrastructure "meetup/_mac_infrastructure"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v5"
 	"gorm.io/gorm"
@@ -249,6 +250,7 @@ func (hm *HandlerManager) updateUserByID() echo.HandlerFunc {
 
 func getUsers(ctx context.Context, db *gorm.DB) (models []infrastructure.User, err error) {
 	models, err = gorm.G[infrastructure.User](db).
+		Where("role_id <> ?", 1).
 		Preload("Role", nil).
 		Select("id, name, email, role_id").Find(ctx)
 	return
@@ -272,11 +274,11 @@ func updates[T any](ctx context.Context, db *gorm.DB, model T, preloads ...strin
 
 func deleteQuestion(ctx context.Context, db *gorm.DB, id int64) error {
 	if _, err := gorm.G[infrastructure.Question](db).
-		Preload("Answers", nil).
-		Preload("Answers.User", nil).
-		Preload("Answers.User.Role", nil).
-		Preload("Answers.ReferManagers", nil).
-		Preload("Answers.ReferManagers.Refer", nil).
+		Preload("Answer", nil).
+		Preload("Answer.User", nil).
+		Preload("Answer.User.Role", nil).
+		Preload("Answer.ReferManagers", nil).
+		Preload("Answer.ReferManagers.Refer", nil).
 		Preload("Memos", nil).
 		Preload("Memos.User", nil).
 		Preload("Memos.User.Role", nil).
@@ -306,14 +308,14 @@ func deleteUser(ctx context.Context, db *gorm.DB, id int64) error {
 
 func getQuestion(ctx context.Context, db *gorm.DB, id int64) (model infrastructure.Question, err error) {
 	model, err = gorm.G[infrastructure.Question](db).
-		Preload("Answers", nil).
-		Preload("Answers.User", func(db gorm.PreloadBuilder) error {
+		Preload("Answer", nil).
+		Preload("Answer.User", func(db gorm.PreloadBuilder) error {
 			db.Select("id", "name", "email", "role_id")
 			return nil
 		}).
-		Preload("Answers.User.Role", nil).
-		Preload("Answers.ReferManagers", nil).
-		Preload("Answers.ReferManagers.Refer", nil).
+		Preload("Answer.User.Role", nil).
+		Preload("Answer.ReferManagers", nil).
+		Preload("Answer.ReferManagers.Refer", nil).
 		Preload("Memos", nil).
 		Preload("Memos.User", func(db gorm.PreloadBuilder) error {
 			db.Select("id", "name", "email", "role_id")
@@ -337,14 +339,14 @@ func getQuestion(ctx context.Context, db *gorm.DB, id int64) (model infrastructu
 
 func getQuestions(ctx context.Context, db *gorm.DB) (models []infrastructure.Question, err error) {
 	models, err = gorm.G[infrastructure.Question](db).
-		Preload("Answers", nil).
-		Preload("Answers.User", func(db gorm.PreloadBuilder) error {
+		Preload("Answer", nil).
+		Preload("Answer.User", func(db gorm.PreloadBuilder) error {
 			db.Select("id", "name", "email", "role_id")
 			return nil
 		}).
-		Preload("Answers.User.Role", nil).
-		Preload("Answers.ReferManagers", nil).
-		Preload("Answers.ReferManagers.Refer", nil).
+		Preload("Answer.User.Role", nil).
+		Preload("Answer.ReferManagers", nil).
+		Preload("Answer.ReferManagers.Refer", nil).
 		Preload("Memos", nil).
 		Preload("Memos.User", func(db gorm.PreloadBuilder) error {
 			db.Select("id", "name", "email", "role_id")
@@ -377,4 +379,25 @@ func deleteTag(ctx context.Context, db *gorm.DB, id int64) error {
 		return err
 	}
 	return nil
+}
+
+func getNotice(ctx context.Context, db *gorm.DB) ([]infrastructure.Question, error) {
+	questions, err := gorm.G[infrastructure.Question](db).Find(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	limit := now.Add(3 * 24 * time.Hour)
+	var recent []infrastructure.Question
+	for _, q := range questions {
+		if q.Due == nil {
+			continue
+		}
+		d := *q.Due
+		if !d.Before(now) && d.Before(limit) {
+			recent = append(recent, q)
+		}
+	}
+	return recent, nil
 }

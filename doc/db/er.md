@@ -3,7 +3,7 @@ erDiagram
     USER {
         number id PK
         string name
-        string passwordd
+        string password
         string email
         number role_id FK
     }
@@ -17,23 +17,24 @@ erDiagram
     QUESTION {
         number id PK
         number origin_question_id FK "元の質問ID (エスカレーション元の場合)"
+        number answer_id FK "紐づく回答 (最大1件)"
+        number support_id FK
         string title
         string content
-        number support_id FK
-        bool isDelete
+        bool deleted
         datetime due
         datetime created_at
     }
-    QUESTION ||--o| ANSWER: "質問は複数の回答を持つことができる"
-    QUESTION ||--o{ ESCALATION: "質問はエスカレーション元となることができる"
+    QUESTION ||--o| ANSWER: "質問は一つの回答を持つ (0または1)"
+    QUESTION ||--o| SUPPORT: "質問は一つのサポート情報に紐づく"
+    QUESTION ||--o{ ESCALATION : "エスカレーション元 (from_question_id)"
+    QUESTION ||--o{ ESCALATION : "エスカレーション先 (to_question_id)"
     QUESTION ||--o{ TAG_MANAGER: "質問は複数のタグを持つことができる"
     QUESTION ||--o{ MEMO: "質問には複数のメモが関連付けられる"
-    QUESTION ||--|| SUPPORT: "質問は一つのサポート情報に紐づく"
 
     ANSWER {
         number id PK
         number user_id FK
-        number question_id FK
         string content
         datetime answered_at
         datetime created_at
@@ -75,7 +76,6 @@ erDiagram
         number to_question_id FK "エスカレーション先の質問ID"
         datetime escalated_at
     }
-    ESCALATION ||--|| QUESTION: "エスカレーションは一つの質問に紐づく (エスカレーション先)"
 
     REFER_MANAGER {
         number id PK
@@ -100,6 +100,21 @@ erDiagram
 
     CATEGORY {
         number id PK
-        string category_name
+        string name
+    }
+
+    NOTICE {
+        number id PK
+        number type_id FK
+        number question_id FK
+        string content
+        datetime displayDue
+    }
+    NOTICE ||--|| NOTICE_TYPE: "通知は必ず１つの通知タイプを持つ"
+    NOTICE ||--o| QUESTION: "質問期限通知の場合は質問を持っている場合もある"
+
+    NOTICE_TYPE {
+        number id PK
+        string name "SYSTEM|DUE"
     }
 ```

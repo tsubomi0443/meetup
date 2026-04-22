@@ -12,7 +12,7 @@ func (hm *HandlerManager) SetPageHandler() (routeInfos []echo.RouteInfo) {
 	routeInfos = append(routeInfos, hm.e.Static("/static", "static"))
 	routeInfos = append(routeInfos, hm.e.GET("/login", hm.loginPage()))
 	routeInfos = append(routeInfos, hm.e.GET("/", hm.homePage()))
-	routeInfos = append(routeInfos, hm.e.GET("/mock/:id", hm.mockup()))
+	routeInfos = append(routeInfos, hm.e.GET("/mock/:id", hm.mockup(), GetJWTConfig()))
 	return
 }
 

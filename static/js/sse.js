@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     es.addEventListener('question', (event) => {
         try {
             const question = Question.fromJSON(JSON.parse(event.data));
+            console.log(question);
             document.dispatchEvent(new CustomEvent('sse-question', {
                 detail: question,
             }));

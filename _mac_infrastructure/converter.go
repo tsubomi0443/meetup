@@ -1,7 +1,6 @@
 package infrastructure
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -97,8 +96,8 @@ func SupportStatusToEntity(f SupportStatusForm) SupportStatus {
 func SupportFromEntity(e Support) SupportForm {
 	f := SupportForm{
 		ID:              e.ID,
-		UserID:          e.UserID,
-		SupportStatusID: e.SupportStatusID,
+		UserID:          strconv.FormatInt(e.UserID, 10),
+		SupportStatusID: strconv.FormatInt(e.SupportStatusID, 10),
 	}
 	if e.User.ID != 0 {
 		u := UserFromEntity(e.User)
@@ -118,8 +117,8 @@ func supportStatusFromEntityShallow(e SupportStatus) SupportStatusForm {
 func SupportToEntity(f SupportForm) Support {
 	e := Support{
 		ID:              f.ID,
-		UserID:          f.UserID,
-		SupportStatusID: f.SupportStatusID,
+		UserID:          f.UserIDInt64(),
+		SupportStatusID: f.SupportStatusIDInt64(),
 	}
 	if f.User != nil {
 		e.User = UserToEntity(*f.User)
@@ -167,14 +166,13 @@ func UserToEntityNoRole(f UserForm) User {
 		e.RoleID = f.Role.ID
 	}
 	if f.Password != "" {
-		e.Passwordd = f.Password
+		e.Password = f.Password
 	}
 	e.Role = Role{}
 	return e
 }
 
 func UserToEntity(f UserForm) User {
-	fmt.Println(f)
 	e := User{
 		ID:     f.ID,
 		Name:   f.Name,
@@ -185,7 +183,7 @@ func UserToEntity(f UserForm) User {
 		e.RoleID = f.Role.ID
 	}
 	if f.Password != "" {
-		e.Passwordd = f.Password
+		e.Password = f.Password
 	}
 	if f.Role != nil {
 		e.Role = RoleToEntity(*f.Role)
@@ -321,8 +319,8 @@ func ReferToEntity(f ReferForm) Refer {
 func MemoFromEntity(e Memo) MemoForm {
 	f := MemoForm{
 		ID:         e.ID,
-		QuestionID: e.QuestionID,
-		UserID:     e.UserID,
+		QuestionID: strconv.FormatInt(e.QuestionID, 10),
+		UserID:     strconv.FormatInt(e.UserID, 10),
 		Content:    e.Content,
 	}
 	if e.User.ID != 0 {
@@ -335,8 +333,8 @@ func MemoFromEntity(e Memo) MemoForm {
 func MemoToEntity(f MemoForm) Memo {
 	e := Memo{
 		ID:         f.ID,
-		QuestionID: f.QuestionID,
-		UserID:     f.UserID,
+		QuestionID: f.QuestionIDInt64(),
+		UserID:     f.UserIDInt64(),
 		Content:    f.Content,
 	}
 	if f.User != nil {
@@ -350,8 +348,7 @@ func MemoToEntity(f MemoForm) Memo {
 func AnswerFromEntity(e Answer) AnswerForm {
 	f := AnswerForm{
 		ID:         e.ID,
-		UserID:     e.UserID,
-		QuestionID: e.QuestionID,
+		UserID:     strconv.FormatInt(e.UserID, 10),
 		Content:    e.Content,
 		AnsweredAt: timePtrToISO(e.AnsweredAt),
 		CreatedAt:  timeToISO(e.CreatedAt),
@@ -371,8 +368,7 @@ func AnswerFromEntity(e Answer) AnswerForm {
 func AnswerToEntity(f AnswerForm) Answer {
 	e := Answer{
 		ID:         f.ID,
-		UserID:     f.UserID,
-		QuestionID: f.QuestionID,
+		UserID:     f.UserIDInt64(),
 		Content:    f.Content,
 		AnsweredAt: isoToTimePtr(f.AnsweredAt),
 	}
@@ -403,8 +399,8 @@ func AnswerToEntity(f AnswerForm) Answer {
 func EscalationFromEntity(e Escalation) EscalationForm {
 	return EscalationForm{
 		ID:             e.ID,
-		FromQuestionID: e.FromQuestionID,
-		ToQuestionID:   e.ToQuestionID,
+		FromQuestionID: strconv.FormatInt(e.FromQuestionID, 10),
+		ToQuestionID:   strconv.FormatInt(e.ToQuestionID, 10),
 		EscalatedAt:    timeToISO(e.EscalatedAt),
 	}
 }
@@ -412,8 +408,8 @@ func EscalationFromEntity(e Escalation) EscalationForm {
 func EscalationToEntity(f EscalationForm) Escalation {
 	e := Escalation{
 		ID:             f.ID,
-		FromQuestionID: f.FromQuestionID,
-		ToQuestionID:   f.ToQuestionID,
+		FromQuestionID: f.FromQuestionIDInt64(),
+		ToQuestionID:   f.ToQuestionIDInt64(),
 	}
 	if f.EscalatedAt == nil || *f.EscalatedAt == "" {
 		e.EscalatedAt = time.Now()
@@ -423,43 +419,128 @@ func EscalationToEntity(f EscalationForm) Escalation {
 	return e
 }
 
+// --- NoticeType / Notice ---
+
+func noticeTypeFromEntityShallow(e NoticeType) NoticeTypeForm {
+	return NoticeTypeForm{ID: e.ID, Name: e.Name}
+}
+
+func NoticeTypeFromEntity(e NoticeType) NoticeTypeForm {
+	f := noticeTypeFromEntityShallow(e)
+	for _, n := range e.Notices {
+		f.Notices = append(f.Notices, NoticeFromEntity(n))
+	}
+	return f
+}
+
+func NoticeTypeToEntity(f NoticeTypeForm) NoticeType {
+	e := NoticeType{ID: f.ID, Name: f.Name}
+	for _, nf := range f.Notices {
+		e.Notices = append(e.Notices, NoticeToEntity(nf))
+	}
+	return e
+}
+
+func NoticeFromEntity(e Notice) NoticeForm {
+	var questionID *string
+	if e.QuestionID != nil {
+		s := strconv.FormatInt(*e.QuestionID, 10)
+		questionID = &s
+	}
+	f := NoticeForm{
+		ID:         e.ID,
+		TypeID:     e.TypeID,
+		QuestionID: questionID,
+		Content:    e.Content,
+		DisplayDue: timePtrToISO(e.DisplayDue),
+	}
+	if e.NoticeType.ID != 0 {
+		nt := noticeTypeFromEntityShallow(e.NoticeType)
+		f.NoticeType = &nt
+	}
+	if e.Question != nil && e.Question.ID != 0 {
+		qf := QuestionForm{ID: e.Question.ID, Title: e.Question.Title, Content: e.Question.Content}
+		f.Question = &qf
+	}
+	return f
+}
+
+func NoticeToEntity(f NoticeForm) Notice {
+	var questionID *int64
+	if v := f.QuestionIDInt64(); v >= 0 {
+		questionID = &v
+	}
+	e := Notice{
+		ID:         f.ID,
+		TypeID:     f.TypeID,
+		QuestionID: questionID,
+		Content:    f.Content,
+		DisplayDue: isoToTimePtr(f.DisplayDue),
+	}
+	if f.NoticeType != nil {
+		e.NoticeType = NoticeTypeToEntity(*f.NoticeType)
+	}
+	if f.Question != nil {
+		q := QuestionToEntity(*f.Question)
+		e.Question = &q
+	}
+	return e
+}
+
 // --- Question ---
 
 func QuestionFromEntity(e Question) QuestionForm {
+	var originQuestionID *string
+	if e.OriginQuestionID != nil {
+		s := strconv.FormatInt(*e.OriginQuestionID, 10)
+		originQuestionID = &s
+	}
 	f := QuestionForm{
 		ID:               e.ID,
-		OriginQuestionID: e.OriginQuestionID,
+		OriginQuestionID: originQuestionID,
+		AnswerID:         e.AnswerID,
 		SupportID:        e.SupportID,
 		Title:            e.Title,
 		Content:          e.Content,
+		Deleted:          e.Deleted,
 		Due:              timePtrToISO(e.Due),
 		CreatedAt:        timeToISO(e.CreatedAt),
 	}
-	for _, a := range e.Answers {
-		f.Answers = append(f.Answers, AnswerFromEntity(a))
+	if e.Answer != nil && e.Answer.ID != 0 {
+		a := AnswerFromEntity(*e.Answer)
+		f.Answer = &a
 	}
 	for _, m := range e.Memos {
 		f.Memos = append(f.Memos, MemoFromEntity(m))
+	}
+	for _, n := range e.Notices {
+		f.Notices = append(f.Notices, NoticeFromEntity(n))
 	}
 	for _, tm := range e.TagManagers {
 		if tm.Tag.ID != 0 {
 			f.Tags = append(f.Tags, tagFromEntityShallow(tm.Tag))
 		}
 	}
-	if e.Support.ID != 0 {
-		s := SupportFromEntity(e.Support)
+	if e.Support != nil && e.Support.ID != 0 {
+		s := SupportFromEntity(*e.Support)
 		f.Support = &s
 	}
 	return f
 }
 
 func QuestionToEntity(f QuestionForm) Question {
+	var originQuestionID *int64
+	if v := f.OriginQuestionIDInt64(); v >= 0 {
+		originQuestionID = &v
+	}
 	e := Question{
 		ID:               f.ID,
-		OriginQuestionID: f.OriginQuestionID,
+		OriginQuestionID: originQuestionID,
+		AnswerID:         f.AnswerID,
 		SupportID:        f.SupportID,
 		Title:            f.Title,
 		Content:          f.Content,
+		Deleted:          f.Deleted,
 		Due:              isoToTimePtr(f.Due),
 	}
 	if f.CreatedAt == nil || *f.CreatedAt == "" {
@@ -468,12 +549,13 @@ func QuestionToEntity(f QuestionForm) Question {
 		e.CreatedAt = isoToTime(f.CreatedAt)
 	}
 	qid := f.ID
-	for _, af := range f.Answers {
-		a := AnswerToEntity(af)
-		if a.QuestionID == 0 {
-			a.QuestionID = qid
+	if f.Answer != nil {
+		a := AnswerToEntity(*f.Answer)
+		e.Answer = &a
+		if e.AnswerID == nil && a.ID != 0 {
+			aid := a.ID
+			e.AnswerID = &aid
 		}
-		e.Answers = append(e.Answers, a)
 	}
 	for _, mf := range f.Memos {
 		m := MemoToEntity(mf)
@@ -481,6 +563,14 @@ func QuestionToEntity(f QuestionForm) Question {
 			m.QuestionID = qid
 		}
 		e.Memos = append(e.Memos, m)
+	}
+	for _, nf := range f.Notices {
+		n := NoticeToEntity(nf)
+		if n.QuestionID == nil && qid != 0 {
+			qidCopy := qid
+			n.QuestionID = &qidCopy
+		}
+		e.Notices = append(e.Notices, n)
 	}
 	for _, tf := range f.Tags {
 		tm := TagManager{
@@ -493,7 +583,8 @@ func QuestionToEntity(f QuestionForm) Question {
 		e.TagManagers = append(e.TagManagers, tm)
 	}
 	if f.Support != nil {
-		e.Support = SupportToEntity(*f.Support)
+		sup := SupportToEntity(*f.Support)
+		e.Support = &sup
 	}
 	return e
 }
@@ -503,8 +594,8 @@ func QuestionToEntity(f QuestionForm) Question {
 func ReferManagerFromEntity(e ReferManager) ReferManagerForm {
 	f := ReferManagerForm{
 		ID:       e.ID,
-		AnswerID: e.AnswerID,
-		ReferID:  e.ReferID,
+		AnswerID: strconv.FormatInt(e.AnswerID, 10),
+		ReferID:  strconv.FormatInt(e.ReferID, 10),
 	}
 	if e.Answer.ID != 0 {
 		a := AnswerFromEntity(e.Answer)
@@ -520,8 +611,8 @@ func ReferManagerFromEntity(e ReferManager) ReferManagerForm {
 func ReferManagerToEntity(f ReferManagerForm) ReferManager {
 	e := ReferManager{
 		ID:       f.ID,
-		AnswerID: f.AnswerID,
-		ReferID:  f.ReferID,
+		AnswerID: f.AnswerIDInt64(),
+		ReferID:  f.ReferIDInt64(),
 	}
 	if f.Answer != nil {
 		e.Answer = AnswerToEntity(*f.Answer)
@@ -535,8 +626,8 @@ func ReferManagerToEntity(f ReferManagerForm) ReferManager {
 func TagManagerFromEntity(e TagManager) TagManagerForm {
 	f := TagManagerForm{
 		ID:         e.ID,
-		TagID:      e.TagID,
-		QuestionID: e.QuestionID,
+		TagID:      strconv.FormatInt(e.TagID, 10),
+		QuestionID: strconv.FormatInt(e.QuestionID, 10),
 	}
 	if e.Tag.ID != 0 {
 		t := TagFromEntity(e.Tag)
@@ -552,8 +643,8 @@ func TagManagerFromEntity(e TagManager) TagManagerForm {
 func TagManagerToEntity(f TagManagerForm) TagManager {
 	e := TagManager{
 		ID:         f.ID,
-		TagID:      f.TagID,
-		QuestionID: f.QuestionID,
+		TagID:      f.TagIDInt64(),
+		QuestionID: f.QuestionIDInt64(),
 	}
 	if f.Tag != nil {
 		e.Tag = TagToEntity(*f.Tag)
