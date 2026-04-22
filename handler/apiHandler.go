@@ -128,7 +128,7 @@ func (hm *HandlerManager) updateTag() echo.HandlerFunc {
 		}
 		model := infrastructure.TagToEntityNoRelations(form)
 		fmt.Println(model)
-		if _, err := updates(c.Request().Context(), hm.db, model); err != nil {
+		if _, err := updateInTransaction(c.Request().Context(), hm.db, model, "Category", "TagManagers"); err != nil {
 			fmt.Println(err)
 			return err
 		}
@@ -190,7 +190,7 @@ func (hm *HandlerManager) updateQuestionByID() echo.HandlerFunc {
 			return err
 		}
 		updatedModel := infrastructure.QuestionToEntity(form)
-		if _, err := updates(c.Request().Context(), hm.db, updatedModel); err != nil {
+		if err := updateQuestionInTransaction(c.Request().Context(), hm.db, updatedModel); err != nil {
 			return err
 		}
 		return c.JSON(http.StatusOK, nil)
@@ -241,7 +241,7 @@ func (hm *HandlerManager) updateUserByID() echo.HandlerFunc {
 		}
 		updatedModel := infrastructure.UserToEntityNoRole(form)
 		fmt.Println(updatedModel)
-		if _, err := updates(c.Request().Context(), hm.db, updatedModel, "Role"); err != nil {
+		if _, err := updateInTransaction(c.Request().Context(), hm.db, updatedModel, "Role"); err != nil {
 			return c.JSON(http.StatusInternalServerError, err)
 		}
 		return c.JSON(http.StatusOK, nil)
@@ -270,6 +270,125 @@ func updates[T any](ctx context.Context, db *gorm.DB, model T, preloads ...strin
 		v.Preload(preload, nil)
 	}
 	return v.Updates(ctx, model)
+}
+
+// updateInTransaction は単一の DB トランザクション内で gorm.Updates を実行する。
+// omit に関連名を渡し、Role/Category など中間テーブル向けの関連を更新対象から外す。
+// 既存の updates と違い、こちらは更新用。事前読み込みは行わない。
+func updateInTransaction[T any](ctx context.Context, db *gorm.DB, model T, omit ...string) (rowsAffected int, err error) {
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		m := model
+		res := tx.Omit(omit...).Model(&m).Updates(&m)
+		rowsAffected = int(res.RowsAffected)
+		return res.Error
+	})
+	return
+}
+
+// updateQuestionInTransaction は Question の1行更新と、QuestionToEntity で組み立てた
+// 1対多の関連（Answer, Support, TagManagers, Memos, Notices）の同期を1トランザクションで行う。
+// フォーム上の下位の質問（SubQuestions）やエスカレーション等は本関数では永続化しない。
+func updateQuestionInTransaction(ctx context.Context, db *gorm.DB, q infrastructure.Question) error {
+	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1) Answer: 新規作成 or 既存更新し、親の answer_id を整合させる
+		if q.Answer != nil {
+			a := *q.Answer
+			if a.ID == 0 {
+				if err := tx.Create(&a).Error; err != nil {
+					return err
+				}
+				aid := a.ID
+				q.AnswerID = &aid
+				q.Answer = &a
+			} else {
+				if _, err := gorm.G[infrastructure.Answer](tx).
+					Omit("User", "ReferManagers").
+					Where("id = ?", a.ID).
+					Updates(ctx, a); err != nil {
+					return err
+				}
+				if q.AnswerID == nil {
+					aid := a.ID
+					q.AnswerID = &aid
+				}
+			}
+		}
+		// 2) Support: 新規作成 or 既存更新
+		if q.Support != nil {
+			s := *q.Support
+			if s.ID == 0 {
+				if err := tx.Create(&s).Error; err != nil {
+					return err
+				}
+				sid := s.ID
+				q.SupportID = &sid
+				q.Support = &s
+			} else {
+				if err := tx.Model(&s).Omit("User", "SupportStatus").Updates(&s).Error; err != nil {
+					return err
+				}
+				if q.SupportID == nil {
+					sid := s.ID
+					q.SupportID = &sid
+				}
+			}
+		}
+		// 3) 親の questions: スカラ列と FK のみ（CreatedAt は更新で変えない）
+		if _, err := gorm.G[infrastructure.Question](tx).
+			Omit("Answer", "Memos", "Notices", "TagManagers", "Support", "CreatedAt").
+			Where("id = ?", q.ID).
+			Updates(ctx, q); err != nil {
+			return err
+		}
+		ref := infrastructure.Question{ID: q.ID}
+		// 4) タグ紐づけ（tag_managers）
+		for i := range q.TagManagers {
+			if q.TagManagers[i].QuestionID == 0 {
+				q.TagManagers[i].QuestionID = q.ID
+			}
+		}
+		if len(q.TagManagers) == 0 {
+			if err := tx.Model(&ref).Association("TagManagers").Clear(); err != nil {
+				return err
+			}
+		} else {
+			if err := tx.Model(&ref).Association("TagManagers").Replace(q.TagManagers); err != nil {
+				return err
+			}
+		}
+		// 5) メモ
+		for i := range q.Memos {
+			if q.Memos[i].QuestionID == 0 {
+				q.Memos[i].QuestionID = q.ID
+			}
+		}
+		if len(q.Memos) == 0 {
+			if err := tx.Model(&ref).Association("Memos").Clear(); err != nil {
+				return err
+			}
+		} else {
+			if err := tx.Model(&ref).Association("Memos").Replace(q.Memos); err != nil {
+				return err
+			}
+		}
+		// 6) 通知
+		for i := range q.Notices {
+			if q.Notices[i].QuestionID == nil {
+				qid := q.ID
+				q.Notices[i].QuestionID = &qid
+			}
+		}
+		if len(q.Notices) == 0 {
+			if err := tx.Model(&ref).Association("Notices").Clear(); err != nil {
+				return err
+			}
+		} else {
+			if err := tx.Model(&ref).Association("Notices").Replace(q.Notices); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func deleteQuestion(ctx context.Context, db *gorm.DB, id int64) error {
