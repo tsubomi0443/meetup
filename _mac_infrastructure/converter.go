@@ -576,12 +576,13 @@ func QuestionToEntity(f QuestionForm) Question {
 		e.Notices = append(e.Notices, n)
 	}
 	for _, tf := range f.Tags {
+		if tf.ID == 0 {
+			continue
+		}
 		tm := TagManager{
 			QuestionID: qid,
 			TagID:      tf.ID,
-		}
-		if tf.ID != 0 {
-			tm.Tag = Tag{ID: tf.ID}
+			Tag:        Tag{ID: tf.ID},
 		}
 		e.TagManagers = append(e.TagManagers, tm)
 	}

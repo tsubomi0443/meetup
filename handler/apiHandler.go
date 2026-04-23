@@ -122,7 +122,7 @@ func (hm *HandlerManager) updateTag() echo.HandlerFunc {
 			return err
 		}
 		model := infrastructure.TagToEntityNoRelations(form)
-		if _, err := infrastructure.UpdateInTransaction(c.Request().Context(), hm.db, model, "Category", "TagManagers"); err != nil {
+		if _, err := infrastructure.UpdateByID(c.Request().Context(), hm.db, model.ID, model, "Category", "TagManagers"); err != nil {
 			return err
 		}
 		return c.JSON(http.StatusOK, nil)
@@ -233,7 +233,7 @@ func (hm *HandlerManager) updateUserByID() echo.HandlerFunc {
 			return err
 		}
 		updatedModel := infrastructure.UserToEntityNoRole(form)
-		if _, err := infrastructure.UpdateInTransaction(c.Request().Context(), hm.db, updatedModel, "Role"); err != nil {
+		if _, err := infrastructure.UpdateByID(c.Request().Context(), hm.db, updatedModel.ID, updatedModel, "Role"); err != nil {
 			return c.JSON(http.StatusInternalServerError, err)
 		}
 		return c.JSON(http.StatusOK, nil)

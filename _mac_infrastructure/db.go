@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+	"strings"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -30,6 +31,16 @@ func Updates[T any](ctx context.Context, db *gorm.DB, model T, preloads ...strin
 		v.Preload(preload, nil)
 	}
 	return v.Updates(ctx, model)
+}
+
+// UpdateByID は主キー id を WHERE に固定して単一モデルを更新する。
+// 他の更新系メソッドに合わせて gorm.G[T](db) の Updates を利用し、トランザクションは張らない。
+// omit は generic ビルダの Omit にそのまま渡す（関連名・列名どちらも可）。
+func UpdateByID[T any](ctx context.Context, db *gorm.DB, id int64, model T, omit ...string) (int, error) {
+	return gorm.G[T](db.WithContext(ctx)).
+		Omit(omit...).
+		Where("id = ?", id).
+		Updates(ctx, model)
 }
 
 // updateInTransaction は単一の DB トランザクション内で gorm.Updates を実行する。
@@ -102,33 +113,46 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 			return err
 		}
 		ref := Question{ID: q.ID}
-		// 4) タグ紐づけ（tag_managers）
-		for i := range q.TagManagers {
-			if q.TagManagers[i].QuestionID == 0 {
-				q.TagManagers[i].QuestionID = q.ID
+		// 4) タグ紐づけ（tag_managers）— has_many Replace は子の FK を NULL 更新するため
+		// NOT NULL 制約（question_id）と相性が悪い。DELETE + INSERT で置き換える。
+		var tagRows []TagManager
+		for _, tm := range q.TagManagers {
+			if tm.TagID == 0 {
+				continue
 			}
+			tagRows = append(tagRows, TagManager{
+				ID:         0,
+				TagID:      tm.TagID,
+				QuestionID: q.ID,
+			})
 		}
-		if len(q.TagManagers) == 0 {
-			if err := tx.Model(&ref).Association("TagManagers").Clear(); err != nil {
+		if err := tx.Where("question_id = ?", q.ID).Delete(&TagManager{}).Error; err != nil {
+			return err
+		}
+		if len(tagRows) > 0 {
+			if err := tx.Create(&tagRows).Error; err != nil {
 				return err
 			}
-		} else {
-			if err := tx.Model(&ref).Association("TagManagers").Replace(q.TagManagers); err != nil {
-				return err
-			}
 		}
-		// 5) メモ
-		for i := range q.Memos {
-			if q.Memos[i].QuestionID == 0 {
-				q.Memos[i].QuestionID = q.ID
+		// 5) メモ（memos）— 同じ理由で Association.Replace ではなく DELETE + INSERT
+		var memoRows []Memo
+		for _, m := range q.Memos {
+			content := strings.TrimSpace(m.Content)
+			if m.UserID == 0 || content == "" {
+				continue
 			}
+			memoRows = append(memoRows, Memo{
+				ID:         0,
+				UserID:     m.UserID,
+				Content:    content,
+				QuestionID: q.ID,
+			})
 		}
-		if len(q.Memos) == 0 {
-			if err := tx.Model(&ref).Association("Memos").Clear(); err != nil {
-				return err
-			}
-		} else {
-			if err := tx.Model(&ref).Association("Memos").Replace(q.Memos); err != nil {
+		if err := tx.Where("question_id = ?", q.ID).Delete(&Memo{}).Error; err != nil {
+			return err
+		}
+		if len(memoRows) > 0 {
+			if err := tx.Create(&memoRows).Error; err != nil {
 				return err
 			}
 		}
