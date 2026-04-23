@@ -299,7 +299,8 @@ INSERT INTO escalations (from_question_id, to_question_id, escalated_at) VALUES
 
 INSERT INTO notice_types (name) VALUES
 ('SYSTEM'),
-('DUE');
+('ALERT'),
+('QUESTION');
 
 INSERT INTO notices (type_id, question_id, content, display_due) VALUES
 (2, 1, 'First Question の期限が近づいています', '2026-04-29 09:00:00'),

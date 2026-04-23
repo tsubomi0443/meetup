@@ -115,6 +115,6 @@ erDiagram
 
     NOTICE_TYPE {
         number id PK
-        string name "SYSTEM|DUE"
+        string name "SYSTEM|ALERT|QUESTION"
     }
 ```

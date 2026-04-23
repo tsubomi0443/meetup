@@ -11,14 +11,14 @@
     "tailwindcss": "3.4.17"
   },
   "peerDependencies": {
-    "typescript": "5"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "alpinejs": "3.15.10",
     "es-toolkit": "1.45.1",
     "htmx-ext-sse": "2.2.4",
     "htmx.org": "2.0.8",
-    "lucide": "^1.8.0"
+    "lucide": "^1.9.0"
   },
   "scripts": {
     "dev": "bunx tailwindcss -i ./global.css -o ../static/css/output.css --watch",

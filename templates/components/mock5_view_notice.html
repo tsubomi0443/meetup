@@ -4,15 +4,24 @@
         <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm flex gap-4 items-start hover:bg-gray-50 transition-colors cursor-pointer"
             @click="setView('home')">
             <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                :class="n.type === 'alert' ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-500'">
-                <i :data-lucide="n.type === 'alert' ? 'alert-circle' : 'info'" class="w-5 h-5"></i>
+                :class="[2, 3].includes(n.typeId) ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-500'">
+                <i :data-lucide="[2, 3].includes(n.typeId) ? 'alert-circle' : 'info'" class="w-5 h-5"></i>
             </div>
             <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-center mb-1">
-                    <h3 class="font-bold text-sm text-gray-800" x-text="n.title"></h3>
-                    <span class="text-[10px] font-bold text-gray-400" x-text="n.time"></span>
+                    <h3 class="font-bold text-sm text-gray-800" x-show="[1, 2].includes(n.typeId)" x-text="n.content"></h3>
+                    <h3 class="font-bold text-sm text-gray-800" x-show="n.typeId === 3" x-text="n.question && (n.question.title ? `回答期限接近中: ${n.question.title}` : `回答期限接近中: 質問ID#${n.question.id}`)"></h3>
+                    <div class="justify-between">
+                        <span class="text-[10px] font-bold text-gray-400" x-text="n.question && n.question.due && `残り時間: ${calcRemainingTimeAndString(n.question)}`"></span>
+                        <div class="flex gap-1 shrink-0">
+                            <template x-for="tag in (n.question.tags || [])" :key="tag.id">
+                                <span class="text-[10px] font-bold bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase"
+                                    x-text="tag.title"></span>
+                            </template>
+                        </div>
+                    </div>
                 </div>
-                <p class="text-xs text-gray-500 line-clamp-2" x-text="n.content"></p>
+                <p class="text-xs text-gray-500 line-clamp-2" x-show="n.question" x-text="n.question && n.question.content"></p>
             </div>
         </div>
     </template>

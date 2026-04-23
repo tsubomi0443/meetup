@@ -459,7 +459,10 @@ func NoticeFromEntity(e Notice) NoticeForm {
 		f.NoticeType = &nt
 	}
 	if e.Question != nil && e.Question.ID != 0 {
-		qf := QuestionForm{ID: e.Question.ID, Title: e.Question.Title, Content: e.Question.Content}
+		// due := e.Question.Due.Format(time.DateTime)
+		// const tag = TagFromEntity(e.Question.TagManagers)
+		// qf := QuestionForm{ID: e.Question.ID, Title: e.Question.Title, Content: e.Question.Content, Due: &due, Tags: tag}
+		qf := QuestionFromEntity(*e.Question)
 		f.Question = &qf
 	}
 	return f

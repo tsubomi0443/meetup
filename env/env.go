@@ -8,21 +8,26 @@ import (
 )
 
 const (
-	jwtkey = "JWK_KEY"
-	modeIs = "MODE"
+	jwtkey   = "JWK_KEY"
+	modeIs   = "MODE"
+	host     = "PSQL_HOST"
+	port     = "PSQL_PORT"
+	user     = "PSQL_USER"
+	password = "PSQL_PASSWORD"
+	dbname   = "PSQL_DBNAME"
+	sslmode  = "PSQL_SSLMODE"
 )
 
 // GetDSN builds a Postgres connection string from environment variables (see .env.example).
 func GetDSN() string {
-	host := getenv("PSQL_HOST", "localhost")
-	port := getenv("PSQL_PORT", "5432")
-	user := getenv("PSQL_USER", "postgres")
-	password := os.Getenv("PSQL_PASSWORD")
-	dbname := getenv("PSQL_DBNAME", "postgresdb")
-	sslmode := getenv("PSQL_SSLMODE", "disable")
 	return fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, password, dbname, sslmode,
+		getenv(host, "localhost"),
+		getenv(port, "5432"),
+		getenv(user, "postgres"),
+		os.Getenv(password),
+		getenv(dbname, "postgresdb"),
+		getenv(sslmode, "disable"),
 	)
 }
 

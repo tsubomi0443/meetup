@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"log"
@@ -29,6 +30,7 @@ func main() {
 	e := setupEcho()
 	hub := handler.NewHub()
 	handlerManager := handler.NewHandlerManager(db, e, hub)
+	go handlerManager.PollingStart(context.Background())
 	fmt.Println(handlerManager.SetupHandlers())
 
 	// サーバー起動

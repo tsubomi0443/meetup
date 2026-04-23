@@ -110,7 +110,7 @@
                             </div>
                         </div>
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold shadow-sm"
-                            :class="statusColorMap[q.support?.supportStatus?.title]" x-text="q.support?.supportStatus?.title"></span>
+                            :class="statusColorMap[q.support.supportStatus.title]" x-text="q.support.supportStatus.title"></span>
                     </div>
                     <h3 class="text-base font-bold text-gray-800 mb-1 group-hover:text-slate-900" x-text="q.title"></h3>
                     <p class="text-sm text-gray-500 mb-4 flex-1 line-clamp-2" x-text="q.content"></p>
@@ -122,9 +122,9 @@
                             </template>
                         </div>
                         <div class="flex items-center gap-1 shrink-0"
-                            :class="q.daysLeft <= 1 && q.support && q.support.supportStatus && q.support.supportStatus.title !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                            :class="q.daysLeft <= 1 && q.support && q.support.supportStatus.title !== '完了' ? 'text-red-500' : 'text-gray-400'">
                             <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                            <span x-text="q.support && q.support.supportStatus && q.support.supportStatus.title === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
+                            <span x-text="q.support.supportStatus.title === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
                         </div>
                     </div>
                 </div>
@@ -140,7 +140,7 @@
                 <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4 group"
                     @click="openDetail(q)">
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 w-16 text-center"
-                        :class="statusColorMap[q.support?.supportStatus?.title]" x-text="q.support?.supportStatus?.title"></span>
+                        :class="statusColorMap[q.support.supportStatus.title]" x-text="q.support.supportStatus.title"></span>
                     <h3 class="text-sm font-bold text-gray-800 truncate w-48 shrink-0 group-hover:text-slate-900"
                         x-text="q.title"></h3>
                     <p class="text-xs text-gray-500 truncate flex-1 font-medium" x-text="q.content"></p>
@@ -152,9 +152,9 @@
                         </template>
                     </div>
                     <div class="text-[10px] font-bold shrink-0 flex items-center gap-1 w-16 justify-end"
-                        :class="q.daysLeft <= 1 && q.support && q.support.supportStatus && q.support.supportStatus.title !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                        :class="q.daysLeft <= 1 && q.support && q.support.supportStatus.title !== '完了' ? 'text-red-500' : 'text-gray-400'">
                         <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                        <span x-text="q.support && q.support.supportStatus && q.support.supportStatus.title === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
+                        <span x-text="q.support && q.support.supportStatus.title === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
                     </div>
                 </div>
             </template>

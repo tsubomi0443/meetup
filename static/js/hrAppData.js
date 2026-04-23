@@ -1,4 +1,5 @@
 import { Question, User, Tag } from '/static/js/model.js';
+import { SSE_ADD_NOTICE, SSE_ADD_QUESTION, SSE_ADD_TAG, SSE_ADD_USER, SSE_TIME_TICKER } from './sse.js';
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('hrAppData', () => ({
@@ -10,6 +11,7 @@ document.addEventListener('alpine:init', () => {
         showEditUserModal: false,
         showTagModal: false,
         showEditTagModal: false,
+        timeNow: new Date(),
         unreadNotices: 1,
         activeQuestion: {},
         originalQuestion: {},
@@ -47,10 +49,7 @@ document.addEventListener('alpine:init', () => {
             { id: 1005, sender: '高橋 三郎', department: 'ここに部署名', title: '慶弔休暇の適用範囲', content: '配偶者の祖父母が亡くなった場合、忌引休暇の対象になりますでしょうか？', support: { supportStatusId: "1", supportStatus: { id: "1", title: '未対応' } }, tags: [{ id: 80, title: '規程' }, { id: 70, title: '健康診断' }], daysLeft: 2, date: '2026-04-07 16:45', dueDate: '2026-04-11', relatedQuestions: [] }
         ],
 
-        notices: [
-            { id: 1, type: 'alert', title: '期日接近: 質問 #1002', time: '10分前', content: '「通勤手当の経路変更」の期日が明日です。早急な対応をお願いします。' },
-            { id: 2, type: 'info', title: 'システムアップデート完了', time: '1時間前', content: 'FAQ検索エンジンの精度を向上させるアップデートを適用しました。' }
-        ],
+        notices: [],
 
         users: [],
         tags: [],
@@ -102,6 +101,7 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             this.refreshIcons();
+            this.activeQuestion = { support: { supportStatusID: "", user: { name: "" } } };
 
             document.addEventListener('connect', (event) => {
                 this.isConnect = event.detail;
@@ -110,16 +110,30 @@ document.addEventListener('alpine:init', () => {
                 this.isConnect = event.detail;
             });
 
-            document.addEventListener('sse-notice', (event) => {
-                const notice = event.detail;
-                this.notices.unshift(notice);
-                if (notice.type === 'alert') this.unreadNotices += 1;
-                this.refreshIcons();
+            document.addEventListener(SSE_TIME_TICKER, (event) => {
+                this.timeNow = event.detail
             });
 
-            document.addEventListener('sse-question', (event) => {
+            document.addEventListener(SSE_ADD_NOTICE, (event) => {
+                const notice = event.detail;
+                const index = this.notices.findIndex(n => n.id === notice.id)
+                if (index === -1) {
+                    this.notices.unshift(notice);
+                    this.refreshIcons();
+                } else {
+                    if (!_.isEqual(this.notices[index], notice)) {
+                        this.notices.splice(index, 1, {
+                            ...this.notices[index],
+                            ...notice,
+                        });
+                        this.refreshIcons();
+                    }
+                }
+                if (notice.noticeType?.name === 'ALERT') this.unreadNotices += 1;
+            });
+
+            document.addEventListener(SSE_ADD_QUESTION, (event) => {
                 const question = this.toQuestionViewModel(event.detail);
-                console.log(this.questions)
                 const index = this.questions.findIndex(q => q.id === question.id);
                 if (index === -1) {
                     this.questions.unshift(question);
@@ -138,22 +152,22 @@ document.addEventListener('alpine:init', () => {
                             _.cloneDeep(question),
                             this.activeQuestion,
                             (serverVal, localVal, key) => {
-                                const originalVal = _.get(this.originalQuestion, key);
+                                const originalVal = _.get(this.originalQuestion, key)
+                                // ローカル変更されてたら優先
                                 if (!_.isEqual(localVal, originalVal)) {
-                                    return localVal;
+                                    return localVal
                                 }
-                                return serverVal;
+                                // server採用
+                                return serverVal
                             }
                         );
                         this.originalQuestion = _.cloneDeep(question);
                         this.refreshIcons();
                     }
                 }
-
-                this.refreshIcons();
             });
 
-            document.addEventListener('sse-user', (event) => {
+            document.addEventListener(SSE_ADD_USER, (event) => {
                 const user = event.detail;
                 const index = this.users.findIndex(q => q.id === user.id);
                 if (index === -1) {
@@ -170,7 +184,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener('sse-tag', (event) => {
+            document.addEventListener(SSE_ADD_TAG, (event) => {
                 const tag = event.detail;
                 const index = this.tags.findIndex(q => q.id === tag.id);
                 if (index === -1) {
@@ -191,6 +205,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         getIcon(name) {
+        },
+
+        currentTimeFormatted(dt = new Date()) {
+            return new Intl.DateTimeFormat('ja-JP', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            }).format(dt);
         },
 
         toQuestionViewModel(question) {
@@ -269,8 +291,7 @@ document.addEventListener('alpine:init', () => {
             if (!this.activeQuestion.tags) {
                 this.activeQuestion.tags = [];
             }
-            const idx = this.activeQuestion.tags.findIndex(t => t.id === tag.id);
-            if (idx !== -1) {
+            if (this.activeQuestion.tags.filter(t => t.id === tag.id).length === 1) {
                 this.activeQuestion.tags = this.activeQuestion.tags.filter(t => t.id !== tag.id);
             } else {
                 this.activeQuestion.tags.push(tag);
@@ -293,7 +314,6 @@ document.addEventListener('alpine:init', () => {
         async updateQuestion() {
             const question = this.questions.filter(q => q.id === this.activeQuestion.id)[0];
             if (!_.isEqual(question, this.activeQuestion)) {
-                console.log(Question.toModel(this.activeQuestion));
                 await fetch("/api/v1/question", {
                     method: "PUT",
                     headers: this.apiHeaders(),
@@ -347,8 +367,7 @@ document.addEventListener('alpine:init', () => {
                 headers: this.apiHeaders(),
                 body: JSON.stringify(data)
             });
-            const json = await res.json();
-            console.log(json);
+            await res.json();
         },
 
         async deleteTag(id) {
@@ -357,8 +376,8 @@ document.addEventListener('alpine:init', () => {
                 headers: this.apiHeaders(false)
             }).then(res => {
                 if (res.ok) {
-                    const newTags = [...this.tags.filter(t => t.id !== id)];
-                    this.tags = newTags;
+                    const newTags = [...this.tags.filter(t => t.id !== id)]
+                    this.tags = newTags
                     this.availableTags = newTags.map((t) => Tag.fromJSON(t));
                 }
             });
@@ -382,6 +401,19 @@ document.addEventListener('alpine:init', () => {
 
         toggleSidebar() {
             this.isSidebarOpen = !this.isSidebarOpen;
+        },
+
+        calcRemainingTimeAndString(question) {
+            const [hours, minutes] = this.calcRemainingTime(new Date(question.due), this.timeNow)
+            return `${hours}時間${minutes}分`;
+        },
+
+        calcRemainingTime(baseDate, d = new Date()) {
+            const diff = baseDate - d;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            return [hours, minutes];
         },
 
         async registerUser(email, name, pass, role) {

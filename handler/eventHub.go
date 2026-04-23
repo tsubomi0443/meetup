@@ -47,7 +47,6 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.Register:
 			h.clients[client] = struct{}{}
-			fmt.Println(*client)
 		case client := <-h.Unregister:
 			if _, ok := h.clients[client]; ok {
 				close(client.send)
@@ -79,13 +78,13 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 
 	go func() {
 		for t := range tickSecond.C {
-			hub.Broadcast <- Event{Event: "time-tick", Data: fmt.Sprintf(`<div>%s</div>`, t.In(local).Format("15:04:05"))}
+			hub.Broadcast <- Event{Event: "time-tick", Data: t.In(local).Format(time.DateTime)}
 		}
 	}()
 
 	go func() {
 		for range tickHalfSecond.C {
-			models, err := getQuestions(ctx, db)
+			models, err := infrastructure.GetQuestions(ctx, db)
 			if err != nil {
 				hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
 				continue
@@ -104,7 +103,7 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 
 	go func() {
 		for range tickHalfSecond.C {
-			models, err := getUsers(ctx, db)
+			models, err := infrastructure.GetUsers(ctx, db)
 			if err != nil {
 				hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
 				continue
@@ -123,7 +122,7 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 
 	go func() {
 		for range tickHalfSecond.C {
-			models, err := getTags(ctx, db)
+			models, err := infrastructure.GetTags(ctx, db)
 			if err != nil {
 				hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
 				continue
@@ -135,6 +134,25 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 					continue
 				} else {
 					hub.Broadcast <- Event{Event: "tag", Data: string(data)}
+				}
+			}
+		}
+	}()
+
+	go func() {
+		for range tickHalfSecond.C {
+			models, err := infrastructure.GetNotice(ctx, db)
+			if err != nil {
+				hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
+				continue
+			}
+			for _, model := range models {
+				nf := infrastructure.NoticeFromEntity(model)
+				if data, err := json.Marshal(nf); err != nil {
+					hub.Broadcast <- Event{Event: "error", Data: fmt.Sprintf(`Error: %v\n`, err)}
+					continue
+				} else {
+					hub.Broadcast <- Event{Event: "notice", Data: string(data)}
 				}
 			}
 		}

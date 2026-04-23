@@ -16,9 +16,9 @@
                 :class="isConnect ? 'bg-success' : 'bg-error'"></span>
             <span x-text="isConnect ? 'LIVE' : 'disconnected'"></span>
         </div>
-        <!-- サーバー時刻 (htmx SSE) -->
-        <div hx-ext="sse" sse-connect="/sse">
-            <span class="font-mono text-sm text-base-content/60" sse-swap="time-tick" hx-swap="innerHTML">
+        <!-- サーバー時刻 (SSE + Alpine) -->
+        <div>
+            <span class="font-mono text-sm text-base-content/60" x-text="currentTimeFormatted(timeNow)">
                 --:--:--
             </span>
         </div>

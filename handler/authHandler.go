@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	infrastructure "meetup/_mac_infrastructure"
 	"meetup/env"
@@ -55,7 +54,6 @@ func (hm *HandlerManager) loginHandler() echo.HandlerFunc {
 
 		user, err := getUserInfo(c.Request().Context(), hm.db, info.E, info.P)
 		if err != nil {
-			fmt.Println("User not found")
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
 		}
 
@@ -67,7 +65,6 @@ func (hm *HandlerManager) loginHandler() echo.HandlerFunc {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		signed, err := token.SignedString([]byte(env.GetJWTKey()))
 		if err != nil {
-			fmt.Println("Signed Error")
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
