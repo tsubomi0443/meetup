@@ -1,5 +1,5 @@
 import { Question, User, Tag } from '/static/js/model.js';
-import { SSE_ADD_NOTICE, SSE_ADD_QUESTION, SSE_ADD_TAG, SSE_ADD_USER, SSE_TIME_TICKER } from './sse.js';
+import { SSE_KEY } from './sse.js';
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('hrAppData', () => ({
@@ -12,7 +12,7 @@ document.addEventListener('alpine:init', () => {
         showTagModal: false,
         showEditTagModal: false,
         timeNow: new Date(),
-        unreadNotices: 1,
+        unreadNotices: 0,
         activeQuestion: {},
         originalQuestion: {},
         activeUser: {},
@@ -101,7 +101,6 @@ document.addEventListener('alpine:init', () => {
 
         init() {
             this.refreshIcons();
-            this.activeQuestion = { support: { supportStatusID: "", user: { name: "" } } };
 
             document.addEventListener('connect', (event) => {
                 this.isConnect = event.detail;
@@ -110,11 +109,11 @@ document.addEventListener('alpine:init', () => {
                 this.isConnect = event.detail;
             });
 
-            document.addEventListener(SSE_TIME_TICKER, (event) => {
+            document.addEventListener(SSE_KEY.system.timeTick, (event) => {
                 this.timeNow = event.detail
             });
 
-            document.addEventListener(SSE_ADD_NOTICE, (event) => {
+            document.addEventListener(SSE_KEY.data.create.notice, (event) => {
                 const notice = event.detail;
                 const index = this.notices.findIndex(n => n.id === notice.id)
                 if (index === -1) {
@@ -129,10 +128,15 @@ document.addEventListener('alpine:init', () => {
                         this.refreshIcons();
                     }
                 }
-                if (notice.noticeType?.name === 'ALERT') this.unreadNotices += 1;
+                if (notice.typeId !== 1) this.unreadNotices += 1;
             });
 
-            document.addEventListener(SSE_ADD_QUESTION, (event) => {
+            document.addEventListener(SSE_KEY.data.delete.notice, (event) => {
+                const id = event.detail;
+                this.notices = this.notices.filter((n) => n.id !== id);
+            });
+
+            document.addEventListener(SSE_KEY.data.create.question, (event) => {
                 const question = this.toQuestionViewModel(event.detail);
                 const index = this.questions.findIndex(q => q.id === question.id);
                 if (index === -1) {
@@ -167,7 +171,16 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_ADD_USER, (event) => {
+            document.addEventListener(SSE_KEY.data.delete.question, (event) => {
+                const id = event.detail;
+                this.questions = this.questions.filter((q) => q.id !== id);
+                if (this.activeQuestion?.id === id) {
+                    this.activeQuestion = {};
+                    this.originalQuestion = {};
+                }
+            });
+
+            document.addEventListener(SSE_KEY.data.create.user, (event) => {
                 const user = event.detail;
                 const index = this.users.findIndex(q => q.id === user.id);
                 if (index === -1) {
@@ -184,9 +197,14 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_ADD_TAG, (event) => {
+            document.addEventListener(SSE_KEY.data.delete.user, (event) => {
+                const id = event.detail;
+                this.users = this.users.filter((u) => u.id !== id);
+            });
+
+            document.addEventListener(SSE_KEY.data.create.tag, (event) => {
                 const tag = event.detail;
-                const index = this.tags.findIndex(q => q.id === tag.id);
+                const index = this.tags.findIndex(t => t.id === tag.id);
                 if (index === -1) {
                     this.tags.unshift(tag);
                     this.availableTags = this.tags.map((t) => Tag.fromJSON(t));
@@ -202,6 +220,15 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
             });
+
+            document.addEventListener(SSE_KEY.data.delete.tag, (event) => {
+                const id = event.detail;
+                const newTags = this.tags.filter((t) => t.id !== id);
+                this.tags = newTags;
+                this.availableTags = newTags.map((t) => Tag.fromJSON(t));
+            });
+
+            this.getTags()
         },
 
         getIcon(name) {
@@ -276,6 +303,17 @@ document.addEventListener('alpine:init', () => {
             this.activeQuestion = v;
             this.relatedSearchQuery = '';
             this.setView('detail');
+        },
+
+        openDetailByID(id = 0) {
+            if (id === 0) {
+                window.alert(`invalid support id is ${id}.`)
+            }
+            const index = this.questions.findIndex(q => q.id == id)
+            console.log(index)
+            if (index !== -1) {
+                this.openDetail(this.questions[index])
+            }
         },
 
         toggleTag(tag) {
@@ -360,8 +398,8 @@ document.addEventListener('alpine:init', () => {
             this.availableTags = list.map((t) => Tag.fromJSON(t));
         },
 
-        async registerTag(name, cateogryId) {
-            const data = Tag.toModel({ title: name, categoryId: cateogryId, usage: 0 });
+        async registerTag(name, cateogryId, categoryText) {
+            const data = Tag.toModel({ title: name, categoryId: cateogryId, usage: 0, category: { categoryName: categoryText } });
             const res = await fetch('/api/v1/tag', {
                 method: "POST",
                 headers: this.apiHeaders(),

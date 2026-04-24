@@ -205,7 +205,6 @@ type QuestionForm struct {
 	Answer           *AnswerForm      `json:"answer,omitempty"`
 	Memos            []MemoForm       `json:"memos,omitempty"`
 	Tags             []TagForm        `json:"tags,omitempty"`
-	Notices          []NoticeForm     `json:"notices,omitempty"`
 	EscalationsFrom  []EscalationForm `json:"escalationsFrom,omitempty"`
 	EscalationsTo    []EscalationForm `json:"escalationsTo,omitempty"`
 }

@@ -112,7 +112,7 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 			Updates(ctx, q); err != nil {
 			return err
 		}
-		ref := Question{ID: q.ID}
+		// ref := Question{ID: q.ID}
 		// 4) タグ紐づけ（tag_managers）— has_many Replace は子の FK を NULL 更新するため
 		// NOT NULL 制約（question_id）と相性が悪い。DELETE + INSERT で置き換える。
 		var tagRows []TagManager
@@ -156,22 +156,22 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 				return err
 			}
 		}
-		// 6) 通知
-		for i := range q.Notices {
-			if q.Notices[i].QuestionID == nil {
-				qid := q.ID
-				q.Notices[i].QuestionID = &qid
-			}
-		}
-		if len(q.Notices) == 0 {
-			if err := tx.Model(&ref).Association("Notices").Clear(); err != nil {
-				return err
-			}
-		} else {
-			if err := tx.Model(&ref).Association("Notices").Replace(q.Notices); err != nil {
-				return err
-			}
-		}
+		// // 6) 通知
+		// for i := range q.Notices {
+		// 	if q.Notices[i].QuestionID == nil {
+		// 		qid := q.ID
+		// 		q.Notices[i].QuestionID = &qid
+		// 	}
+		// }
+		// if len(q.Notices) == 0 {
+		// 	if err := tx.Model(&ref).Association("Notices").Clear(); err != nil {
+		// 		return err
+		// 	}
+		// } else {
+		// 	if err := tx.Model(&ref).Association("Notices").Replace(q.Notices); err != nil {
+		// 		return err
+		// 	}
+		// }
 		return nil
 	})
 }
@@ -277,6 +277,14 @@ func GetTags(ctx context.Context, db *gorm.DB) (models []Tag, err error) {
 	models, err = gorm.G[Tag](db).
 		Preload("Category", nil).
 		Find(ctx)
+	return
+}
+
+func GetTagByID(ctx context.Context, db *gorm.DB, id int64) (models Tag, err error) {
+	models, err = gorm.G[Tag](db).
+		Preload("Category", nil).
+		Where("id = ?", id).
+		First(ctx)
 	return
 }
 

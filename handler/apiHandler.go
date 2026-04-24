@@ -17,48 +17,55 @@ const (
 )
 
 func (hm *HandlerManager) SetAPIHandler() (routeInfos []echo.RouteInfo) {
-	routeInfos = append(routeInfos, hm.setupUserHandler()...)
-	routeInfos = append(routeInfos, hm.setupQuestionHandler()...)
-	routeInfos = append(routeInfos, hm.setupTagHandler()...)
+	group := hm.e.Group(apiPath, GetJWTConfig())
+	routeInfos = append(routeInfos, hm.setupUserHandler(group)...)
+	routeInfos = append(routeInfos, hm.setupQuestionHandler(group)...)
+	routeInfos = append(routeInfos, hm.setupTagHandler(group)...)
 
 	return
 }
 
-func (hm *HandlerManager) setupUserHandler() (routeInfos []echo.RouteInfo) {
+// TODO; sseeventの名前の一覧をJSに渡すかどうか、画面側に渡す値を入力データのまま（Form）のまま他ユーザへ配信するか、DBの情報と一致したものを受け取ったほうがいいため、Entityを返却してフロントエンドで変換をかける、もしくはフロントの変換ロジックをサーバ側へと移動させ、フロントエンドの変換ロジックは使わないようにする。
+// TODO; 通知→質問の場合は一覧へ戻るではなく、通知に戻ったほうがUX的に正解だと思う
+// TODO; 更新→入力データを他ユーザへ配信、この流れだとIDが未付与の状態が送信されてしまいオブジェクトのキー（undefined）で打消しあってしまう。入力データを取得後DBからIDのもっとも大きいものを取得してきて、それに置換。それを返却して対処することができる。
+// TODO; 各CRUDのタイミングでのSSE処理の粒度があやふやになっている。登録・更新は同じイベント内の処理でよさそう。削除は削除対象のIDを送信し対象の配列内にIDを持つオブジェクトが存在すればDELETE
+func (hm *HandlerManager) setupUserHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/user"
 	const uriWithID = uri + "/:id"
-	var api = hm.e.Group(apiPath, GetJWTConfig())
+	const api = "user"
 
-	routeInfos = append(routeInfos, api.POST(uri, hm.registerUser()))
-	routeInfos = append(routeInfos, api.PUT(uri, hm.updateUserByID()))
-	routeInfos = append(routeInfos, api.DELETE(uriWithID, hm.deleteUserByID()))
+	routeInfos = append(routeInfos, group.POST(uri, hm.registerUser(api, hm.hub.sendCreateEvent)))
+	routeInfos = append(routeInfos, group.PUT(uri, hm.updateUserByID(api, hm.hub.sendUpdateEvent)))
+	routeInfos = append(routeInfos, group.DELETE(uriWithID, hm.deleteUserByID(api, hm.hub.sendDeleteEvent)))
 	return
 }
 
-func (hm *HandlerManager) setupQuestionHandler() (routeInfos []echo.RouteInfo) {
+func (hm *HandlerManager) setupQuestionHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/question"
 	const uriWithID = uri + "/:id"
-	var api = hm.e.Group(apiPath, GetJWTConfig())
+	const api = "question"
 
-	routeInfos = append(routeInfos, api.POST(uri, hm.registerQuestion()))
-	routeInfos = append(routeInfos, api.GET(uriWithID, hm.getQuestionByID()))
-	routeInfos = append(routeInfos, api.DELETE(uriWithID, hm.deleteQuestionByID()))
-	routeInfos = append(routeInfos, api.PUT(uri, hm.updateQuestionByID()))
+	routeInfos = append(routeInfos, group.POST(uri, hm.registerQuestion(api, hm.hub.sendCreateEvent)))
+	routeInfos = append(routeInfos, group.GET(uri, hm.getQuestions()))
+	routeInfos = append(routeInfos, group.GET(uriWithID, hm.getQuestionByID()))
+	routeInfos = append(routeInfos, group.DELETE(uriWithID, hm.deleteQuestionByID(api, hm.hub.sendDeleteEvent)))
+	routeInfos = append(routeInfos, group.PUT(uri, hm.updateQuestionByID(api, hm.hub.sendUpdateEvent)))
 	return
 }
 
-func (hm *HandlerManager) setupTagHandler() (routeInfos []echo.RouteInfo) {
+func (hm *HandlerManager) setupTagHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/tag"
 	const uriWithID = uri + "/:id"
-	var api = hm.e.Group(apiPath, GetJWTConfig())
+	const api = "tag"
 
-	routeInfos = append(routeInfos, api.POST(uri, hm.registerTag()))
-	routeInfos = append(routeInfos, api.PUT(uri, hm.updateTag()))
-	routeInfos = append(routeInfos, api.DELETE(uriWithID, hm.deleteTagByID()))
+	routeInfos = append(routeInfos, group.GET(uri, hm.getTags()))
+	routeInfos = append(routeInfos, group.POST(uri, hm.registerTag(api, hm.hub.sendCreateEvent)))
+	routeInfos = append(routeInfos, group.PUT(uri, hm.updateTag(api, hm.hub.sendUpdateEvent)))
+	routeInfos = append(routeInfos, group.DELETE(uriWithID, hm.deleteTagByID(api, hm.hub.sendDeleteEvent)))
 	return
 }
 
-func (hm *HandlerManager) registerUser() echo.HandlerFunc {
+func (hm *HandlerManager) registerUser(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -71,11 +78,16 @@ func (hm *HandlerManager) registerUser() echo.HandlerFunc {
 			return err
 		}
 		data := infrastructure.UserToEntityNoRole(form)
-		return infrastructure.Register(c.Request().Context(), hm.db, &data)
+		if err := infrastructure.Register(c.Request().Context(), hm.db, &data); err != nil {
+			return c.JSON(http.StatusInternalServerError, fmt.Errorf("Create user server error %w", err))
+		}
+
+		sendEvent(api, string(body))
+		return c.JSON(http.StatusOK, nil)
 	}
 }
 
-func (hm *HandlerManager) registerQuestion() echo.HandlerFunc {
+func (hm *HandlerManager) registerQuestion(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -88,11 +100,15 @@ func (hm *HandlerManager) registerQuestion() echo.HandlerFunc {
 			return err
 		}
 		data := infrastructure.QuestionToEntity(form)
-		return infrastructure.Register(c.Request().Context(), hm.db, &data)
+		if err := infrastructure.Register(c.Request().Context(), hm.db, &data); err != nil {
+			return c.JSON(http.StatusInternalServerError, fmt.Errorf("Create question server error %w", err))
+		}
+		sendEvent(api, string(body))
+		return c.JSON(http.StatusOK, nil)
 	}
 }
 
-func (hm *HandlerManager) registerTag() echo.HandlerFunc {
+func (hm *HandlerManager) registerTag(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -105,11 +121,16 @@ func (hm *HandlerManager) registerTag() echo.HandlerFunc {
 			return err
 		}
 		model := infrastructure.TagToEntity(form)
-		return infrastructure.Register(c.Request().Context(), hm.db, &model)
+		if err := infrastructure.Register(c.Request().Context(), hm.db, &model); err != nil {
+			return c.JSON(http.StatusInternalServerError, fmt.Errorf("Create new tag error %w\n", err))
+		}
+
+		sendEvent(api, string(body))
+		return c.JSON(http.StatusOK, nil)
 	}
 }
 
-func (hm *HandlerManager) updateTag() echo.HandlerFunc {
+func (hm *HandlerManager) updateTag(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -125,11 +146,12 @@ func (hm *HandlerManager) updateTag() echo.HandlerFunc {
 		if _, err := infrastructure.UpdateByID(c.Request().Context(), hm.db, model.ID, model, "Category", "TagManagers"); err != nil {
 			return err
 		}
+		sendEvent(api, string(body))
 		return c.JSON(http.StatusOK, nil)
 	}
 }
 
-func (hm *HandlerManager) deleteTagByID() echo.HandlerFunc {
+func (hm *HandlerManager) deleteTagByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -140,6 +162,7 @@ func (hm *HandlerManager) deleteTagByID() echo.HandlerFunc {
 		if err := infrastructure.DeleteTagByID(c.Request().Context(), hm.db, id); err != nil {
 			return err
 		}
+		sendEvent(api, idStr)
 		return c.JSON(http.StatusOK, nil)
 	}
 }
@@ -151,6 +174,16 @@ func (hm *HandlerManager) getUsers() echo.HandlerFunc {
 			return err
 		}
 		return c.JSON(http.StatusOK, infrastructure.UserFormsFromEntities(users))
+	}
+}
+
+func (hm *HandlerManager) getQuestions() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		questions, err := infrastructure.GetQuestions(c.Request().Context(), hm.db)
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, infrastructure.QuestionFromEntities(questions))
 	}
 }
 
@@ -171,7 +204,17 @@ func (hm *HandlerManager) getQuestionByID() echo.HandlerFunc {
 	}
 }
 
-func (hm *HandlerManager) updateQuestionByID() echo.HandlerFunc {
+func (hm *HandlerManager) getTags() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		tags, err := infrastructure.GetTags(c.Request().Context(), hm.db)
+		if err != nil {
+			return err
+		}
+		return c.JSON(http.StatusOK, infrastructure.TagFromEntities(tags))
+	}
+}
+
+func (hm *HandlerManager) updateQuestionByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -186,11 +229,12 @@ func (hm *HandlerManager) updateQuestionByID() echo.HandlerFunc {
 		if err := infrastructure.UpdateQuestionInTransaction(c.Request().Context(), hm.db, updatedModel); err != nil {
 			return err
 		}
+		sendEvent(api, string(body))
 		return c.JSON(http.StatusOK, nil)
 	}
 }
 
-func (hm *HandlerManager) deleteQuestionByID() echo.HandlerFunc {
+func (hm *HandlerManager) deleteQuestionByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 0, 10)
@@ -201,11 +245,12 @@ func (hm *HandlerManager) deleteQuestionByID() echo.HandlerFunc {
 		if err := infrastructure.DeleteQuestionByID(c.Request().Context(), hm.db, id); err != nil {
 			return err
 		}
+		sendEvent(api, idStr)
 		return c.JSON(http.StatusOK, "")
 	}
 }
 
-func (hm *HandlerManager) deleteUserByID() echo.HandlerFunc {
+func (hm *HandlerManager) deleteUserByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 0, 10)
@@ -215,12 +260,13 @@ func (hm *HandlerManager) deleteUserByID() echo.HandlerFunc {
 		if err := infrastructure.DeleteUserByID(c.Request().Context(), hm.db, id); err != nil {
 			return err
 		}
+		sendEvent(api, idStr)
 
 		return c.JSON(http.StatusOK, nil)
 	}
 }
 
-func (hm *HandlerManager) updateUserByID() echo.HandlerFunc {
+func (hm *HandlerManager) updateUserByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
 		if err != nil {
@@ -236,6 +282,7 @@ func (hm *HandlerManager) updateUserByID() echo.HandlerFunc {
 		if _, err := infrastructure.UpdateByID(c.Request().Context(), hm.db, updatedModel.ID, updatedModel, "Role"); err != nil {
 			return c.JSON(http.StatusInternalServerError, err)
 		}
+		sendEvent(api, string(body))
 		return c.JSON(http.StatusOK, nil)
 	}
 }

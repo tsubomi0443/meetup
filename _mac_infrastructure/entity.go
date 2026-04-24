@@ -10,8 +10,7 @@ import (
 type Role struct {
 	ID       int64  `gorm:"column:id;primaryKey"`
 	RoleName string `gorm:"column:role_name"`
-
-	Users []User `gorm:"foreignKey:RoleID;references:ID"`
+	Users    []User `gorm:"foreignKey:RoleID;references:ID"`
 }
 
 func (Role) TableName() string {
@@ -40,8 +39,7 @@ func (User) TableName() string {
 type Category struct {
 	ID           int64  `gorm:"column:id;primaryKey"`
 	CategoryName string `gorm:"column:category_name"`
-
-	Tags []Tag `gorm:"foreignKey:CategoryID;references:ID"`
+	Tags         []Tag  `gorm:"foreignKey:CategoryID;references:ID"`
 }
 
 func (Category) TableName() string {
@@ -52,11 +50,10 @@ func (Category) TableName() string {
 // TAG
 // =====================
 type Tag struct {
-	ID         int64  `gorm:"column:id;primaryKey"`
-	Title      string `gorm:"column:title"`
-	Usage      int    `gorm:"column:usage"`
-	CategoryID int64  `gorm:"column:category_id"`
-
+	ID          int64        `gorm:"column:id;primaryKey"`
+	Title       string       `gorm:"column:title"`
+	Usage       int          `gorm:"column:usage"`
+	CategoryID  int64        `gorm:"column:category_id"`
 	Category    Category     `gorm:"foreignKey:CategoryID;references:ID"`
 	TagManagers []TagManager `gorm:"foreignKey:TagID;references:ID"`
 }
@@ -69,21 +66,19 @@ func (Tag) TableName() string {
 // QUESTION
 // =====================
 type Question struct {
-	ID               int64      `gorm:"column:id;primaryKey"`
-	OriginQuestionID *int64     `gorm:"column:origin_question_id"`
-	AnswerID         *int64     `gorm:"column:answer_id"`
-	SupportID        *int64     `gorm:"column:support_id"`
-	Title            string     `gorm:"column:title"`
-	Content          string     `gorm:"column:content"`
-	Deleted          bool       `gorm:"column:deleted"`
-	Due              *time.Time `gorm:"column:due"`
-	CreatedAt        time.Time  `gorm:"column:created_at"`
-
-	Answer      *Answer      `gorm:"foreignKey:AnswerID;references:ID"`
-	Memos       []Memo       `gorm:"foreignKey:QuestionID;references:ID"`
-	TagManagers []TagManager `gorm:"foreignKey:QuestionID;references:ID"`
-	Notices     []Notice     `gorm:"foreignKey:QuestionID;references:ID"`
-	Support     *Support     `gorm:"foreignKey:SupportID;references:ID"`
+	ID               int64        `gorm:"column:id;primaryKey"`
+	OriginQuestionID *int64       `gorm:"column:origin_question_id"`
+	AnswerID         *int64       `gorm:"column:answer_id"`
+	SupportID        *int64       `gorm:"column:support_id"`
+	Title            string       `gorm:"column:title"`
+	Content          string       `gorm:"column:content"`
+	Deleted          bool         `gorm:"column:deleted"`
+	Due              *time.Time   `gorm:"column:due"`
+	CreatedAt        time.Time    `gorm:"column:created_at"`
+	Answer           *Answer      `gorm:"foreignKey:AnswerID;references:ID"`
+	Memos            []Memo       `gorm:"foreignKey:QuestionID;references:ID"`
+	TagManagers      []TagManager `gorm:"foreignKey:QuestionID;references:ID"`
+	Support          *Support     `gorm:"foreignKey:SupportID;references:ID"`
 }
 
 func (Question) TableName() string {
@@ -94,12 +89,11 @@ func (Question) TableName() string {
 // ANSWER
 // =====================
 type Answer struct {
-	ID         int64      `gorm:"column:id;primaryKey"`
-	UserID     int64      `gorm:"column:user_id"`
-	Content    string     `gorm:"column:content"`
-	AnsweredAt *time.Time `gorm:"column:answered_at"`
-	CreatedAt  time.Time  `gorm:"column:created_at"`
-
+	ID            int64          `gorm:"column:id;primaryKey"`
+	UserID        int64          `gorm:"column:user_id"`
+	Content       string         `gorm:"column:content"`
+	AnsweredAt    *time.Time     `gorm:"column:answered_at"`
+	CreatedAt     time.Time      `gorm:"column:created_at"`
 	User          User           `gorm:"foreignKey:UserID;references:ID"`
 	ReferManagers []ReferManager `gorm:"foreignKey:AnswerID;references:ID"`
 }
@@ -128,10 +122,9 @@ func (Memo) TableName() string {
 // REFER
 // =====================
 type Refer struct {
-	ID    int64  `gorm:"column:id;primaryKey"`
-	Title string `gorm:"column:title"`
-	URL   string `gorm:"column:url"`
-
+	ID            int64          `gorm:"column:id;primaryKey"`
+	Title         string         `gorm:"column:title"`
+	URL           string         `gorm:"column:url"`
 	ReferManagers []ReferManager `gorm:"foreignKey:ReferID;references:ID"`
 }
 
@@ -143,12 +136,11 @@ func (Refer) TableName() string {
 // REFER_MANAGER
 // =====================
 type ReferManager struct {
-	ID       int64 `gorm:"column:id;primaryKey"`
-	AnswerID int64 `gorm:"column:answer_id"`
-	ReferID  int64 `gorm:"column:refer_id"`
-
-	Answer Answer `gorm:"foreignKey:AnswerID;references:ID"`
-	Refer  Refer  `gorm:"foreignKey:ReferID;references:ID"`
+	ID       int64  `gorm:"column:id;primaryKey"`
+	AnswerID int64  `gorm:"column:answer_id"`
+	ReferID  int64  `gorm:"column:refer_id"`
+	Answer   Answer `gorm:"foreignKey:AnswerID;references:ID"`
+	Refer    Refer  `gorm:"foreignKey:ReferID;references:ID"`
 }
 
 func (ReferManager) TableName() string {
@@ -159,12 +151,11 @@ func (ReferManager) TableName() string {
 // TAG_MANAGER
 // =====================
 type TagManager struct {
-	ID         int64 `gorm:"column:id;primaryKey"`
-	TagID      int64 `gorm:"column:tag_id"`
-	QuestionID int64 `gorm:"column:question_id"`
-
-	Tag      Tag      `gorm:"foreignKey:TagID;references:ID"`
-	Question Question `gorm:"foreignKey:QuestionID;references:ID"`
+	ID         int64    `gorm:"column:id;primaryKey"`
+	TagID      int64    `gorm:"column:tag_id"`
+	QuestionID int64    `gorm:"column:question_id"`
+	Tag        Tag      `gorm:"foreignKey:TagID;references:ID"`
+	Question   Question `gorm:"foreignKey:QuestionID;references:ID"`
 }
 
 func (TagManager) TableName() string {
@@ -179,9 +170,8 @@ type Escalation struct {
 	FromQuestionID int64     `gorm:"column:from_question_id"`
 	ToQuestionID   int64     `gorm:"column:to_question_id"`
 	EscalatedAt    time.Time `gorm:"column:escalated_at"`
-
-	FromQuestion Question `gorm:"foreignKey:FromQuestionID;references:ID"`
-	ToQuestion   Question `gorm:"foreignKey:ToQuestionID;references:ID"`
+	FromQuestion   Question  `gorm:"foreignKey:FromQuestionID;references:ID"`
+	ToQuestion     Question  `gorm:"foreignKey:ToQuestionID;references:ID"`
 }
 
 func (Escalation) TableName() string {
@@ -192,9 +182,8 @@ func (Escalation) TableName() string {
 // SUPPORT_STATUS
 // =====================
 type SupportStatus struct {
-	ID    int64  `gorm:"column:id;primaryKey"`
-	Title string `gorm:"column:title"`
-
+	ID       int64     `gorm:"column:id;primaryKey"`
+	Title    string    `gorm:"column:title"`
 	Supports []Support `gorm:"foreignKey:SupportStatusID;references:ID"`
 }
 
@@ -206,12 +195,11 @@ func (SupportStatus) TableName() string {
 // SUPPORT
 // =====================
 type Support struct {
-	ID              int64 `gorm:"column:id;primaryKey"`
-	UserID          int64 `gorm:"column:user_id"`
-	SupportStatusID int64 `gorm:"column:support_status_id"`
-
-	User          User          `gorm:"foreignKey:UserID;references:ID"`
-	SupportStatus SupportStatus `gorm:"foreignKey:SupportStatusID;references:ID"`
+	ID              int64         `gorm:"column:id;primaryKey"`
+	UserID          int64         `gorm:"column:user_id"`
+	SupportStatusID int64         `gorm:"column:support_status_id"`
+	User            User          `gorm:"foreignKey:UserID;references:ID"`
+	SupportStatus   SupportStatus `gorm:"foreignKey:SupportStatusID;references:ID"`
 }
 
 func (Support) TableName() string {
@@ -240,7 +228,6 @@ type Notice struct {
 	QuestionID *int64     `gorm:"column:question_id"`
 	Content    *string    `gorm:"column:content"`
 	DisplayDue *time.Time `gorm:"column:display_due"`
-
 	NoticeType NoticeType `gorm:"foreignKey:TypeID;references:ID"`
 	Question   *Question  `gorm:"foreignKey:QuestionID;references:ID"`
 }

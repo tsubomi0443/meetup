@@ -38,9 +38,9 @@ export class Role {
    * @param {User[]} [users]
    */
   constructor(id, roleName, users = []) {
-    this.id       = id;
+    this.id = id;
     this.roleName = roleName;
-    this.users    = users;
+    this.users = users;
   }
 
   /** @param {Object} json @returns {Role} */
@@ -68,8 +68,8 @@ export class SupportStatus {
    * @param {Support[]} [supports]
    */
   constructor(id, title, supports = []) {
-    this.id       = id;
-    this.title    = title;
+    this.id = id;
+    this.title = title;
     this.supports = supports;
   }
 
@@ -94,19 +94,19 @@ export class SupportStatus {
 export class Support {
   /**
    * @param {number}        id
-   * @param {number|string} userId
-   * @param {number|string} supportStatusId
+   * @param {number}        userId
+   * @param {string}        supportStatusId
    * @param {User|null}     [user]
    * @param {SupportStatus|null} [supportStatus]
    * @param {Question|null} [question]
    */
   constructor(id, userId, supportStatusId, user = null, supportStatus = null, question = null) {
-    this.id              = id;
-    this.userId          = userId;
+    this.id = id;
+    this.userId = userId;
     this.supportStatusId = supportStatusId;
-    this.user            = user;
-    this.supportStatus   = supportStatus;
-    this.question        = question;
+    this.user = user;
+    this.supportStatus = supportStatus;
+    this.question = question;
   }
 
   /** @param {Object} json @returns {Support} */
@@ -142,20 +142,20 @@ export class User {
    * @param {Memo[]}    [memos]
    */
   constructor(id, name, email, roleId, role = null, supports = [], answers = [], memos = []) {
-    this.id       = id;
-    this.name     = name;
-    this.email    = email;
-    this.roleId   = roleId;
-    this.role     = role;
+    this.id = id;
+    this.name = name;
+    this.email = email;
+    this.roleId = roleId;
+    this.role = role;
     this.supports = supports;
-    this.answers  = answers;
-    this.memos    = memos;
+    this.answers = answers;
+    this.memos = memos;
   }
 
   /** @param {Object} json @returns {User} */
   static fromJSON(json) {
     // const rid = json.roleId;
-    // const roleIdNum =
+    // const roleIdNum = 
     //   rid === null || rid === undefined || rid === ''
     //     ? rid
     //     : typeof rid === 'string'
@@ -189,9 +189,9 @@ export class Category {
    * @param {Tag[]}  [tags]
    */
   constructor(id, categoryName, tags = []) {
-    this.id           = id;
+    this.id = id;
     this.categoryName = categoryName;
-    this.tags         = tags;
+    this.tags = tags;
   }
 
   /** @param {Object} json @returns {Category} */
@@ -222,12 +222,12 @@ export class Tag {
    * @param {Question[]}  [questions]
    */
   constructor(id, title, usage, categoryId, category = null, questions = []) {
-    this.id         = id;
-    this.title      = title;
-    this.usage      = usage;
+    this.id = id;
+    this.title = title;
+    this.usage = usage;
     this.categoryId = categoryId;
-    this.category   = category;
-    this.questions  = questions;
+    this.category = category;
+    this.questions = questions;
   }
 
   /** @param {Object} json @returns {Tag} */
@@ -266,9 +266,9 @@ export class Refer {
    * @param {Answer[]} [answers]
    */
   constructor(id, title, url, answers = []) {
-    this.id      = id;
-    this.title   = title;
-    this.url     = url;
+    this.id = id;
+    this.title = title;
+    this.url = url;
     this.answers = answers;
   }
 
@@ -301,12 +301,12 @@ export class Memo {
    * @param {User|null}    [user]
    */
   constructor(id, questionId, userId, content, question = null, user = null) {
-    this.id         = id;
+    this.id = id;
     this.questionId = questionId;
-    this.userId     = userId;
-    this.content    = content;
-    this.question   = question;
-    this.user       = user;
+    this.userId = userId;
+    this.content = content;
+    this.question = question;
+    this.user = user;
   }
 
   /** @param {Object} json @returns {Memo} */
@@ -341,13 +341,13 @@ export class Answer {
    * @param {Refer[]}      [refers]
    */
   constructor(id, userId, content, answeredAt, createdAt, user = null, refers = []) {
-    this.id         = id;
-    this.userId     = userId;
-    this.content    = content;
+    this.id = id;
+    this.userId = userId;
+    this.content = content;
     this.answeredAt = answeredAt ? new Date(answeredAt) : null;
-    this.createdAt  = new Date(createdAt);
-    this.user       = user;
-    this.refers     = refers;
+    this.createdAt = new Date(createdAt);
+    this.user = user;
+    this.refers = refers;
   }
 
   /** @param {Object} json @returns {Answer} */
@@ -382,12 +382,12 @@ export class Escalation {
    * @param {Question|null} [toQuestion]
    */
   constructor(id, fromQuestionId, toQuestionId, escalatedAt, fromQuestion = null, toQuestion = null) {
-    this.id             = id;
+    this.id = id;
     this.fromQuestionId = fromQuestionId;
-    this.toQuestionId   = toQuestionId;
-    this.escalatedAt    = new Date(escalatedAt);
-    this.fromQuestion   = fromQuestion;
-    this.toQuestion     = toQuestion;
+    this.toQuestionId = toQuestionId;
+    this.escalatedAt = new Date(escalatedAt);
+    this.fromQuestion = fromQuestion;
+    this.toQuestion = toQuestion;
   }
 
   /** @param {Object} json @returns {Escalation} */
@@ -418,8 +418,8 @@ export class NoticeType {
    * @param {Notice[]} [notices]
    */
   constructor(id, name, notices = []) {
-    this.id      = id;
-    this.name    = name;
+    this.id = id;
+    this.name = name;
     this.notices = notices;
   }
 
@@ -452,13 +452,13 @@ export class Notice {
    * @param {Question|null} [question]
    */
   constructor(id, typeId, questionId, content, displayDue, noticeType = null, question = null) {
-    this.id         = id;
-    this.typeId     = typeId;
+    this.id = id;
+    this.typeId = typeId;
     this.questionId = questionId;
-    this.content    = content;
+    this.content = content;
     this.displayDue = displayDue ? new Date(displayDue) : null;
     this.noticeType = noticeType;
-    this.question   = question;
+    this.question = question;
   }
 
   /** @param {Object} json @returns {Notice} */
@@ -510,24 +510,24 @@ export class Question {
     answer = null, memos = [], tags = [], notices = [],
     escalationsFrom = [], escalationsTo = [],
   ) {
-    this.id               = id;
+    this.id = id;
     this.originQuestionId = originQuestionId;
-    this.answerId         = answerId;
-    this.supportId        = supportId;
-    this.title            = title;
-    this.content          = content;
-    this.deleted          = deleted;
-    this.due              = due ? new Date(due) : null;
-    this.createdAt        = new Date(createdAt);
-    this.originQuestion   = originQuestion;
-    this.subQuestions     = subQuestions;
-    this.support          = support;
-    this.answer           = answer;
-    this.memos            = memos;
-    this.tags             = tags;
-    this.notices          = notices;
-    this.escalationsFrom  = escalationsFrom;
-    this.escalationsTo    = escalationsTo;
+    this.answerId = answerId;
+    this.supportId = supportId;
+    this.title = title;
+    this.content = content;
+    this.deleted = deleted;
+    this.due = due ? new Date(due) : null;
+    this.createdAt = new Date(createdAt);
+    this.originQuestion = originQuestion;
+    this.subQuestions = subQuestions;
+    this.support = support;
+    this.answer = answer;
+    this.memos = memos;
+    this.tags = tags;
+    this.notices = notices;
+    this.escalationsFrom = escalationsFrom;
+    this.escalationsTo = escalationsTo;
   }
 
   /** @param {Object} json @returns {Question} */
@@ -576,11 +576,11 @@ export class ReferManager {
    * @param {Refer|null}  [refer]
    */
   constructor(id, answerId, referId, answer = null, refer = null) {
-    this.id       = id;
+    this.id = id;
     this.answerId = answerId;
-    this.referId  = referId;
-    this.answer   = answer;
-    this.refer    = refer;
+    this.referId = referId;
+    this.answer = answer;
+    this.refer = refer;
   }
 
   /** @param {Object} json @returns {ReferManager} */
@@ -612,11 +612,11 @@ export class TagManager {
    * @param {Question|null} [question]
    */
   constructor(id, tagId, questionId, tag = null, question = null) {
-    this.id         = id;
-    this.tagId      = tagId;
+    this.id = id;
+    this.tagId = tagId;
     this.questionId = questionId;
-    this.tag        = tag;
-    this.question   = question;
+    this.tag = tag;
+    this.question = question;
   }
 
   /** @param {Object} json @returns {TagManager} */

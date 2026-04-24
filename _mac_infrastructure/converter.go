@@ -247,6 +247,14 @@ func TagFromEntity(e Tag) TagForm {
 	return f
 }
 
+func TagFromEntities(e []Tag) []TagForm {
+	forms := []TagForm{}
+	for _, tag := range e {
+		forms = append(forms, TagFromEntity(tag))
+	}
+	return forms
+}
+
 func TagToEntity(f TagForm) Tag {
 	e := Tag{
 		ID:         f.ID,
@@ -516,9 +524,6 @@ func QuestionFromEntity(e Question) QuestionForm {
 	for _, m := range e.Memos {
 		f.Memos = append(f.Memos, MemoFromEntity(m))
 	}
-	for _, n := range e.Notices {
-		f.Notices = append(f.Notices, NoticeFromEntity(n))
-	}
 	for _, tm := range e.TagManagers {
 		if tm.Tag.ID != 0 {
 			f.Tags = append(f.Tags, tagFromEntityShallow(tm.Tag))
@@ -529,6 +534,14 @@ func QuestionFromEntity(e Question) QuestionForm {
 		f.Support = &s
 	}
 	return f
+}
+
+func QuestionFromEntities(e []Question) []QuestionForm {
+	forms := []QuestionForm{}
+	for _, q := range e {
+		forms = append(forms, QuestionFromEntity(q))
+	}
+	return forms
 }
 
 func QuestionToEntity(f QuestionForm) Question {
@@ -566,14 +579,6 @@ func QuestionToEntity(f QuestionForm) Question {
 			m.QuestionID = qid
 		}
 		e.Memos = append(e.Memos, m)
-	}
-	for _, nf := range f.Notices {
-		n := NoticeToEntity(nf)
-		if n.QuestionID == nil && qid != 0 {
-			qidCopy := qid
-			n.QuestionID = &qidCopy
-		}
-		e.Notices = append(e.Notices, n)
 	}
 	for _, tf := range f.Tags {
 		if tf.ID == 0 {
