@@ -282,6 +282,220 @@ document.addEventListener('alpine:init', () => {
         getIcon(name) {
         },
 
+        // --- mock5: 表示用ヘルパー（HTMLのAlpine式からロジックを分離） ---
+
+        hasSelectedTags() {
+            return this.selectedTags.length > 0;
+        },
+
+        questionStatusTitle(q) {
+            if (!q?.support?.supportStatus?.title) return '';
+            return String(q.support.supportStatus.title);
+        },
+
+        questionStatusBadgeClass(q) {
+            const t = this.questionStatusTitle(q);
+            if (!t) return '';
+            return this.statusColorMap[t] || '';
+        },
+
+        questionTagsList(q) {
+            return Array.isArray(q?.tags) ? q.tags : [];
+        },
+
+        isQuestionStatusCompleted(q) {
+            return this.questionStatusTitle(q) === '完了';
+        },
+
+        isQuestionDueUrgent(q) {
+            return (
+                (q?.daysLeft ?? 99) <= 1 &&
+                !this.isQuestionStatusCompleted(q)
+            );
+        },
+
+        questionDueLabel(q) {
+            return this.isQuestionStatusCompleted(q)
+                ? '完了'
+                : `あと${q?.daysLeft ?? 0}日`;
+        },
+
+        userInitialChar(u) {
+            return String(u?.name ?? '').charAt(0);
+        },
+
+        userDisplayName(u) {
+            return u?.name != null && u.name !== '' ? String(u.name) : '';
+        },
+
+        userDisplayEmail(u) {
+            return u?.email != null && u.email !== '' ? String(u.email) : '';
+        },
+
+        userRoleDisplayName(u) {
+            if (u?.role && u.role.roleName) return String(u.role.roleName);
+            return '';
+        },
+
+        activeQuestionHeaderLine() {
+            const s = this.activeQuestion?.sender != null
+                ? String(this.activeQuestion.sender)
+                : '';
+            const d = this.activeQuestion?.department != null
+                ? String(this.activeQuestion.department)
+                : '';
+            return `${s} • ${d}`;
+        },
+
+        senderInitialChar() {
+            const s = this.activeQuestion?.sender != null
+                ? String(this.activeQuestion.sender)
+                : '';
+            return s.charAt(0);
+        },
+
+        supportUserInitialChar() {
+            const s = this.activeQuestion?.support?.user?.name != null
+                ? String(this.activeQuestion.support.user.name)
+                : '';
+            return s.charAt(0);
+        },
+
+        activeQuestionTagButtonLabel() {
+            const tags = this.activeQuestion?.tags;
+            if (!Array.isArray(tags) || tags.length === 0) return 'タグを選択';
+            return tags.map((t) => t.title).join(', ');
+        },
+
+        isActiveQuestionTagSelected(tag) {
+            const tags = this.activeQuestion?.tags;
+            if (!Array.isArray(tags) || !tag) return false;
+            return tags.filter((t) => t.title === tag.title).length === 1;
+        },
+
+        activeQuestionDateOrPlaceholder() {
+            return this.activeQuestion?.date
+                ? String(this.activeQuestion.date)
+                : '---';
+        },
+
+        relatedQuestionsIsEmpty() {
+            const rq = this.activeQuestion?.relatedQuestions;
+            return !Array.isArray(rq) || rq.length === 0;
+        },
+
+        relatedQuestionPickerButtonLabel() {
+            if (this.relatedQuestionsIsEmpty()) return '質問を選択';
+            const n = this.activeQuestion.relatedQuestions.length;
+            return `${n}件選択中`;
+        },
+
+        isRelatedQuestionChecked(rId) {
+            const rq = this.activeQuestion?.relatedQuestions;
+            if (!Array.isArray(rq)) return false;
+            return rq.includes(rId);
+        },
+
+        hasActiveRelatedQuestionIds() {
+            const rq = this.activeQuestion?.relatedQuestions;
+            return Array.isArray(rq) && rq.length > 0;
+        },
+
+        relatedQuestionLineTitle(rId) {
+            const id = rId;
+            const q = this.questions.find((x) => x.id === id);
+            const t = q?.title != null ? String(q.title) : '';
+            return `#${id} ${t}`;
+        },
+
+        findQuestionById(id) {
+            return this.questions.find((q) => q.id === id);
+        },
+
+        openNoticeIfQuestion(n) {
+            if (n?.question) {
+                this.openDetailByID(n.questionId);
+            }
+        },
+
+        hasNoticeQuestion(n) {
+            return Boolean(n?.question);
+        },
+
+        noticeItemLayoutClass(n) {
+            return n?.question && n.question.support ? 'flex-col' : '';
+        },
+
+        noticeIconWrapperClass(n) {
+            return [2, 3].includes(n?.typeId)
+                ? 'bg-red-50 text-red-500'
+                : 'bg-slate-50 text-slate-500';
+        },
+
+        noticeIconName(n) {
+            return [2, 3].includes(n?.typeId) ? 'alert-circle' : 'info';
+        },
+
+        noticeSupportStatusTitle(n) {
+            return (
+                n?.question?.support?.supportStatus?.title
+                    ? String(n.question.support.supportStatus.title)
+                    : ''
+            );
+        },
+
+        noticeSupportStatusBadgeClass(n) {
+            const t = this.noticeSupportStatusTitle(n);
+            if (!t) return '';
+            return this.statusColorMap[t] || '';
+        },
+
+        noticeType3Heading(n) {
+            if (!n?.question) return '';
+            if (n.question.title) {
+                return `回答期限接近中: ${n.question.title}`;
+            }
+            return `回答期限接近中: 質問ID#${n.question.id}`;
+        },
+
+        noticeDueTimeLabel(n) {
+            if (!n?.question?.due) return '';
+            return `残り時間: ${this.calcRemainingTimeAndString(n.question)}`;
+        },
+
+        noticeQuestionTagsList(n) {
+            if (!n?.question) return [];
+            return Array.isArray(n.question.tags) ? n.question.tags : [];
+        },
+
+        noticeQuestionContent(n) {
+            if (!n?.question) return '';
+            return n.question.content != null
+                ? String(n.question.content)
+                : '';
+        },
+
+        countQuestionsUsingTagTitle(tag) {
+            const title = tag?.title != null ? String(tag.title) : '';
+            if (!title) return 0;
+            return this.questions.filter((q) => {
+                const tags = q?.tags;
+                if (!Array.isArray(tags)) return false;
+                return tags.some((t) => t && t.title === title);
+            }).length;
+        },
+
+        tagUsageCountLabel(tag) {
+            return `${this.countQuestionsUsingTagTitle(tag)}件`;
+        },
+
+        tagCategoryDisplayName(tag) {
+            if (tag?.category && tag.category.categoryName) {
+                return String(tag.category.categoryName);
+            }
+            return '';
+        },
+
         currentTimeFormatted(dt = new Date()) {
             return new Intl.DateTimeFormat('ja-JP', {
                 hour: '2-digit',

@@ -13,7 +13,7 @@
                     class="btn btn-outline btn-sm border-gray-300 normal-case h-10 px-4 font-bold text-gray-600 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800">
                     <i data-lucide="filter" class="w-4 h-4 mr-2"></i>
                     タグ
-                    <span x-show="selectedTags.length > 0"
+                    <span x-show="hasSelectedTags()"
                         class="ml-2 badge bg-slate-800 text-white border-none badge-xs"
                         x-text="selectedTags.length"></span>
                 </label>
@@ -34,7 +34,7 @@
                         </div>
                         <div class="divider my-1"></div>
                         <button @click="selectedTags = []" class="btn btn-ghost btn-xs text-red-500 font-bold"
-                            :disabled="selectedTags.length === 0">リセット</button>
+                            :disabled="!hasSelectedTags()">リセット</button>
                     </div>
                 </div>
             </div>
@@ -73,7 +73,7 @@
                     class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">完了のみ</button>
             </div>
 
-            <div x-show="selectedTags.length > 0" class="flex flex-wrap gap-1 items-center ml-2">
+            <div x-show="hasSelectedTags()" class="flex flex-wrap gap-1 items-center ml-2">
                 <template x-for="tag in selectedTags" :key="tag">
                     <span
                         class="badge bg-slate-100 border-slate-200 text-slate-800 font-bold gap-1 px-2 py-2 text-[10px] shadow-sm">
@@ -110,26 +110,26 @@
                             </div>
                         </div>
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold shadow-sm"
-                            :class="q.support && q.support.supportStatus && q.support.supportStatus.title && statusColorMap[q.support.supportStatus.title]" x-text="q.support && q.support.supportStatus && q.support.supportStatus.title"></span>
+                            :class="questionStatusBadgeClass(q)" x-text="questionStatusTitle(q)"></span>
                     </div>
                     <h3 class="text-base font-bold text-gray-800 mb-1 group-hover:text-slate-900" x-text="q.title"></h3>
                     <p class="text-sm text-gray-500 mb-4 flex-1 line-clamp-2" x-text="q.content"></p>
                     <div class="flex items-center justify-between pt-4 border-t border-gray-50 text-[10px] font-bold">
                         <div class="flex gap-1 flex-wrap">
-                            <template x-for="tag in (q.tags || [])" :key="tag.id">
+                            <template x-for="tag in questionTagsList(q)" :key="tag.id">
                                 <span class="bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase"
                                     x-text="tag.title"></span>
                             </template>
                         </div>
                         <div class="flex items-center gap-1 shrink-0"
-                            :class="q.daysLeft <= 1 && q.support && q.support.supportStatus && q.support.supportStatus.title !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                            :class="isQuestionDueUrgent(q) ? 'text-red-500' : 'text-gray-400'">
                             <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                            <span x-text="q.support && q.support.supportStatus && q.support.supportStatus.title === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
+                            <span x-text="questionDueLabel(q)"></span>
                         </div>
                     </div>
                 </div>
             </template>
-            <div x-show="filteredQuestions.length === 0" class="col-span-full py-16 text-center">
+            <div x-show="!filteredQuestions.length" class="col-span-full py-16 text-center">
                 <i data-lucide="search-x" class="w-12 h-12 text-gray-200 mx-auto mb-4"></i>
                 <p class="text-gray-400 font-bold">条件に一致する質問は見つかりませんでした。</p>
             </div>
@@ -140,21 +140,21 @@
                 <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer hover:border-slate-300 hover:shadow-md transition-all flex items-center gap-4 group"
                     @click="openDetail(q)">
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 w-16 text-center"
-                        :class="q.support && q.support.supportStatus && q.support.supportStatus.title && statusColorMap[q.support.supportStatus.title]" x-text="q.support && q.support.supportStatus && q.support.supportStatus.title && q.support.supportStatus.title"></span>
+                        :class="questionStatusBadgeClass(q)" x-text="questionStatusTitle(q)"></span>
                     <h3 class="text-sm font-bold text-gray-800 truncate w-48 shrink-0 group-hover:text-slate-900"
                         x-text="q.title"></h3>
                     <p class="text-xs text-gray-500 truncate flex-1 font-medium" x-text="q.content"></p>
                     <div class="flex gap-1 shrink-0">
-                        <template x-for="tag in (q.tags || [])" :key="tag.id">
+                        <template x-for="tag in questionTagsList(q)" :key="tag.id">
                             <span
                                 class="text-[10px] font-bold bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase"
                                 x-text="tag.title"></span>
                         </template>
                     </div>
                     <div class="text-[10px] font-bold shrink-0 flex items-center gap-1 w-16 justify-end"
-                        :class="q.daysLeft <= 1 && q.support && q.support.supportStatus && q.support.supportStatus.title !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                        :class="isQuestionDueUrgent(q) ? 'text-red-500' : 'text-gray-400'">
                         <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                        <span x-text="q.support && q.support.supportStatus && q.support.supportStatus.title === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
+                        <span x-text="questionDueLabel(q)"></span>
                     </div>
                 </div>
             </template>

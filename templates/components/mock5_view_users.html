@@ -24,16 +24,16 @@
                         <td>
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center font-bold text-slate-600 text-xs"
-                                    x-text="(u.name || '').charAt(0)"></div>
+                                    x-text="userInitialChar(u)"></div>
                                 <div>
-                                    <div class="font-bold text-sm" x-text="u.name || ''"></div>
-                                    <div class="text-[10px] text-gray-400" x-text="u.email || ''"></div>
+                                    <div class="font-bold text-sm" x-text="userDisplayName(u)"></div>
+                                    <div class="text-[10px] text-gray-400" x-text="userDisplayEmail(u)"></div>
                                 </div>
                             </div>
                         </td>
                         <td><span class="badge badge-sm font-bold"
                                 :class="u.roleId === 2 ? 'badge-info bg-slate-100 text-slate-800 border-slate-200' : 'badge-ghost'"
-                                x-text="(u.role && u.role.roleName) || ''"></span></td>
+                                x-text="userRoleDisplayName(u)"></span></td>
                         <td><button class="text-gray-400 hover:text-slate-800" @click="showEditUserModal = true; openUser(u)"><i data-lucide="edit-2"
                                     class="w-4 h-4"></i></button></td>
                     </tr>

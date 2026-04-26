@@ -33,12 +33,12 @@
                         </td>
                         <td>
                             <div class="flex items-center gap-3">
-                                <div class="font-bold text-sm" x-text="(tag.category && tag.category.categoryName) || ''"></div>
+                                <div class="font-bold text-sm" x-text="tagCategoryDisplayName(tag)"></div>
                             </div>
                         </td>
                         <td>
                             <span class="badge badge-sm font-bold bg-slate-100 text-slate-800 border-slate-200"
-                                x-text="questions.filter(q => q.tags && q.tags.includes(tag.title)).length + '件'"></span>
+                                x-text="tagUsageCountLabel(tag)"></span>
                         </td>
                         <td>
                             <button class="text-gray-400 hover:text-slate-800"><i data-lucide="edit-2" @click="showEditTagModal = true; openEditTag(tag)" class="w-4 h-4"></i></button>
