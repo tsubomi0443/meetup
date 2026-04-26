@@ -34,6 +34,7 @@ func (hm *HandlerManager) setupUserHandler(group *echo.Group) (routeInfos []echo
 	const uriWithID = uri + "/:id"
 	const api = "user"
 
+	routeInfos = append(routeInfos, group.GET(uri, hm.getUsers()))
 	routeInfos = append(routeInfos, group.POST(uri, hm.registerUser(api, hm.hub.sendCreateEvent)))
 	routeInfos = append(routeInfos, group.PUT(uri, hm.updateUserByID(api, hm.hub.sendUpdateEvent)))
 	routeInfos = append(routeInfos, group.DELETE(uriWithID, hm.deleteUserByID(api, hm.hub.sendDeleteEvent)))

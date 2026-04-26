@@ -1,5 +1,27 @@
-import { Question, User, Tag } from '/static/js/model.js';
+import { Question, User, Tag, Notice } from '/static/js/model.js';
 import { SSE_KEY } from './sse.js';
+
+/** API / モックで support はあるが user が無い場合がある。テンプレは activeQuestion.support.user.name を前提にする */
+function ensureSupportForView(support) {
+    const defaults = {
+        supportStatusId: '1',
+        supportStatus: { id: '1', title: '未対応' },
+        user: { name: '' }
+    };
+    if (!support) return defaults;
+    const o = { ...support };
+    o.user = support.user && typeof support.user === 'object'
+        ? { name: String(support.user.name ?? '') }
+        : { name: '' };
+    if (o.supportStatusId == null) o.supportStatusId = defaults.supportStatusId;
+    if (!o.supportStatus) o.supportStatus = { ...defaults.supportStatus };
+    return o;
+}
+
+/** 詳細ビュー (mock5_view_detail) が x-show 中でも式評価するため、空状態でも support 階層を持つ */
+function emptyActiveQuestion() {
+    return { support: ensureSupportForView(null) };
+}
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('hrAppData', () => ({
@@ -13,7 +35,7 @@ document.addEventListener('alpine:init', () => {
         showEditTagModal: false,
         timeNow: new Date(),
         unreadNotices: 0,
-        activeQuestion: {},
+        activeQuestion: emptyActiveQuestion(),
         originalQuestion: {},
         activeUser: {},
         activeTag: {},
@@ -115,11 +137,18 @@ document.addEventListener('alpine:init', () => {
 
             document.addEventListener(SSE_KEY.data.create.notice, (event) => {
                 const notice = event.detail;
-                const index = this.notices.findIndex(n => n.id === notice.id)
+                const index = this.notices.findIndex((n) => n.id === notice.id);
                 if (index === -1) {
                     this.notices.unshift(notice);
+                    if (notice.typeId !== 1) this.unreadNotices += 1;
                     this.refreshIcons();
-                } else {
+                }
+            });
+
+            document.addEventListener(SSE_KEY.data.update.notice, (event) => {
+                const notice = event.detail;
+                const index = this.notices.findIndex((n) => n.id === notice.id);
+                if (index !== -1) {
                     if (!_.isEqual(this.notices[index], notice)) {
                         this.notices.splice(index, 1, {
                             ...this.notices[index],
@@ -128,7 +157,6 @@ document.addEventListener('alpine:init', () => {
                         this.refreshIcons();
                     }
                 }
-                if (notice.typeId !== 1) this.unreadNotices += 1;
             });
 
             document.addEventListener(SSE_KEY.data.delete.notice, (event) => {
@@ -141,52 +169,64 @@ document.addEventListener('alpine:init', () => {
                 const index = this.questions.findIndex(q => q.id === question.id);
                 if (index === -1) {
                     this.questions.unshift(question);
-                } else {
+                    this.refreshIcons();
+                }
+            });
+
+            document.addEventListener(SSE_KEY.data.update.question, (event) => {
+                const question = this.toQuestionViewModel(event.detail);
+                const index = this.questions.findIndex(q => q.id === question.id);
+                if (index === -1) {
                     if (!_.isEqual(this.questions[index], question)) {
                         this.questions.splice(index, 1, {
                             ...this.questions[index],
                             ...question,
                         });
                     }
-                }
-
-                if (this.activeQuestion?.id === question.id) {
-                    if (!_.isEqual(this.activeQuestion, question)) {
-                        this.activeQuestion = _.mergeWith(
-                            _.cloneDeep(question),
-                            this.activeQuestion,
-                            (serverVal, localVal, key) => {
-                                const originalVal = _.get(this.originalQuestion, key)
-                                // ローカル変更されてたら優先
-                                if (!_.isEqual(localVal, originalVal)) {
-                                    return localVal
-                                }
-                                // server採用
-                                return serverVal
-                            }
-                        );
-                        this.originalQuestion = _.cloneDeep(question);
-                        this.refreshIcons();
-                    }
+					if (this.activeQuestion?.id === question.id) {
+						if (!_.isEqual(this.activeQuestion, question)) {
+							this.activeQuestion = _.mergeWith(
+								_.cloneDeep(question),
+								this.activeQuestion,
+								(serverVal, localVal, key) => {
+									const originalVal = _.get(this.originalQuestion, key)
+									// ローカル変更されてたら優先
+									if (!_.isEqual(localVal, originalVal)) {
+										return localVal
+									}
+									// server採用
+									return serverVal
+								}
+							);
+							this.originalQuestion = _.cloneDeep(question);
+							this.refreshIcons();
+						}
+					}
                 }
             });
 
             document.addEventListener(SSE_KEY.data.delete.question, (event) => {
                 const id = event.detail;
-                this.questions = this.questions.filter((q) => q.id !== id);
                 if (this.activeQuestion?.id === id) {
-                    this.activeQuestion = {};
+					this.questions = this.questions.filter((q) => q.id !== id);
+                    this.activeQuestion = emptyActiveQuestion();
                     this.originalQuestion = {};
                 }
             });
 
             document.addEventListener(SSE_KEY.data.create.user, (event) => {
                 const user = event.detail;
-                const index = this.users.findIndex(q => q.id === user.id);
+                const index = this.users.findIndex((u) => u.id === user.id);
                 if (index === -1) {
                     this.users.unshift(user);
                     this.refreshIcons();
-                } else {
+                }
+            });
+
+            document.addEventListener(SSE_KEY.data.update.user, (event) => {
+                const user = event.detail;
+                const index = this.users.findIndex((u) => u.id === user.id);
+                if (index !== -1) {
                     if (!_.isEqual(this.users[index], user)) {
                         this.users.splice(index, 1, {
                             ...this.users[index],
@@ -204,12 +244,18 @@ document.addEventListener('alpine:init', () => {
 
             document.addEventListener(SSE_KEY.data.create.tag, (event) => {
                 const tag = event.detail;
-                const index = this.tags.findIndex(t => t.id === tag.id);
+                const index = this.tags.findIndex((t) => t.id === tag.id);
                 if (index === -1) {
                     this.tags.unshift(tag);
                     this.availableTags = this.tags.map((t) => Tag.fromJSON(t));
                     this.refreshIcons();
-                } else {
+                }
+            });
+
+            document.addEventListener(SSE_KEY.data.update.tag, (event) => {
+                const tag = event.detail;
+                const index = this.tags.findIndex((t) => t.id === tag.id);
+                if (index !== -1) {
                     if (!_.isEqual(this.tags[index], tag)) {
                         this.tags.splice(index, 1, {
                             ...this.tags[index],
@@ -228,7 +274,9 @@ document.addEventListener('alpine:init', () => {
                 this.availableTags = newTags.map((t) => Tag.fromJSON(t));
             });
 
-            this.getTags()
+            this.getQuestions();
+            this.getUsers();
+            this.getTags();
         },
 
         getIcon(name) {
@@ -259,7 +307,7 @@ document.addEventListener('alpine:init', () => {
                 department: 'ここに部署名',
                 title: question.title ?? '',
                 content: question.content ?? '',
-                support: question.support ?? null,
+                support: ensureSupportForView(question.support),
                 tags: question.tags,
                 daysLeft,
                 date: this.formatDateTime(createdAt),
@@ -296,9 +344,7 @@ document.addEventListener('alpine:init', () => {
 
         openDetail(q) {
             const v = _.cloneDeep(q);
-            if (!v.support) {
-                v.support = { supportStatusId: '1', supportStatus: { id: '1', title: '未対応' }, user: { name: '' } };
-            }
+            v.support = ensureSupportForView(v.support);
             this.originalQuestion = _.cloneDeep(v);
             this.activeQuestion = v;
             this.relatedSearchQuery = '';
@@ -358,6 +404,13 @@ document.addEventListener('alpine:init', () => {
                     body: JSON.stringify(Question.toModel(this.activeQuestion))
                 });
             }
+        },
+
+        async getQuestions() {
+            const res = await fetch('/api/v1/question', { headers: this.apiHeaders(false) });
+            const json = await res.json();
+            const list = Array.isArray(json) ? json : [json];
+            this.questions = list.map((q) => this.toQuestionViewModel(q));
         },
 
         async getUsers() {

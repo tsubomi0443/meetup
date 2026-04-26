@@ -163,8 +163,8 @@ export class User {
     //       : rid;
     return new User(
       json.id,
-      json.name,
-      json.email,
+      json.name ?? '',
+      json.email ?? '',
       json.roleId,
       json.role ? Role.fromJSON(json.role) : null,
       (json.supports ?? []).map(Support.fromJSON),
