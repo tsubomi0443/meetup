@@ -653,8 +653,11 @@ document.addEventListener('alpine:init', () => {
             const due = question.due instanceof Date
                 ? question.due
                 : (question.due ? new Date(question.due) : null);
-            const daysLeft = due
-                ? Math.max(0, Math.ceil((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+            const createdAtValid = !Number.isNaN(createdAt.getTime());
+            const dueValid = due != null && !Number.isNaN(due.getTime());
+            const dueForCalc = dueValid ? due : null;
+            const daysLeft = dueForCalc
+                ? Math.max(0, Math.ceil((dueForCalc.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
                 : 0;
             return {
                 id: question.id,
@@ -665,8 +668,10 @@ document.addEventListener('alpine:init', () => {
                 support: ensureSupportForView(question.support),
                 tags: question.tags,
                 daysLeft,
-                date: this.formatDateTime(createdAt),
-                dueDate: due ? this.formatDate(due) : '',
+                date: createdAtValid ? this.formatDateTime(createdAt) : '',
+                dueDate: dueValid ? this.formatDate(due) : '',
+                createdAt: createdAtValid ? createdAt : null,
+                due: dueValid ? due : null,
                 relatedQuestions: this.normalizeRelatedQuestionsForViewModel(question),
                 memos: normalizeMemosForViewModel(question),
                 answer: normalizeAnswerForViewModel(question),
@@ -799,10 +804,49 @@ document.addEventListener('alpine:init', () => {
             const question = this.questions.filter(q => q.id === this.activeQuestion.id)[0];
 
             if (!_.isEqual(question, this.activeQuestion)) {
+                const aq = this.activeQuestion;
+                let dueISO = null;
+                if (aq.dueDate) {
+                    const sameAsOriginal = aq.due instanceof Date && this.formatDate(aq.due) === aq.dueDate;
+                    if (sameAsOriginal) {
+                        dueISO = aq.due.toISOString();
+                    } else {
+                        const parts = aq.dueDate.split('-').map(Number);
+                        if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+                            const [y, m, d] = parts;
+                            dueISO = new Date(y, m - 1, d).toISOString();
+                        }
+                    }
+                }
+                const createdAtISO = aq.createdAt instanceof Date && !Number.isNaN(aq.createdAt.getTime())
+                    ? aq.createdAt.toISOString()
+                    : null;
+
+                /** PUT は RelatedQuestionForm のみ（ネストした relatedQuestion が Question 実体だと originQuestionId が数値になり Go が拒否する） */
+                const relatedQuestionsPayload = Array.isArray(aq.relatedQuestions)
+                    ? aq.relatedQuestions.map((row) => ({
+                        id: typeof row?.id === 'number' ? row.id : Number(row?.id) || 0,
+                        questionId:
+                            row?.questionId != null && row.questionId !== ''
+                                ? String(row.questionId)
+                                : String(aq.id ?? ''),
+                        relatedQuestionId:
+                            row?.relatedQuestionId != null && row.relatedQuestionId !== ''
+                                ? String(row.relatedQuestionId)
+                                : String(this.relatedQuestionTargetId(row)),
+                    }))
+                    : [];
+
+                const payload = {
+                    ...aq,
+                    createdAt: createdAtISO,
+                    due: dueISO,
+                    relatedQuestions: relatedQuestionsPayload,
+                };
                 await fetch("/api/v1/question", {
                     method: "PUT",
                     headers: this.apiHeaders(),
-                    body: JSON.stringify(Question.toModel(this.activeQuestion))
+                    body: JSON.stringify(Question.toModel(payload))
                 });
             }
         },
