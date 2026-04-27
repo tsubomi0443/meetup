@@ -9,26 +9,34 @@
         <div
             class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px]">
             <div class="bg-gray-50 p-6 flex-1 space-y-6 overflow-y-auto">
-                <div class="flex gap-4">
-                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 shrink-0 shadow-sm"
-                        x-text="senderInitialChar()"></div>
-                    <div class="space-y-1 max-w-[80%]">
-                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"
-                            x-text="activeQuestionHeaderLine()"></div>
-                        <div class="bg-white p-4 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm text-sm leading-relaxed"
-                            x-text="activeQuestion.content"></div>
+                <div class="chat chat-start">
+                    <div class="chat-image avatar">
+                        <div class="w-10 rounded-full">
+                            <img
+                                :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(chatAvatarSeed(activeQuestion.sender))}&backgroundColor=eff6ff`"
+                                class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
+                                alt="" />
+                        </div>
                     </div>
-                </div>
-                <div class="flex gap-4">
-                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix"
-                        class="w-10 h-10 rounded-full border bg-white shrink-0 shadow-sm" />
-                    <div class="space-y-1 max-w-[80%]">
-                        <div class="text-[10px] font-bold text-yellow-600 uppercase tracking-widest">自分 • 内部メモ</div>
-                        <div
-                            class="bg-yellow-50 p-4 rounded-2xl rounded-tl-none border border-yellow-100 text-sm text-yellow-900 italic">
-                            前回の事例（#1001）を参考に回答を作成中...</div>
+                    <div class="chat-header">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"
+                            x-text="activeQuestionHeaderLine()"></span>
                     </div>
+                    <div class="chat-bubble text-sm leading-relaxed" x-text="chatQuestionContent()"></div>
                 </div>
+                <template x-for="(item, idx) in chatTimelineItems()" :key="(item.kind || 'x') + '-' + String(item.memo?.id ?? item.answer?.id ?? '') + '-' + idx">
+                    <div class="chat" :class="isSelfChatItem(item) ? 'chat-end' : 'chat-start'">
+                        <div class="chat-image avatar">
+                            <div class="w-10 rounded-full">
+                                <img
+                                    :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(chatAvatarSeed(item.userName))}&backgroundColor=eff6ff`"
+                                    class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
+                                    alt="" />
+                            </div>
+                        </div>
+                        <div class="chat-bubble text-sm leading-relaxed" x-text="item.content"></div>
+                    </div>
+                </template>
             </div>
             <div class="p-4 border-t border-gray-100 bg-white">
                 <textarea
