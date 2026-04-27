@@ -1,0 +1,40 @@
+{{define "mock5_view_notice"}}
+<div x-show="currentView === 'notice'" class="max-w-3xl mx-auto space-y-4" style="display: none;">
+    <template x-for="n in notices" :key="n.id">
+        <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm flex gap-4 items-start hover:bg-gray-50 transition-colors cursor-pointer"
+            @click="openNoticeIfQuestion(n)">
+            <div class="flex items-center" :class="noticeItemLayoutClass(n)">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                    :class="noticeIconWrapperClass(n)">
+                    <i :data-lucide="noticeIconName(n)" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 w-16 text-center"
+                    :class="noticeSupportStatusBadgeClass(n)" x-text="noticeSupportStatusTitle(n)"></span>
+                </div>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-center mb-1">
+                    <h2 class="font-bold text-sm text-gray-800 align-middle" x-show="[1, 2].includes(n.typeId)" x-text="n.content"></h2>
+                    <h3 class="font-bold text-sm text-gray-800" x-show="n.typeId === 3"
+                        x-text="noticeType3Heading(n)">
+                    </h3>
+                    <div class="justify-between">
+                        <span class="text-[10px] font-bold text-gray-400"
+                            x-text="noticeDueTimeLabel(n)"></span>
+                        <div class="flex gap-1 shrink-0">
+                            <template x-for="tag in noticeQuestionTagsList(n)" :key="tag.id">
+                                <span
+                                    class="text-[10px] font-bold bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase"
+                                    x-text="tag.title"></span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 line-clamp-2" x-show="hasNoticeQuestion(n)"
+                    x-text="noticeQuestionContent(n)"></p>
+            </div>
+        </div>
+    </template>
+</div>
+{{end}}

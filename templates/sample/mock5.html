@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja" data-theme="light">
+
 <head>
-{{template "mock5_head" .}}
+    {{template "mock5_head" .}}
 </head>
 
 <body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-x-hidden" x-data="hrAppData">
@@ -11,7 +12,7 @@
         <div class="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
             {{template "mock5_header" .}}
 
-            <main class="flex-1 overflow-y-auto p-6 w-full max-w-6xl mx-auto no-scrollbar">
+            <main class="flex-1 overflow-y-auto p-6 w-full max-w-7xl mx-auto no-scrollbar h-full">
                 {{template "mock5_view_home" .}}
                 {{template "mock5_view_detail" .}}
                 {{template "mock5_view_notice" .}}
@@ -27,4 +28,5 @@
     {{template "mock5_modal_tag" .}}
     {{template "mock5_modal_edit_tag" .}}
 </body>
+
 </html>

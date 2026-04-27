@@ -1,0 +1,45 @@
+{{define "mock5_view_users"}}
+<div x-show="currentView === 'users'" class="flex flex-col gap-6 h-[87vh]" style="display: none;">
+    <div class="flex justify-between items-center">
+        <div class="relative w-80">
+            <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
+            <input type="text" placeholder="ユーザー検索..."
+                class="input input-bordered w-full pl-10 h-10 text-sm focus:border-slate-800 shadow-sm" />
+        </div>
+        <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showAddUserModal = true">+
+            ユーザー追加</button>
+    </div>
+    <div class="flex flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-96 overflow-y-auto min-h-0 no-scrollbar">
+        <table class="table w-full table-pin-rows">
+            <thead>
+                <tr class="bg-gray-50">
+                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">氏名</th>
+                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">役割</th>
+                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="u in users" :key="u.id">
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td>
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center font-bold text-slate-600 text-xs"
+                                    x-text="userInitialChar(u)"></div>
+                                <div>
+                                    <div class="font-bold text-sm" x-text="userDisplayName(u)"></div>
+                                    <div class="text-[10px] text-gray-400" x-text="userDisplayEmail(u)"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-sm font-bold"
+                                :class="u.roleId === 2 ? 'badge-info bg-slate-100 text-slate-800 border-slate-200' : 'badge-ghost'"
+                                x-text="userRoleDisplayName(u)"></span></td>
+                        <td><button class="text-gray-400 hover:text-slate-800" @click="showEditUserModal = true; openUser(u)"><i data-lucide="edit-2"
+                                    class="w-4 h-4"></i></button></td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}

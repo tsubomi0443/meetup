@@ -1,0 +1,35 @@
+{{define "login_panel"}}
+<div class="min-h-screen flex items-center justify-center p-4 bg-gray-100" x-data="hrAppLogin">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden transition-all">
+        <div class="bg-slate-50 p-8 text-center border-b border-gray-100">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4 shadow-inner">
+                <i data-lucide="boxes" class="w-8 h-8 text-slate-700"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">HR Assist</h1>
+            <p class="text-sm text-gray-500 mt-2 font-medium">総務人事FAQ管理システム</p>
+        </div>
+        <div class="p-8 space-y-6">
+            <button type="button"
+                disabled="disabled"
+                class="w-full flex items-center justify-center gap-3 bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm">
+                <svg class="w-5 h-5" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+                    <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+                    <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+                    <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+                </svg>
+                社内アカウントでログイン
+            </button>
+            <div class="divider text-xs text-gray-400 font-bold uppercase">または</div>
+            <form method="post" class="space-y-4" @submit.prevent>
+                <input type="email" placeholder="メールアドレス"
+                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" x-model="login.email"/>
+                <input type="password" placeholder="パスワード"
+                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" x-model="login.pass"/>
+                <button type="button"
+                    class="btn btn-primary w-full bg-slate-800 border-none hover:bg-slate-900 font-bold shadow-lg transition-transform active:scale-95" @click="doLogin()">ログイン</button>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}

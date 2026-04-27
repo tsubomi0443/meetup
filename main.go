@@ -1,14 +1,20 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"html/template"
+	"log"
 	"log/slog"
-	"net/http"
+	"meetup/env"
+	"meetup/handler"
 	"os"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func init() {
@@ -16,36 +22,16 @@ func init() {
 }
 
 func main() {
-	e := echo.New()
-
-	// テンプレートの設定
-	e.Renderer = &echo.TemplateRenderer{
-		Template: template.Must(template.ParseGlob("templates/**/*.html")),
+	db, err := setupDB()
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	// ミドルウェア
-	e.Use(middleware.Recover())
-
-	// 静的ファイル配信
-	e.Static("/static", "static")
-
-	// ルート
-	e.GET("/", func(c *echo.Context) error {
-		return c.Render(http.StatusOK, "index.html", map[string]any{
-			"Title": "Go + Echo + HTMX + Alpine.js",
-		})
-	})
-
-	// ルート
-	e.GET("/mock", func(c *echo.Context) error {
-		return c.Render(http.StatusOK, "mock.html", nil)
-	})
-
-	// HTMX API エンドポイント
-	e.GET("/api/joke", func(c *echo.Context) error {
-		// サンプルレスポンス
-		return c.HTML(http.StatusOK, `<div class="alert alert-success">サンプルジョーク: なぜプログラマーはハロウィンが好きか？クリスマスが怖いから（Oct 31 == Dec 25）</div>`)
-	})
+	e := setupEcho()
+	hub := handler.NewHub()
+	handlerManager := handler.NewHandlerManager(db, e, hub)
+	go handlerManager.PollingStart(context.Background())
+	fmt.Println(handlerManager.SetupHandlers())
 
 	// サーバー起動
 	port := os.Getenv("PORT")
@@ -56,4 +42,29 @@ func main() {
 		slog.Error("failed to start server", "error", err)
 		os.Exit(1)
 	}
+}
+
+func setupEcho() *echo.Echo {
+	e := echo.New()
+
+	e.Use(middleware.RequestLogger())
+	e.Use(middleware.Recover())
+
+	// テンプレートの設定
+	e.Renderer = &echo.TemplateRenderer{
+		Template: template.Must(template.ParseGlob("templates/**/*.html")),
+	}
+
+	// ミドルウェア
+	e.Use(middleware.Recover())
+	return e
+}
+
+func setupDB() (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(env.GetDSN()))
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

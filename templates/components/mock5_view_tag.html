@@ -1,0 +1,52 @@
+{{define "mock5_view_tag"}}
+<div x-show="currentView === 'tags'" class="flex flex-col gap-6 h-[87vh]" style="display: none;">
+    <div class="flex justify-between items-center">
+        <div class="relative w-80">
+            <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
+            <input type="text" placeholder="タグ検索..."
+                class="input input-bordered w-full pl-10 h-10 text-sm focus:border-slate-800 shadow-sm" />
+        </div>
+        <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showTagModal = true">+
+            タグ追加</button>
+    </div>
+    <div class="flex flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-96 overflow-y-auto min-h-0 no-scrollbar">
+        <table class="table w-full table-pin-rows">
+            <thead>
+                <tr class="bg-gray-50">
+                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">タグ名</th>
+                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">カテゴリ名</th>
+                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">使用数</th>
+                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template x-for="tag in tags" :key="tag.id">
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td>
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center font-bold text-slate-600 text-xs">
+                                    <i data-lucide="tag" class="w-4 h-4"></i>
+                                </div>
+                                <div class="font-bold text-sm" x-text="tag.title"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-3">
+                                <div class="font-bold text-sm" x-text="tagCategoryDisplayName(tag)"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-sm font-bold bg-slate-100 text-slate-800 border-slate-200"
+                                x-text="tagUsageCountLabel(tag)"></span>
+                        </td>
+                        <td>
+                            <button class="text-gray-400 hover:text-slate-800"><i data-lucide="edit-2" @click="showEditTagModal = true; openEditTag(tag)" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}
