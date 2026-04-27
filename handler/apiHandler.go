@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
 )
 
@@ -32,9 +33,11 @@ func (hm *HandlerManager) SetAPIHandler() (routeInfos []echo.RouteInfo) {
 func (hm *HandlerManager) setupUserHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/user"
 	const uriWithID = uri + "/:id"
+	const uriWithToken = uri + "/t"
 	const api = "user"
 
 	routeInfos = append(routeInfos, group.GET(uri, hm.getUsers()))
+	routeInfos = append(routeInfos, group.GET(uriWithToken, hm.getUserFromToken()))
 	routeInfos = append(routeInfos, group.POST(uri, hm.registerUser(api, hm.hub.sendCreateEvent)))
 	routeInfos = append(routeInfos, group.PUT(uri, hm.updateUserByID(api, hm.hub.sendUpdateEvent)))
 	routeInfos = append(routeInfos, group.DELETE(uriWithID, hm.deleteUserByID(api, hm.hub.sendDeleteEvent)))
@@ -227,6 +230,7 @@ func (hm *HandlerManager) updateQuestionByID(api string, sendEvent func(string, 
 			return err
 		}
 		updatedModel := infrastructure.QuestionToEntity(form)
+		fmt.Println(updatedModel)
 		if err := infrastructure.UpdateQuestionInTransaction(c.Request().Context(), hm.db, updatedModel); err != nil {
 			return err
 		}
@@ -264,6 +268,26 @@ func (hm *HandlerManager) deleteUserByID(api string, sendEvent func(string, stri
 		sendEvent(api, idStr)
 
 		return c.JSON(http.StatusOK, nil)
+	}
+}
+
+func (hm *HandlerManager) getUserFromToken() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		token := c.Get("user").(*jwt.Token)
+		claims := token.Claims.(jwt.MapClaims)
+		subFloat, ok := claims["sub"].(float64)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ID format")
+		}
+		id := int64(subFloat)
+
+		user, err := infrastructure.GetUserByID(c.Request().Context(), hm.db, id)
+		if err != nil {
+			fmt.Println(err)
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+
+		return c.JSON(http.StatusOK, infrastructure.UserFromEntity(user))
 	}
 }
 

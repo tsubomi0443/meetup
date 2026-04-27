@@ -27,6 +27,7 @@ CREATE TABLE users (
     name VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
+    memo TEXT NOT NULL DEFAULT '',
     role_id BIGINT NOT NULL,
     CONSTRAINT fk_users_role
         FOREIGN KEY (role_id)
@@ -162,6 +163,34 @@ CREATE TABLE notices (
         REFERENCES questions(id)
 );
 
+-- ============================================
+-- RELATED_QUESTION
+-- ============================================
+
+CREATE TABLE related_questions (
+    id BIGSERIAL PRIMARY KEY,
+    question_id BIGINT NOT NULL,
+    related_question_id BIGINT NOT NULL,
+
+    CONSTRAINT fk_related_questions_question
+        FOREIGN KEY (question_id)
+        REFERENCES questions(id),
+
+    CONSTRAINT fk_related_questions_related
+        FOREIGN KEY (related_question_id)
+        REFERENCES questions(id)
+);
+
+-- 自己参照禁止
+ALTER TABLE related_questions
+ADD CONSTRAINT chk_no_self_reference
+CHECK (question_id <> related_question_id);
+
+-- 重複登録禁止
+ALTER TABLE related_questions
+ADD CONSTRAINT uq_related_questions
+UNIQUE (question_id, related_question_id);
+
 
 -- ============================================
 -- INDEX
@@ -220,6 +249,9 @@ ON notices(type_id);
 
 CREATE INDEX idx_notices_question_id
 ON notices(question_id);
+
+CREATE INDEX idx_related_questions_question
+ON related_questions(question_id);
 
 
 -- ============================================
@@ -305,3 +337,8 @@ INSERT INTO notice_types (name) VALUES
 INSERT INTO notices (type_id, question_id, content, display_due) VALUES
 (2, 1, 'First Question の期限が近づいています', '2026-04-29 09:00:00'),
 (1, NULL, 'システムメンテナンスのお知らせ', NULL);
+
+INSERT INTO related_questions (question_id, related_question_id) VALUES
+(2, 1),
+(3, 1),
+(3, 2);

@@ -25,6 +25,7 @@ type User struct {
 	Name     string `gorm:"column:name"`
 	Password string `gorm:"column:password"`
 	Email    string `gorm:"column:email"`
+	Memo     string `gorm:"column:memo"`
 	RoleID   int64  `gorm:"column:role_id"`
 	Role     Role   `gorm:"foreignKey:RoleID;references:ID"`
 }
@@ -66,19 +67,20 @@ func (Tag) TableName() string {
 // QUESTION
 // =====================
 type Question struct {
-	ID               int64        `gorm:"column:id;primaryKey"`
-	OriginQuestionID *int64       `gorm:"column:origin_question_id"`
-	AnswerID         *int64       `gorm:"column:answer_id"`
-	SupportID        *int64       `gorm:"column:support_id"`
-	Title            string       `gorm:"column:title"`
-	Content          string       `gorm:"column:content"`
-	Deleted          bool         `gorm:"column:deleted"`
-	Due              *time.Time   `gorm:"column:due"`
-	CreatedAt        time.Time    `gorm:"column:created_at"`
-	Answer           *Answer      `gorm:"foreignKey:AnswerID;references:ID"`
-	Memos            []Memo       `gorm:"foreignKey:QuestionID;references:ID"`
-	TagManagers      []TagManager `gorm:"foreignKey:QuestionID;references:ID"`
-	Support          *Support     `gorm:"foreignKey:SupportID;references:ID"`
+	ID               int64             `gorm:"column:id;primaryKey"`
+	OriginQuestionID *int64            `gorm:"column:origin_question_id"`
+	AnswerID         *int64            `gorm:"column:answer_id"`
+	SupportID        *int64            `gorm:"column:support_id"`
+	Title            string            `gorm:"column:title"`
+	Content          string            `gorm:"column:content"`
+	Deleted          bool              `gorm:"column:deleted"`
+	Due              *time.Time        `gorm:"column:due"`
+	CreatedAt        time.Time         `gorm:"column:created_at"`
+	Answer           *Answer           `gorm:"foreignKey:AnswerID;references:ID"`
+	Memos            []Memo            `gorm:"foreignKey:QuestionID;references:ID"`
+	TagManagers      []TagManager      `gorm:"foreignKey:QuestionID;references:ID"`
+	RelatedQuestions []RelatedQuestion `gorm:"foreignKey:QuestionID;references:ID"`
+	Support          *Support          `gorm:"foreignKey:SupportID;references:ID"`
 }
 
 func (Question) TableName() string {
@@ -234,4 +236,18 @@ type Notice struct {
 
 func (Notice) TableName() string {
 	return "notices"
+}
+
+type RelatedQuestion struct {
+	ID                int64 `gorm:"column:id;primaryKey"`
+	QuestionID        int64 `gorm:"column:question_id"`
+	RelatedQuestionID int64 `gorm:"column:related_question_id"`
+
+	// related_questions: question_id → 親質問、related_question_id → 関連先質問
+	Question        Question `gorm:"foreignKey:QuestionID;references:ID"`
+	RelatedQuestion Question `gorm:"foreignKey:RelatedQuestionID;references:ID"`
+}
+
+func (RelatedQuestion) TableName() string {
+	return "related_questions"
 }

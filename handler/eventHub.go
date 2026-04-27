@@ -177,7 +177,6 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 			}
 		}
 	}()
-
 	<-ctx.Done()
 	return nil
 }

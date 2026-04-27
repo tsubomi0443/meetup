@@ -23,7 +23,7 @@
 export function formToApiJson(form) {
   return JSON.parse(
     JSON.stringify(form, (_key, value) =>
-      value instanceof Date ? value.toString() : value,
+      value instanceof Date ? value.toISOString() : value,
     ),
   );
 }
@@ -135,16 +135,20 @@ export class User {
    * @param {number}   id
    * @param {string}   name
    * @param {string}   email
+   * @param {string}   memo
+   * @param {string}   pass
    * @param {number}   roleId
    * @param {Role|null} [role]
    * @param {Support[]} [supports]
    * @param {Answer[]}  [answers]
    * @param {Memo[]}    [memos]
    */
-  constructor(id, name, email, roleId, role = null, supports = [], answers = [], memos = []) {
+  constructor(id, name, email, memo, pass, roleId, role = null, supports = [], answers = [], memos = []) {
     this.id = id;
     this.name = name;
     this.email = email;
+    this.memo = memo;
+    this.pass = pass;
     this.roleId = roleId;
     this.role = role;
     this.supports = supports;
@@ -154,17 +158,12 @@ export class User {
 
   /** @param {Object} json @returns {User} */
   static fromJSON(json) {
-    // const rid = json.roleId;
-    // const roleIdNum = 
-    //   rid === null || rid === undefined || rid === ''
-    //     ? rid
-    //     : typeof rid === 'string'
-    //       ? parseInt(rid, 10)
-    //       : rid;
     return new User(
       json.id,
       json.name ?? '',
       json.email ?? '',
+      json.memo ?? '',
+      json.pass ?? '',
       json.roleId,
       json.role ? Role.fromJSON(json.role) : null,
       (json.supports ?? []).map(Support.fromJSON),
@@ -481,6 +480,42 @@ export class Notice {
 }
 
 // ---------------------------------------------------------------------------
+// RelatedQuestion  (中間テーブル related_questions)
+// ---------------------------------------------------------------------------
+export class RelatedQuestion {
+  /**
+   * @param {number} id
+   * @param {string} questionId
+   * @param {string} relatedQuestionId
+   * @param {Question|null} [question]
+   * @param {Question|null} [relatedQuestion]
+   */
+  constructor(id, questionId, relatedQuestionId, question = null, relatedQuestion = null) {
+    this.id = id;
+    this.questionId = questionId;
+    this.relatedQuestionId = relatedQuestionId;
+    this.question = question;
+    this.relatedQuestion = relatedQuestion;
+  }
+
+  /** @param {Object} json @returns {RelatedQuestion} */
+  static fromJSON(json) {
+    return new RelatedQuestion(
+      json.id ?? 0,
+      json.questionId != null ? String(json.questionId) : '',
+      json.relatedQuestionId != null ? String(json.relatedQuestionId) : '',
+      json.question ? Question.fromJSON(json.question) : null,
+      json.relatedQuestion ? Question.fromJSON(json.relatedQuestion) : null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Question
 // ---------------------------------------------------------------------------
 export class Question {
@@ -503,12 +538,13 @@ export class Question {
    * @param {Notice[]}       [notices]
    * @param {Escalation[]}   [escalationsFrom]
    * @param {Escalation[]}   [escalationsTo]
+   * @param {RelatedQuestion[]} [relatedQuestions]
    */
   constructor(
     id, originQuestionId, answerId, supportId, title, content, deleted, due, createdAt,
     originQuestion = null, subQuestions = [], support = null,
     answer = null, memos = [], tags = [], notices = [],
-    escalationsFrom = [], escalationsTo = [],
+    escalationsFrom = [], escalationsTo = [], relatedQuestions = [],
   ) {
     this.id = id;
     this.originQuestionId = originQuestionId;
@@ -528,6 +564,7 @@ export class Question {
     this.notices = notices;
     this.escalationsFrom = escalationsFrom;
     this.escalationsTo = escalationsTo;
+    this.relatedQuestions = relatedQuestions;
   }
 
   /** @param {Object} json @returns {Question} */
@@ -555,6 +592,7 @@ export class Question {
       (json.notices ?? []).map(Notice.fromJSON),
       (json.escalationsFrom ?? []).map(Escalation.fromJSON),
       (json.escalationsTo ?? []).map(Escalation.fromJSON),
+      (json.relatedQuestions ?? []).map(RelatedQuestion.fromJSON),
     );
   }
 

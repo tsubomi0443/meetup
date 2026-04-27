@@ -5,6 +5,7 @@ erDiagram
         string name
         string password
         string email
+        string memo
         number role_id FK
     }
     USER ||--|| ROLE: "ユーザーは一つの権限を持つ (Admin>Manager>Staff>Emproyee)"
@@ -31,6 +32,8 @@ erDiagram
     QUESTION ||--o{ ESCALATION : "エスカレーション先 (to_question_id)"
     QUESTION ||--o{ TAG_MANAGER: "質問は複数のタグを持つことができる"
     QUESTION ||--o{ MEMO: "質問には複数のメモが関連付けられる"
+    QUESTION ||--o{ RELATED_QUESTION: "１つの質問に対して、複数の関連する質問を持つ（question_id 側）"
+    QUESTION ||--o{ RELATED_QUESTION: "１つの質問に対して、複数の関連する質問を持つ（related_question_id 側）"
 
     ANSWER {
         number id PK
@@ -116,5 +119,11 @@ erDiagram
     NOTICE_TYPE {
         number id PK
         string name "SYSTEM|ALERT|QUESTION"
+    }
+
+    RELATED_QUESTION {
+        number id PK
+        number question_id FK
+        number related_question_id FK
     }
 ```

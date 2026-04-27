@@ -136,6 +136,7 @@ func UserFromEntity(e User) UserForm {
 		ID:     e.ID,
 		Name:   e.Name,
 		Email:  e.Email,
+		Memo:   e.Memo,
 		RoleID: strconv.FormatInt(e.RoleID, 10),
 	}
 	if e.Role.ID != 0 {
@@ -151,6 +152,7 @@ func UserFromEntityNoRole(e User) UserForm {
 		ID:     e.ID,
 		Name:   e.Name,
 		Email:  e.Email,
+		Memo:   e.Memo,
 		RoleID: strconv.FormatInt(e.RoleID, 10),
 	}
 }
@@ -160,6 +162,7 @@ func UserToEntityNoRole(f UserForm) User {
 		ID:     f.ID,
 		Name:   f.Name,
 		Email:  f.Email,
+		Memo:   f.Memo,
 		RoleID: f.RoleIDInt64(),
 	}
 	if f.RoleID == "0" && f.Role != nil {
@@ -177,6 +180,7 @@ func UserToEntity(f UserForm) User {
 		ID:     f.ID,
 		Name:   f.Name,
 		Email:  f.Email,
+		Memo:   f.Memo,
 		RoleID: f.RoleIDInt64(),
 	}
 	if f.RoleID == "0" && f.Role != nil {
@@ -237,6 +241,14 @@ func tagFromEntityShallow(e Tag) TagForm {
 	return f
 }
 
+func TagFromEntities(e []Tag) []TagForm {
+	forms := []TagForm{}
+	for _, tag := range e {
+		forms = append(forms, TagFromEntity(tag))
+	}
+	return forms
+}
+
 func TagFromEntity(e Tag) TagForm {
 	f := tagFromEntityShallow(e)
 	for _, tm := range e.TagManagers {
@@ -245,14 +257,6 @@ func TagFromEntity(e Tag) TagForm {
 		}
 	}
 	return f
-}
-
-func TagFromEntities(e []Tag) []TagForm {
-	forms := []TagForm{}
-	for _, tag := range e {
-		forms = append(forms, TagFromEntity(tag))
-	}
-	return forms
 }
 
 func TagToEntity(f TagForm) Tag {
@@ -498,6 +502,14 @@ func NoticeToEntity(f NoticeForm) Notice {
 	return e
 }
 
+func QuestionFromEntities(e []Question) []QuestionForm {
+	forms := []QuestionForm{}
+	for _, q := range e {
+		forms = append(forms, QuestionFromEntity(q))
+	}
+	return forms
+}
+
 // --- Question ---
 
 func QuestionFromEntity(e Question) QuestionForm {
@@ -529,19 +541,23 @@ func QuestionFromEntity(e Question) QuestionForm {
 			f.Tags = append(f.Tags, tagFromEntityShallow(tm.Tag))
 		}
 	}
+	seenRelated := make(map[int64]struct{})
+	for _, rq := range e.RelatedQuestions {
+		rid := rq.RelatedQuestionID
+		if rid == 0 || rid == e.ID {
+			continue
+		}
+		if _, ok := seenRelated[rid]; ok {
+			continue
+		}
+		seenRelated[rid] = struct{}{}
+		f.RelatedQuestions = append(f.RelatedQuestions, RelatedQuestionFromEntity(rq))
+	}
 	if e.Support != nil && e.Support.ID != 0 {
 		s := SupportFromEntity(*e.Support)
 		f.Support = &s
 	}
 	return f
-}
-
-func QuestionFromEntities(e []Question) []QuestionForm {
-	forms := []QuestionForm{}
-	for _, q := range e {
-		forms = append(forms, QuestionFromEntity(q))
-	}
-	return forms
 }
 
 func QuestionToEntity(f QuestionForm) Question {
@@ -565,6 +581,18 @@ func QuestionToEntity(f QuestionForm) Question {
 		e.CreatedAt = isoToTime(f.CreatedAt)
 	}
 	qid := f.ID
+	seenRelated := make(map[int64]struct{})
+	for _, rf := range f.RelatedQuestions {
+		rq := RelatedQuestionToEntity(rf, qid)
+		if rq.RelatedQuestionID == 0 || rq.RelatedQuestionID == qid {
+			continue
+		}
+		if _, ok := seenRelated[rq.RelatedQuestionID]; ok {
+			continue
+		}
+		seenRelated[rq.RelatedQuestionID] = struct{}{}
+		e.RelatedQuestions = append(e.RelatedQuestions, rq)
+	}
 	if f.Answer != nil {
 		a := AnswerToEntity(*f.Answer)
 		e.Answer = &a
@@ -594,6 +622,61 @@ func QuestionToEntity(f QuestionForm) Question {
 	if f.Support != nil {
 		sup := SupportToEntity(*f.Support)
 		e.Support = &sup
+	}
+	return e
+}
+
+func questionFormShallowFromEntity(e Question) QuestionForm {
+	var originQuestionID *string
+	if e.OriginQuestionID != nil {
+		s := strconv.FormatInt(*e.OriginQuestionID, 10)
+		originQuestionID = &s
+	}
+	return QuestionForm{
+		ID:               e.ID,
+		OriginQuestionID: originQuestionID,
+		AnswerID:         e.AnswerID,
+		SupportID:        e.SupportID,
+		Title:            e.Title,
+		Content:          e.Content,
+		Deleted:          e.Deleted,
+		Due:              timePtrToISO(e.Due),
+		CreatedAt:        timeToISO(e.CreatedAt),
+	}
+}
+
+func RelatedQuestionFromEntity(r RelatedQuestion) RelatedQuestionForm {
+	f := RelatedQuestionForm{
+		ID:                r.ID,
+		QuestionID:        strconv.FormatInt(r.QuestionID, 10),
+		RelatedQuestionID: strconv.FormatInt(r.RelatedQuestionID, 10),
+	}
+	if r.RelatedQuestion.ID != 0 {
+		q := questionFormShallowFromEntity(r.RelatedQuestion)
+		f.RelatedQuestion = &q
+	}
+	return f
+}
+
+func RelatedQuestionToEntity(f RelatedQuestionForm, parentQuestionID int64) RelatedQuestion {
+	qid := f.QuestionIDInt64()
+	if qid < 0 || qid == 0 {
+		qid = parentQuestionID
+	}
+	rid := f.RelatedQuestionIDInt64()
+	if rid < 0 {
+		rid = 0
+	}
+	if rid == 0 && f.RelatedQuestion != nil && f.RelatedQuestion.ID != 0 {
+		rid = f.RelatedQuestion.ID
+	}
+	e := RelatedQuestion{
+		ID:                f.ID,
+		QuestionID:        qid,
+		RelatedQuestionID: rid,
+	}
+	if f.RelatedQuestion != nil && f.RelatedQuestion.ID != 0 {
+		e.RelatedQuestion = QuestionToEntity(*f.RelatedQuestion)
 	}
 	return e
 }

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	infrastructure "meetup/_mac_infrastructure"
@@ -12,14 +11,12 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v5"
 	"github.com/labstack/echo/v5"
-	"gorm.io/gorm"
 )
 
 const (
 	COOKIE_NAME_TOKEN = "access_token"
 )
 
-// TODO; 基本的なJWT認証の一部。まだ本実装には進まない
 func GetJWTConfig() echo.MiddlewareFunc {
 	return echojwt.WithConfig(echojwt.Config{
 		SigningKey:  []byte(env.GetJWTKey()),
@@ -52,7 +49,7 @@ func (hm *HandlerManager) loginHandler() echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
-		user, err := getUserInfo(c.Request().Context(), hm.db, info.E, info.P)
+		user, err := infrastructure.GetUserInfo(c.Request().Context(), hm.db, info.E, info.P)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
 		}
@@ -95,9 +92,4 @@ func logoutHandler() echo.HandlerFunc {
 		})
 		return c.Redirect(http.StatusSeeOther, "/login")
 	}
-}
-
-func getUserInfo(ctx context.Context, db *gorm.DB, email, pass string) (user infrastructure.User, err error) {
-	user, err = gorm.G[infrastructure.User](db).Where("email = ? AND password = ?", email, pass).First(ctx)
-	return
 }

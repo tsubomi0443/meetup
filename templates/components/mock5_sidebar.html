@@ -46,13 +46,14 @@
 
     <div class="p-4 border-t border-gray-200 flex items-center gap-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
         :class="isSidebarOpen ? 'px-4' : 'justify-center'" @click="setView('settings')">
-        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=eff6ff"
+        <img
+            :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${activeUser?.name ?? 'User'}&backgroundColor=eff6ff`"
             class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
             alt="Avatar" />
         <div class="min-w-0" x-show="isSidebarOpen">
-            <div class="text-sm font-bold text-gray-800 truncate">自分</div>
+            <div class="text-sm font-bold text-gray-800 truncate" x-text="activeUser?.name || '自分'">自分</div>
             <div class="text-xs text-gray-500 truncate font-medium uppercase tracking-wider"
-                x-text="isManager ? 'Manager' : 'Creator'"></div>
+                x-text="activeUser?.role?.roleName || (isManager ? 'Manager' : 'Creator')"></div>
         </div>
     </div>
 </aside>

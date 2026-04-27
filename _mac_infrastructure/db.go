@@ -8,12 +8,24 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+func GetUserByID(ctx context.Context, db *gorm.DB, id int64) (model User, err error) {
+	model, err = gorm.G[User](db).Where("id = ?", id).Select("id, name, email, memo, role_id").
+		Preload("Role", nil).
+		First(ctx)
+	return
+}
+
+func GetUserInfo(ctx context.Context, db *gorm.DB, email, pass string) (user User, err error) {
+	user, err = gorm.G[User](db).Where("email = ? AND password = ?", email, pass).First(ctx)
+	return
+}
+
 func GetUsers(ctx context.Context, db *gorm.DB) (models []User, err error) {
 	models, err = gorm.G[User](db).
 		Where("role_id <> ?", 1).
 		Preload("Role", nil).
 		Not("role_id = 1").
-		Select("id, name, email, role_id").Find(ctx)
+		Select("id, name, email, memo, role_id").Find(ctx)
 	return
 }
 
@@ -57,7 +69,7 @@ func UpdateInTransaction[T any](ctx context.Context, db *gorm.DB, model T, omit 
 }
 
 // updateQuestionInTransaction は Question の1行更新と、QuestionToEntity で組み立てた
-// 1対多の関連（Answer, Support, TagManagers, Memos, Notices）の同期を1トランザクションで行う。
+// 1対多の関連（Answer, Support, TagManagers, Memos, RelatedQuestions）の同期を1トランザクションで行う。
 // フォーム上の下位の質問（SubQuestions）やエスカレーション等は本関数では永続化しない。
 func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) error {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -107,7 +119,7 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 		}
 		// 3) 親の questions: スカラ列と FK のみ（CreatedAt は更新で変えない）
 		if _, err := gorm.G[Question](tx).
-			Omit("Answer", "Memos", "Notices", "TagManagers", "Support", "CreatedAt").
+			Omit("Answer", "Memos", "Notices", "TagManagers", "Support", "RelatedQuestions", "CreatedAt").
 			Where("id = ?", q.ID).
 			Updates(ctx, q); err != nil {
 			return err
@@ -156,7 +168,27 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 				return err
 			}
 		}
-		// // 6) 通知
+		// 6) 関連質問（related_questions）— tag_managers / memos と同様に DELETE + INSERT
+		var relatedRows []RelatedQuestion
+		for _, rq := range q.RelatedQuestions {
+			if rq.RelatedQuestionID == 0 || rq.RelatedQuestionID == q.ID {
+				continue
+			}
+			relatedRows = append(relatedRows, RelatedQuestion{
+				ID:                0,
+				QuestionID:        q.ID,
+				RelatedQuestionID: rq.RelatedQuestionID,
+			})
+		}
+		if err := tx.Where("question_id = ?", q.ID).Delete(&RelatedQuestion{}).Error; err != nil {
+			return err
+		}
+		if len(relatedRows) > 0 {
+			if err := tx.Create(&relatedRows).Error; err != nil {
+				return err
+			}
+		}
+		// // 7) 通知
 		// for i := range q.Notices {
 		// 	if q.Notices[i].QuestionID == nil {
 		// 		qid := q.ID
@@ -177,6 +209,11 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 }
 
 func DeleteQuestionByID(ctx context.Context, db *gorm.DB, id int64) error {
+	if err := db.WithContext(ctx).
+		Where("question_id = ? OR related_question_id = ?", id, id).
+		Delete(&RelatedQuestion{}).Error; err != nil {
+		return err
+	}
 	if _, err := gorm.G[Question](db).
 		Preload("Answer", nil).
 		Preload("Answer.User", nil).
@@ -231,6 +268,8 @@ func GetQuestion(ctx context.Context, db *gorm.DB, id int64) (model Question, er
 		Preload("TagManagers", nil).
 		Preload("TagManagers.Tag", nil).
 		Preload("TagManagers.Tag.Category", nil).
+		Preload("RelatedQuestions", nil).
+		Preload("RelatedQuestions.RelatedQuestion", nil).
 		Preload("Support", nil).
 		Preload("Support.User", func(pb gorm.PreloadBuilder) error {
 			pb.Select("id", "name", "email", "role_id")
@@ -262,6 +301,8 @@ func GetQuestions(ctx context.Context, db *gorm.DB) (models []Question, err erro
 		Preload("TagManagers", nil).
 		Preload("TagManagers.Tag", nil).
 		Preload("TagManagers.Tag.Category", nil).
+		Preload("RelatedQuestions", nil).
+		Preload("RelatedQuestions.RelatedQuestion", nil).
 		Preload("Support", nil).
 		Preload("Support.User", func(pb gorm.PreloadBuilder) error {
 			pb.Select("id", "name", "email", "role_id")

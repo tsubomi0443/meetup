@@ -47,12 +47,13 @@ type UserForm struct {
 	ID       int64         `json:"id"`
 	Name     string        `json:"name"`
 	Email    string        `json:"email"`
+	Memo     string        `json:"memo"`
 	RoleID   string        `json:"roleId"`
 	Role     *RoleForm     `json:"role,omitempty"`
 	Supports []SupportForm `json:"supports,omitempty"`
 	Answers  []AnswerForm  `json:"answers,omitempty"`
 	Memos    []MemoForm    `json:"memos,omitempty"`
-	Password string        `json:"password,omitempty"`
+	Password string        `json:"pass,omitempty"`
 }
 
 func (uf UserForm) RoleIDInt64() int64 {
@@ -190,23 +191,24 @@ func (f NoticeForm) QuestionIDInt64() int64 {
 
 // QuestionForm corresponds to Question.
 type QuestionForm struct {
-	ID               int64            `json:"id"`
-	OriginQuestionID *string          `json:"originQuestionId,omitempty"`
-	AnswerID         *int64           `json:"answerId,omitempty"`
-	SupportID        *int64           `json:"supportId,omitempty"`
-	Title            string           `json:"title"`
-	Content          string           `json:"content"`
-	Deleted          bool             `json:"deleted"`
-	Due              *string          `json:"due,omitempty"`
-	CreatedAt        *string          `json:"createdAt,omitempty"`
-	OriginQuestion   *QuestionForm    `json:"originQuestion,omitempty"`
-	SubQuestions     []QuestionForm   `json:"subQuestions,omitempty"`
-	Support          *SupportForm     `json:"support,omitempty"`
-	Answer           *AnswerForm      `json:"answer,omitempty"`
-	Memos            []MemoForm       `json:"memos,omitempty"`
-	Tags             []TagForm        `json:"tags,omitempty"`
-	EscalationsFrom  []EscalationForm `json:"escalationsFrom,omitempty"`
-	EscalationsTo    []EscalationForm `json:"escalationsTo,omitempty"`
+	ID               int64                 `json:"id"`
+	OriginQuestionID *string               `json:"originQuestionId,omitempty"`
+	AnswerID         *int64                `json:"answerId,omitempty"`
+	SupportID        *int64                `json:"supportId,omitempty"`
+	Title            string                `json:"title"`
+	Content          string                `json:"content"`
+	Deleted          bool                  `json:"deleted"`
+	Due              *string               `json:"due,omitempty"`
+	CreatedAt        *string               `json:"createdAt,omitempty"`
+	OriginQuestion   *QuestionForm         `json:"originQuestion,omitempty"`
+	SubQuestions     []QuestionForm        `json:"subQuestions,omitempty"`
+	Support          *SupportForm          `json:"support,omitempty"`
+	Answer           *AnswerForm           `json:"answer,omitempty"`
+	Memos            []MemoForm            `json:"memos,omitempty"`
+	Tags             []TagForm             `json:"tags,omitempty"`
+	EscalationsFrom  []EscalationForm      `json:"escalationsFrom,omitempty"`
+	EscalationsTo    []EscalationForm      `json:"escalationsTo,omitempty"`
+	RelatedQuestions []RelatedQuestionForm `json:"relatedQuestions,omitempty"`
 }
 
 func (f QuestionForm) OriginQuestionIDInt64() int64 {
@@ -260,6 +262,29 @@ func (f TagManagerForm) TagIDInt64() int64 {
 
 func (f TagManagerForm) QuestionIDInt64() int64 {
 	if val, err := strconv.ParseInt(f.QuestionID, 10, 64); err == nil {
+		return val
+	}
+	return -1
+}
+
+// RelatedQuestionForm corresponds to RelatedQuestion (related_questions).
+type RelatedQuestionForm struct {
+	ID                int64         `json:"id"`
+	QuestionID        string        `json:"questionId"`
+	RelatedQuestionID string        `json:"relatedQuestionId"`
+	Question          *QuestionForm `json:"question,omitempty"`
+	RelatedQuestion   *QuestionForm `json:"relatedQuestion,omitempty"`
+}
+
+func (f RelatedQuestionForm) QuestionIDInt64() int64 {
+	if val, err := strconv.ParseInt(f.QuestionID, 10, 64); err == nil {
+		return val
+	}
+	return -1
+}
+
+func (f RelatedQuestionForm) RelatedQuestionIDInt64() int64 {
+	if val, err := strconv.ParseInt(f.RelatedQuestionID, 10, 64); err == nil {
 		return val
 	}
 	return -1

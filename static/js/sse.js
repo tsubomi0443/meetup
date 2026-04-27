@@ -88,9 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     });
 
-    const bindSSE = (eventNames, fromJSON, normalizedEvent, deleteEvent = null) => {
+    const bindSSE = (eventSource, eventNames, fromJSON, normalizedEvent, deleteEvent = null) => {
         eventNames.forEach((eventName) => {
-            es.addEventListener(eventName, (event) => {
+            eventSource.addEventListener(eventName, (event) => {
                 try {
                     if (deleteEvent && eventName.startsWith('delete-')) {
                         const id = Number(event.data);
@@ -101,7 +101,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const model = fromJSON(JSON.parse(event.data));
-                    document.dispatchEvent(new CustomEvent(normalizedEvent, {
+                    console.log(eventName, model);
+                    let domEvent = normalizedEvent;
+                    if (eventName.startsWith('get-') || eventName.startsWith('update-')) {
+                        if (eventName.endsWith('-notice')) domEvent = SSE_KEY.data.update.notice;
+                        else if (eventName.endsWith('-question')) domEvent = SSE_KEY.data.update.question;
+                        else if (eventName.endsWith('-user')) domEvent = SSE_KEY.data.update.user;
+                        else if (eventName.endsWith('-tag')) domEvent = SSE_KEY.data.update.tag;
+                    } else if (eventName.startsWith('create-')) {
+                        if (eventName.endsWith('-notice')) domEvent = SSE_KEY.data.create.notice;
+                        else if (eventName.endsWith('-question')) domEvent = SSE_KEY.data.create.question;
+                        else if (eventName.endsWith('-user')) domEvent = SSE_KEY.data.create.user;
+                        else if (eventName.endsWith('-tag')) domEvent = SSE_KEY.data.create.tag;
+                    }
+                    document.dispatchEvent(new CustomEvent(domEvent, {
                         detail: model,
                     }));
                 } catch (fail) {
@@ -111,8 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    bindSSE(SSE_KEY.notice(true), Notice.fromJSON, SSE_KEY.data.create.notice, SSE_KEY.data.delete.notice);
-    bindSSE(SSE_KEY.question(true), Question.fromJSON, SSE_KEY.data.create.question, SSE_KEY.data.delete.question);
-    bindSSE(SSE_KEY.user(true), User.fromJSON, SSE_KEY.data.create.user, SSE_KEY.data.delete.user);
-    bindSSE(SSE_KEY.tag(true), Tag.fromJSON, SSE_KEY.data.create.tag, SSE_KEY.data.delete.tag);
+    bindSSE(es, SSE_KEY.notice(true), Notice.fromJSON, SSE_KEY.data.create.notice, SSE_KEY.data.delete.notice);
+    bindSSE(es, SSE_KEY.question(true), Question.fromJSON, SSE_KEY.data.create.question, SSE_KEY.data.delete.question);
+    bindSSE(es, SSE_KEY.user(true), User.fromJSON, SSE_KEY.data.create.user, SSE_KEY.data.delete.user);
+    bindSSE(es, SSE_KEY.tag(true), Tag.fromJSON, SSE_KEY.data.create.tag, SSE_KEY.data.delete.tag);
 });

@@ -25,6 +25,7 @@ function emptyActiveQuestion() {
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('hrAppData', () => ({
+        timeNow: new Date(),
         isSidebarOpen: true,
         currentView: 'home',
         viewMode: 'card',
@@ -33,7 +34,6 @@ document.addEventListener('alpine:init', () => {
         showEditUserModal: false,
         showTagModal: false,
         showEditTagModal: false,
-        timeNow: new Date(),
         unreadNotices: 0,
         activeQuestion: emptyActiveQuestion(),
         originalQuestion: {},
@@ -56,6 +56,12 @@ document.addEventListener('alpine:init', () => {
             users: 'ユーザー管理',
             tags: 'タグ管理',
             settings: 'プロフィール設定'
+        },
+
+        statusTitleMap: {
+            1: '未対応',
+            2: '対応中',
+            3: '完了'
         },
 
         statusColorMap: {
@@ -121,11 +127,19 @@ document.addEventListener('alpine:init', () => {
             return h;
         },
 
+        initData() {
+            this.getLoginUser();
+            this.getQuestions();
+            this.getUsers();
+            this.getTags();
+        },
+
         init() {
             this.refreshIcons();
 
             document.addEventListener('connect', (event) => {
                 this.isConnect = event.detail;
+                this.initData()
             });
             document.addEventListener('disconnect', (event) => {
                 this.isConnect = event.detail;
@@ -176,7 +190,8 @@ document.addEventListener('alpine:init', () => {
             document.addEventListener(SSE_KEY.data.update.question, (event) => {
                 const question = this.toQuestionViewModel(event.detail);
                 const index = this.questions.findIndex(q => q.id === question.id);
-                if (index === -1) {
+
+                if (index !== -1) {
                     if (!_.isEqual(this.questions[index], question)) {
                         this.questions.splice(index, 1, {
                             ...this.questions[index],
@@ -192,7 +207,8 @@ document.addEventListener('alpine:init', () => {
 									const originalVal = _.get(this.originalQuestion, key)
 									// ローカル変更されてたら優先
 									if (!_.isEqual(localVal, originalVal)) {
-										return localVal
+                                        if (key === "support") return serverVal; // support.supportStatusの更新が必ずLocalWinになってしまうため例外
+										return localVal;
 									}
 									// server採用
 									return serverVal
@@ -273,10 +289,6 @@ document.addEventListener('alpine:init', () => {
                 this.tags = newTags;
                 this.availableTags = newTags.map((t) => Tag.fromJSON(t));
             });
-
-            this.getQuestions();
-            this.getUsers();
-            this.getTags();
         },
 
         getIcon(name) {
@@ -290,7 +302,11 @@ document.addEventListener('alpine:init', () => {
 
         questionStatusTitle(q) {
             if (!q?.support?.supportStatus?.title) return '';
-            return String(q.support.supportStatus.title);
+            const id = Number(q?.support?.supportStatusId);
+            const title = this.statusTitleMap[id];
+
+            this.activeQuestion.support.supportStatus = {id: id, title: title}
+            return title;
         },
 
         questionStatusBadgeClass(q) {
@@ -390,10 +406,28 @@ document.addEventListener('alpine:init', () => {
             return `${n}件選択中`;
         },
 
+        /** Form の relatedQuestions 行またはレガシーな数値IDから関連先質問IDを取り出す */
+        relatedQuestionTargetId(rowOrId) {
+            if (rowOrId == null) return 0;
+            if (typeof rowOrId === 'object' && rowOrId.relatedQuestionId != null && rowOrId.relatedQuestionId !== '') {
+                const n = Number(rowOrId.relatedQuestionId);
+                return Number.isNaN(n) ? 0 : n;
+            }
+            const n = Number(rowOrId);
+            return Number.isNaN(n) ? 0 : n;
+        },
+
+        relatedQuestionRowKey(row, idx) {
+            const rid = row && typeof row === 'object' ? String(row.relatedQuestionId ?? '') : '';
+            const idPart = row && typeof row === 'object' && row.id != null ? String(row.id) : '';
+            return `${idPart}-${rid}-${idx}`;
+        },
+
         isRelatedQuestionChecked(rId) {
             const rq = this.activeQuestion?.relatedQuestions;
             if (!Array.isArray(rq)) return false;
-            return rq.includes(rId);
+            const id = Number(rId);
+            return rq.some((row) => this.relatedQuestionTargetId(row) === id);
         },
 
         hasActiveRelatedQuestionIds() {
@@ -401,10 +435,14 @@ document.addEventListener('alpine:init', () => {
             return Array.isArray(rq) && rq.length > 0;
         },
 
-        relatedQuestionLineTitle(rId) {
-            const id = rId;
+        relatedQuestionLineTitle(rowOrId) {
+            const id = this.relatedQuestionTargetId(rowOrId);
+            let title = '';
+            if (rowOrId && typeof rowOrId === 'object' && rowOrId.relatedQuestion && rowOrId.relatedQuestion.title != null) {
+                title = String(rowOrId.relatedQuestion.title);
+            }
             const q = this.questions.find((x) => x.id === id);
-            const t = q?.title != null ? String(q.title) : '';
+            const t = title || (q?.title != null ? String(q.title) : '');
             return `#${id} ${t}`;
         },
 
@@ -514,7 +552,6 @@ document.addEventListener('alpine:init', () => {
             const daysLeft = due
                 ? Math.max(0, Math.ceil((due.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
                 : 0;
-
             return {
                 id: question.id,
                 sender: question.support?.user?.name ?? '不明',
@@ -526,9 +563,42 @@ document.addEventListener('alpine:init', () => {
                 daysLeft,
                 date: this.formatDateTime(createdAt),
                 dueDate: due ? this.formatDate(due) : '',
-                relatedQuestions: (question.subQuestions ?? []).map((sq) =>
-                    typeof sq === 'object' && sq !== null ? sq.id : sq),
+                relatedQuestions: this.normalizeRelatedQuestionsForViewModel(question),
             };
+        },
+
+        normalizeRelatedQuestionsForViewModel(question) {
+            const raw = question.relatedQuestions;
+            if (Array.isArray(raw) && raw.length > 0) {
+                return raw.map((row) => {
+                    if (row && typeof row === 'object' && (row.relatedQuestionId != null || row.relatedQuestion)) {
+                        return {
+                            id: row.id ?? 0,
+                            questionId: row.questionId != null ? String(row.questionId) : String(question.id ?? ''),
+                            relatedQuestionId: row.relatedQuestionId != null ? String(row.relatedQuestionId) : '',
+                            question: row.question ?? null,
+                            relatedQuestion: row.relatedQuestion ?? null,
+                        };
+                    }
+                    const n = typeof row === 'number' ? row : Number(row);
+                    return {
+                        id: 0,
+                        questionId: String(question.id ?? ''),
+                        relatedQuestionId: String(Number.isNaN(n) ? 0 : n),
+                        question: null,
+                        relatedQuestion: null,
+                    };
+                });
+            }
+            return (question.subQuestions ?? []).map((sq) => ({
+                id: 0,
+                questionId: String(question.id ?? ''),
+                relatedQuestionId: String(
+                    typeof sq === 'object' && sq !== null && sq.id != null ? sq.id : sq,
+                ),
+                question: null,
+                relatedQuestion: null,
+            }));
         },
 
         formatDateTime(date) {
@@ -570,7 +640,6 @@ document.addEventListener('alpine:init', () => {
                 window.alert(`invalid support id is ${id}.`)
             }
             const index = this.questions.findIndex(q => q.id == id)
-            console.log(index)
             if (index !== -1) {
                 this.openDetail(this.questions[index])
             }
@@ -601,16 +670,28 @@ document.addEventListener('alpine:init', () => {
             if (!this.activeQuestion.relatedQuestions) {
                 this.activeQuestion.relatedQuestions = [];
             }
-            if (this.activeQuestion.relatedQuestions.includes(qId)) {
-                this.activeQuestion.relatedQuestions = this.activeQuestion.relatedQuestions.filter(id => id !== qId);
+            const q = this.activeQuestion;
+            const target = Number(qId);
+            const idx = q.relatedQuestions.findIndex(
+                (row) => this.relatedQuestionTargetId(row) === target
+            );
+            if (idx !== -1) {
+                q.relatedQuestions.splice(idx, 1);
             } else {
-                this.activeQuestion.relatedQuestions.push(qId);
+                q.relatedQuestions.push({
+                    id: 0,
+                    questionId: String(q.id),
+                    relatedQuestionId: String(target),
+                    question: null,
+                    relatedQuestion: null,
+                });
             }
             this.refreshIcons();
         },
 
         async updateQuestion() {
             const question = this.questions.filter(q => q.id === this.activeQuestion.id)[0];
+
             if (!_.isEqual(question, this.activeQuestion)) {
                 await fetch("/api/v1/question", {
                     method: "PUT",
@@ -624,7 +705,14 @@ document.addEventListener('alpine:init', () => {
             const res = await fetch('/api/v1/question', { headers: this.apiHeaders(false) });
             const json = await res.json();
             const list = Array.isArray(json) ? json : [json];
+            console.log(list);
             this.questions = list.map((q) => this.toQuestionViewModel(q));
+        },
+
+        async getLoginUser() {
+            const res = await fetch('/api/v1/user/t', { headers: this.apiHeaders(false) });
+            const json = await res.json();
+            this.activeUser = User.fromJSON(json);
         },
 
         async getUsers() {
@@ -728,6 +816,20 @@ document.addEventListener('alpine:init', () => {
                 body: JSON.stringify(data),
                 headers: this.apiHeaders(),
             }).catch({});
+        },
+
+        calcRemainingTimeAndString(question) {
+            const [hours, minutes] = this.calcRemainingTime(new Date(question.due), this.timeNow)
+            return `${hours}時間${minutes}分`;
+        },
+
+
+        calcRemainingTime(baseDate, d = new Date()) {
+            const diff = baseDate - d;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            return [hours, minutes];
         },
 
         refreshIcons() {
