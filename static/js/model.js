@@ -163,7 +163,7 @@ export class User {
       json.name ?? '',
       json.email ?? '',
       json.memo ?? '',
-      json.pass ?? '',
+      '', // PWは画面側で持つことはないので除去
       json.roleId,
       json.role ? Role.fromJSON(json.role) : null,
       (json.supports ?? []).map(Support.fromJSON),

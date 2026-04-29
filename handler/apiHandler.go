@@ -1,12 +1,16 @@
 package handler
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	infrastructure "meetup/_mac_infrastructure"
+	"meetup/env"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v5"
@@ -17,8 +21,15 @@ const (
 	apiPath    = "/api/" + apiVersion
 )
 
+func encryptSha256(target string) string {
+	newTarget := fmt.Sprintf("%s-%s", target, env.GetJWTKey())
+	hash := sha256.Sum256([]byte(newTarget))
+	return hex.EncodeToString(hash[:])
+}
+
 func (hm *HandlerManager) SetAPIHandler() (routeInfos []echo.RouteInfo) {
 	group := hm.e.Group(apiPath, GetJWTConfig())
+	routeInfos = append(routeInfos, hm.setupNoticeHandler(group)...)
 	routeInfos = append(routeInfos, hm.setupUserHandler(group)...)
 	routeInfos = append(routeInfos, hm.setupQuestionHandler(group)...)
 	routeInfos = append(routeInfos, hm.setupTagHandler(group)...)
@@ -26,10 +37,11 @@ func (hm *HandlerManager) SetAPIHandler() (routeInfos []echo.RouteInfo) {
 	return
 }
 
-// TODO; sseeventの名前の一覧をJSに渡すかどうか、画面側に渡す値を入力データのまま（Form）のまま他ユーザへ配信するか、DBの情報と一致したものを受け取ったほうがいいため、Entityを返却してフロントエンドで変換をかける、もしくはフロントの変換ロジックをサーバ側へと移動させ、フロントエンドの変換ロジックは使わないようにする。
-// TODO; 通知→質問の場合は一覧へ戻るではなく、通知に戻ったほうがUX的に正解だと思う
-// TODO; 更新→入力データを他ユーザへ配信、この流れだとIDが未付与の状態が送信されてしまいオブジェクトのキー（undefined）で打消しあってしまう。入力データを取得後DBからIDのもっとも大きいものを取得してきて、それに置換。それを返却して対処することができる。
-// TODO; 各CRUDのタイミングでのSSE処理の粒度があやふやになっている。登録・更新は同じイベント内の処理でよさそう。削除は削除対象のIDを送信し対象の配列内にIDを持つオブジェクトが存在すればDELETE
+func (hm *HandlerManager) setupNoticeHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
+	const uri = "/notice"
+	routeInfos = append(routeInfos, group.GET(uri, hm.getNotice()))
+	return
+}
 func (hm *HandlerManager) setupUserHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/user"
 	const uriWithID = uri + "/:id"
@@ -80,6 +92,9 @@ func (hm *HandlerManager) registerUser(api string, sendEvent func(string, string
 		var form infrastructure.UserForm
 		if err := json.Unmarshal(body, &form); err != nil {
 			return err
+		}
+		if strings.TrimSpace(form.Password) != "" {
+			form.Password = encryptSha256(form.Password)
 		}
 		data := infrastructure.UserToEntityNoRole(form)
 		if err := infrastructure.Register(c.Request().Context(), hm.db, &data); err != nil {
@@ -230,10 +245,10 @@ func (hm *HandlerManager) updateQuestionByID(api string, sendEvent func(string, 
 			return err
 		}
 		updatedModel := infrastructure.QuestionToEntity(form)
-		fmt.Println(updatedModel)
 		if err := infrastructure.UpdateQuestionInTransaction(c.Request().Context(), hm.db, updatedModel); err != nil {
 			return err
 		}
+		hm.ne.UpdateQuestion(updatedModel)
 		sendEvent(api, string(body))
 		return c.JSON(http.StatusOK, nil)
 	}
@@ -250,6 +265,7 @@ func (hm *HandlerManager) deleteQuestionByID(api string, sendEvent func(string, 
 		if err := infrastructure.DeleteQuestionByID(c.Request().Context(), hm.db, id); err != nil {
 			return err
 		}
+		hm.ne.DeleteQuestion(id)
 		sendEvent(api, idStr)
 		return c.JSON(http.StatusOK, "")
 	}
@@ -303,11 +319,24 @@ func (hm *HandlerManager) updateUserByID(api string, sendEvent func(string, stri
 		if err := json.Unmarshal(body, &form); err != nil {
 			return err
 		}
+		if strings.TrimSpace(form.Password) != "" {
+			form.Password = encryptSha256(form.Password)
+		}
 		updatedModel := infrastructure.UserToEntityNoRole(form)
 		if _, err := infrastructure.UpdateByID(c.Request().Context(), hm.db, updatedModel.ID, updatedModel, "Role"); err != nil {
 			return c.JSON(http.StatusInternalServerError, err)
 		}
 		sendEvent(api, string(body))
 		return c.JSON(http.StatusOK, nil)
+	}
+}
+
+func (hm *HandlerManager) getNotice() echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		models, err := infrastructure.GetNotice(c.Request().Context(), hm.db)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return c.JSON(http.StatusOK, infrastructure.NoticeFromEntities(models))
 	}
 }

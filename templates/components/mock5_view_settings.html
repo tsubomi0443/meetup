@@ -7,7 +7,7 @@
         <div class="p-8 space-y-6">
             <div class="flex flex-col sm:flex-row items-center gap-8">
                 <img
-                    :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${activeUser?.name ?? 'User'}&backgroundColor=eff6ff`"
+                    :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${loginUser?.name ?? 'User'}&backgroundColor=eff6ff`"
                     class="w-24 h-24 rounded-2xl border-2 border-white shadow-lg" />
                 <div class="lg:tooltip-top" data-tip="現在未実装です。今後のアップデートで追加予定です。">
                     <button class="btn btn-sm btn-outline font-bold shadow-sm disabled">画像をアップロード</button>
@@ -16,12 +16,12 @@
             <div class="space-y-4">
                 <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">氏名</label>
                     <input type="text" value="自分" class="input input-bordered w-full text-sm font-bold shadow-inner"
-                        x-model="activeUser.name" />
+                        x-model="loginUser.name" />
                 </div>
                 <div x-data="{ isValid: false }"><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">メールアドレス</label><input
                         type="email" value="example@example.mail.com"
-                        @input="isValid = /^\S+@\S+\.\S+$/.test(activeUser.email)"
-                        class="input input-bordered w-full text-sm font-bold shadow-inner" x-model="activeUser.email"
+                        @input="isValid = /^\S+@\S+\.\S+$/.test(loginUser.email)"
+                        class="input input-bordered w-full text-sm font-bold shadow-inner" x-model="loginUser.email"
                         :class="!isValid ? 'input-error' : 'input-primary'" />
                 </div>
                 <div>
@@ -29,7 +29,7 @@
                     <div x-data="{ show: false }" class="relative flex items-center mt-2">
                         <input type="password" placeholder="変更する場合のみ入力"
                             class="input input-bordered w-full text-sm shadow-inner" :type="show ? 'text' : 'password'"
-                            x-model="activeUser.pass" />
+                            x-model="loginUser.pass" />
                         <button type="button"
                             class="absolute right-2 bg-transparent flex items-center justify-center hover:text-blue-600"
                             @click="show = !show">
@@ -51,14 +51,14 @@
                     </div>
                 </div>
                 <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">自己紹介・メモ</label><textarea
-                        class="textarea textarea-bordered w-full h-24 text-sm font-bold shadow-inner" x-model="activeUser.memo"
+                        class="textarea textarea-bordered w-full h-24 text-sm font-bold shadow-inner" x-model="loginUser.memo"
                         placeholder="対応のメモなど..."></textarea></div>
             </div>
         </div>
         <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
             <button class="btn btn-ghost font-bold text-gray-500" @click="setView('home')">キャンセル</button>
             <button class="btn bg-slate-800 text-white border-none font-bold px-10 shadow-md"
-                @click="updateUser()">保存する</button>
+                @click="updateLoginUser()">保存する</button>
         </div>
     </div>
 </div>

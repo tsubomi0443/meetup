@@ -88,7 +88,7 @@ erDiagram
 
     TAG {
         number id PK
-        string title
+        string name
         number usage
         number category_id FK
     }

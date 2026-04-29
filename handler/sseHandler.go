@@ -13,7 +13,8 @@ func (hm *HandlerManager) SetSSEHandler() (routeInfos []echo.RouteInfo) {
 	// SSEの定期送信処理の開始（時刻表示など）
 	go hm.hub.RunSSE(hm.db)
 
-	routeInfos = append(routeInfos, hm.e.GET("/sse", hm.sseHandler()))
+	group := hm.e.Group("", GetJWTConfig())
+	routeInfos = append(routeInfos, group.GET("/sse", hm.sseHandler()))
 	return
 }
 

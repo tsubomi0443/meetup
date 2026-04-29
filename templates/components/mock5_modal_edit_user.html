@@ -1,9 +1,11 @@
 {{define "mock5_modal_edit_user"}}
-<div class="modal" :class="{'modal-open': showEditUserModal}">
+<div class="modal" :class="{'modal-open': showEditUserModal}" x-data="{ roleName: 'Staff', selectOption(event) {
+    this.roleName = event.target.options[event.target.selectedIndex].text;
+}}">
     <div class="modal-box bg-white rounded-2xl shadow-2xl">
         <h3 class="font-bold text-lg mb-6 tracking-tight">ユーザーデータ更新</h3>
         <div class="space-y-4">
-            <select class="select select-bordered w-full text-sm font-bold shadow-inner" x-model="activeUser.roleId">
+            <select class="select select-bordered w-full text-sm font-bold shadow-inner" x-model="activeUser.roleId" @change="selectOption($event)">
                 <option selected disabled>役割を選択</option>
                 <option value="3">Staff</option>
                 <option value="2">Manager</option>
@@ -12,7 +14,7 @@
         <div class="modal-action">
             <button class="btn btn-ghost font-bold" @click="showEditUserModal = false">キャンセル</button>
             <button class="btn btn-error font-bold" @click="showEditUserModal = false; deleteUser(activeUser.id)">削除</button>
-            <button class="btn bg-slate-400 border-none font-bold px-8 shadow-md" @click="showEditUserModal = false; updateUser(activeUser); alert('ユーザ情報を更新しました')">更新</button>
+            <button class="btn bg-slate-400 border-none font-bold px-8 shadow-md" @click="showEditUserModal = false; updateUser(activeUser.roleId, roleName); alert('ユーザ情報を更新しました')">更新</button>
         </div>
     </div>
 </div>

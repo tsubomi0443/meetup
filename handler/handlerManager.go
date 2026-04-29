@@ -6,16 +6,18 @@ import (
 )
 
 type HandlerManager struct {
-	db  *gorm.DB
-	e   *echo.Echo
+	db *gorm.DB
+	e *echo.Echo
 	hub *Hub
+	ne  *NoticeEvent
 }
 
-func NewHandlerManager(db *gorm.DB, e *echo.Echo, hub *Hub) *HandlerManager {
+func NewHandlerManager(db *gorm.DB, e *echo.Echo, hub *Hub, ne *NoticeEvent) *HandlerManager {
 	return &HandlerManager{
 		db:  db,
 		e:   e,
 		hub: hub,
+		ne:  ne,
 	}
 }
 

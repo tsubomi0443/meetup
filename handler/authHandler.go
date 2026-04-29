@@ -49,6 +49,7 @@ func (hm *HandlerManager) loginHandler() echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
+		info.P = encryptSha256(info.P)
 		user, err := infrastructure.GetUserInfo(c.Request().Context(), hm.db, info.E, info.P)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})

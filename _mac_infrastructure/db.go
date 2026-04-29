@@ -15,8 +15,8 @@ func GetUserByID(ctx context.Context, db *gorm.DB, id int64) (model User, err er
 	return
 }
 
-func GetUserInfo(ctx context.Context, db *gorm.DB, email, pass string) (user User, err error) {
-	user, err = gorm.G[User](db).Where("email = ? AND password = ?", email, pass).First(ctx)
+func GetUserInfo(ctx context.Context, db *gorm.DB, emailOrName, pass string) (user User, err error) {
+	user, err = gorm.G[User](db).Where("(email = ? OR name = ?) AND password = ?", emailOrName, emailOrName, pass).First(ctx)
 	return
 }
 
@@ -360,8 +360,8 @@ func GetNotice(ctx context.Context, db *gorm.DB) (models []Notice, err error) {
 	return
 }
 
-func GetNoticeByQuestionSilent(ctx context.Context, db *gorm.DB, question Question) (models Notice, err error) {
-	models, err = gorm.G[Notice](db.Session(&gorm.Session{
+func GetNoticeByQuestionSilent(ctx context.Context, db *gorm.DB, question Question) (model Notice, err error) {
+	model, err = gorm.G[Notice](db.Session(&gorm.Session{
 		Logger: db.Logger.LogMode(logger.Silent),
 	})).Where("question_id = ?", question.ID).First(ctx)
 	return
@@ -382,4 +382,31 @@ func DeleteNoticeByID(ctx context.Context, db *gorm.DB, id int64) error {
 		return err
 	}
 	return nil
+}
+
+func DeleteNoticeByQuestion(ctx context.Context, db *gorm.DB, question Question) (noticeID int64, err error) {
+	n, err := GetNoticeByQuestionSilent(ctx, db, question)
+	if err != nil {
+		return -1, err
+	}
+	if err := DeleteNoticeByID(ctx, db, n.ID); err != nil {
+		return -1, err
+	}
+	return n.ID, nil
+}
+
+func DeleteNoticeByQuestionID(ctx context.Context, db *gorm.DB, questionID int64) (deletedID int64, err error) {
+	notices, err := GetNotice(ctx, db)
+	if err != nil {
+		return -1, err
+	}
+	for _, n := range notices {
+		if n.QuestionID != nil && *n.QuestionID == questionID {
+			if err := DeleteNoticeByID(ctx, db, n.ID); err != nil {
+				return n.ID, err
+			}
+			return n.ID, nil
+		}
+	}
+	return -1, gorm.ErrRecordNotFound
 }

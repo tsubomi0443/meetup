@@ -2,11 +2,8 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
-
-	infrastructure "meetup/_mac_infrastructure"
 
 	"gorm.io/gorm"
 )
@@ -88,9 +85,9 @@ func (h *Hub) Run() {
 }
 
 func (hub *Hub) RunSSE(db *gorm.DB) error {
+	_ = db // 定期 get-* ブロードキャスト削除後は Hub のみ使用
 	ctx := context.Background()
 	tickSecond := time.NewTicker(1 * time.Second)
-	tickHalfSecond := time.NewTicker(1 * time.Hour)
 	local, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
 		return fmt.Errorf("time.LoadLocationの処理に失敗しました。: %w\n", err)
@@ -99,82 +96,6 @@ func (hub *Hub) RunSSE(db *gorm.DB) error {
 	go func() {
 		for t := range tickSecond.C {
 			hub.sendTimeTicker(t.In(local).Format(time.DateTime))
-		}
-	}()
-
-	go func() {
-		for range tickHalfSecond.C {
-			models, err := infrastructure.GetQuestions(ctx, db)
-			if err != nil {
-				hub.sendError("question", fmt.Sprintf(`Error: %v\n`, err))
-				continue
-			}
-			for _, model := range models {
-				qf := infrastructure.QuestionFromEntity(model)
-				if data, err := json.Marshal(qf); err != nil {
-					hub.sendError("question", fmt.Sprintf(`Error: %v\n`, err))
-					continue
-				} else {
-					hub.sendGetEvent("question", string(data))
-				}
-			}
-		}
-	}()
-
-	go func() {
-		for range tickHalfSecond.C {
-			models, err := infrastructure.GetUsers(ctx, db)
-			if err != nil {
-				hub.sendError("user", fmt.Sprintf(`Error: %v\n`, err))
-				continue
-			}
-			for _, model := range models {
-				uf := infrastructure.UserFromEntity(model)
-				if data, err := json.Marshal(uf); err != nil {
-					hub.sendError("user", fmt.Sprintf(`Error: %v\n`, err))
-					continue
-				} else {
-					hub.sendGetEvent("user", string(data))
-				}
-			}
-		}
-	}()
-
-	go func() {
-		for range tickHalfSecond.C {
-			models, err := infrastructure.GetTags(ctx, db)
-			if err != nil {
-				hub.sendError("tag", fmt.Sprintf(`Error: %v\n`, err))
-				continue
-			}
-			for _, model := range models {
-				tf := infrastructure.TagFromEntity(model)
-				if data, err := json.Marshal(tf); err != nil {
-					hub.sendError("tag", fmt.Sprintf(`Error: %v\n`, err))
-					continue
-				} else {
-					hub.sendGetEvent("tag", string(data))
-				}
-			}
-		}
-	}()
-
-	go func() {
-		for range tickHalfSecond.C {
-			models, err := infrastructure.GetNotice(ctx, db)
-			if err != nil {
-				hub.sendError("notice", fmt.Sprintf(`Error: %v\n`, err))
-				continue
-			}
-			for _, model := range models {
-				nf := infrastructure.NoticeFromEntity(model)
-				if data, err := json.Marshal(nf); err != nil {
-					hub.sendError("notice", fmt.Sprintf(`Error: %v\n`, err))
-					continue
-				} else {
-					hub.sendGetEvent("notice", string(data))
-				}
-			}
 		}
 	}()
 	<-ctx.Done()

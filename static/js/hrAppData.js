@@ -1,5 +1,5 @@
 import { Question, User, Tag, Notice } from '/static/js/model.js';
-import { SSE_KEY } from './sse.js';
+import { SSE } from './sse.js';
 
 /** API / モックで support はあるが user が無い場合がある。テンプレは activeQuestion.support.user.name を前提にする */
 function ensureSupportForView(support) {
@@ -72,6 +72,7 @@ document.addEventListener('alpine:init', () => {
         activeQuestion: emptyActiveQuestion(),
         originalQuestion: {},
         activeUser: {},
+        loginUser: {},
         activeTag: {},
         isConnect: false,
 
@@ -96,6 +97,12 @@ document.addEventListener('alpine:init', () => {
             1: '未対応',
             2: '対応中',
             3: '完了'
+        },
+
+        categoryTitleMap: {
+            1: '総務',
+            2: '人事',
+            3: 'その他',
         },
 
         statusColorMap: {
@@ -166,24 +173,25 @@ document.addEventListener('alpine:init', () => {
             this.getQuestions();
             this.getUsers();
             this.getTags();
+            this.getNotices();
         },
 
         init() {
-            this.refreshIcons();
 
             document.addEventListener('connect', (event) => {
                 this.isConnect = event.detail;
-                this.initData()
+                this.initData();
+                this.refreshIcons();
             });
             document.addEventListener('disconnect', (event) => {
                 this.isConnect = event.detail;
             });
 
-            document.addEventListener(SSE_KEY.system.timeTick, (event) => {
+            document.addEventListener(SSE.system.timeTick, (event) => {
                 this.timeNow = event.detail
             });
 
-            document.addEventListener(SSE_KEY.data.create.notice, (event) => {
+            document.addEventListener(SSE.data.create.notice, (event) => {
                 const notice = event.detail;
                 const index = this.notices.findIndex((n) => n.id === notice.id);
                 if (index === -1) {
@@ -193,7 +201,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.update.notice, (event) => {
+            document.addEventListener(SSE.data.update.notice, (event) => {
                 const notice = event.detail;
                 const index = this.notices.findIndex((n) => n.id === notice.id);
                 if (index !== -1) {
@@ -207,12 +215,13 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.delete.notice, (event) => {
+            document.addEventListener(SSE.data.delete.notice, (event) => {
                 const id = event.detail;
+                console.log(this.notices, id);
                 this.notices = this.notices.filter((n) => n.id !== id);
             });
 
-            document.addEventListener(SSE_KEY.data.create.question, (event) => {
+            document.addEventListener(SSE.data.create.question, (event) => {
                 const question = this.toQuestionViewModel(event.detail);
                 const index = this.questions.findIndex(q => q.id === question.id);
                 if (index === -1) {
@@ -221,7 +230,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.update.question, (event) => {
+            document.addEventListener(SSE.data.update.question, (event) => {
                 const question = this.toQuestionViewModel(event.detail);
                 const index = this.questions.findIndex(q => q.id === question.id);
 
@@ -255,7 +264,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.delete.question, (event) => {
+            document.addEventListener(SSE.data.delete.question, (event) => {
                 const id = event.detail;
                 if (this.activeQuestion?.id === id) {
 					this.questions = this.questions.filter((q) => q.id !== id);
@@ -264,7 +273,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.create.user, (event) => {
+            document.addEventListener(SSE.data.create.user, (event) => {
                 const user = event.detail;
                 const index = this.users.findIndex((u) => u.id === user.id);
                 if (index === -1) {
@@ -273,7 +282,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.update.user, (event) => {
+            document.addEventListener(SSE.data.update.user, (event) => {
                 const user = event.detail;
                 const index = this.users.findIndex((u) => u.id === user.id);
                 if (index !== -1) {
@@ -287,12 +296,12 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.delete.user, (event) => {
+            document.addEventListener(SSE.data.delete.user, (event) => {
                 const id = event.detail;
                 this.users = this.users.filter((u) => u.id !== id);
             });
 
-            document.addEventListener(SSE_KEY.data.create.tag, (event) => {
+            document.addEventListener(SSE.data.create.tag, (event) => {
                 const tag = event.detail;
                 const index = this.tags.findIndex((t) => t.id === tag.id);
                 if (index === -1) {
@@ -302,7 +311,7 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.update.tag, (event) => {
+            document.addEventListener(SSE.data.update.tag, (event) => {
                 const tag = event.detail;
                 const index = this.tags.findIndex((t) => t.id === tag.id);
                 if (index !== -1) {
@@ -317,12 +326,14 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            document.addEventListener(SSE_KEY.data.delete.tag, (event) => {
+            document.addEventListener(SSE.data.delete.tag, (event) => {
                 const id = event.detail;
                 const newTags = this.tags.filter((t) => t.id !== id);
                 this.tags = newTags;
                 this.availableTags = newTags.map((t) => Tag.fromJSON(t));
             });
+
+            this.refreshIcons();
         },
 
         getIcon(name) {
@@ -424,14 +435,14 @@ document.addEventListener('alpine:init', () => {
         },
 
         isSelfMemo(memo) {
-            if (this.activeUser?.id == null || memo?.userId == null) return false;
-            return Number(memo.userId) === Number(this.activeUser.id);
+            if (this.loginUser?.id == null || memo?.userId == null) return false;
+            return Number(memo.userId) === Number(this.loginUser.id);
         },
 
         isSelfAnswer() {
             const a = this.activeQuestion?.answer;
-            if (this.activeUser?.id == null || a?.userId == null) return false;
-            return Number(a.userId) === Number(this.activeUser.id);
+            if (this.loginUser?.id == null || a?.userId == null) return false;
+            return Number(a.userId) === Number(this.loginUser.id);
         },
 
         chatAvatarSeed(name) {
@@ -862,7 +873,14 @@ document.addEventListener('alpine:init', () => {
         async getLoginUser() {
             const res = await fetch('/api/v1/user/t', { headers: this.apiHeaders(false) });
             const json = await res.json();
-            this.activeUser = User.fromJSON(json);
+            this.loginUser = User.fromJSON(json);
+        },
+
+        async getNotices() {
+            const res = await fetch('/api/v1/notice', { headers: this.apiHeaders(false) });
+            const json = await res.json();
+            const list = Array.isArray(json) ? json : [json];
+            this.notices = list.map((n) => Notice.fromJSON(n));
         },
 
         async getUsers() {
@@ -886,8 +904,18 @@ document.addEventListener('alpine:init', () => {
             this.activeUser = u;
         },
 
-        async updateUser() {
+        async updateUser(role, roleName) {
+            this.activeUser.role = { id: Number(role), roleName: roleName };
             const data = JSON.stringify(User.toModel(this.activeUser));
+            await fetch("/api/v1/user", {
+                method: "PUT",
+                headers: this.apiHeaders(),
+                body: data
+            });
+        },
+
+        async updateLoginUser() {
+            const data = JSON.stringify(User.toModel(this.loginUser));
             await fetch("/api/v1/user", {
                 method: "PUT",
                 headers: this.apiHeaders(),
@@ -903,8 +931,8 @@ document.addEventListener('alpine:init', () => {
             this.availableTags = list.map((t) => Tag.fromJSON(t));
         },
 
-        async registerTag(name, cateogryId, categoryText) {
-            const data = Tag.toModel({ title: name, categoryId: cateogryId, usage: 0, category: { categoryName: categoryText } });
+        async registerTag(name, categoryId, categoryText) {
+            const data = Tag.toModel({ title: name, categoryId: categoryId, usage: 0, category: { id: Number(categoryId), categoryName: categoryText } });
             const res = await fetch('/api/v1/tag', {
                 method: "POST",
                 headers: this.apiHeaders(),
@@ -933,8 +961,10 @@ document.addEventListener('alpine:init', () => {
             };
         },
 
-        async updateTag() {
-            const data = JSON.stringify(Tag.toModel(this.activeTag));
+        async updateTag(categoryId, categoryName) {
+            this.activeTag.category = { id: Number(categoryId), categoryName: categoryName };
+            const tag = Tag.toModel(this.activeTag);
+            const data = JSON.stringify(tag);
             await fetch('/api/v1/tag', {
                 method: 'PUT',
                 headers: this.apiHeaders(),
@@ -959,27 +989,13 @@ document.addEventListener('alpine:init', () => {
             return [hours, minutes];
         },
 
-        async registerUser(email, name, pass, role) {
-            const data = User.toModel({ email: email, name: name, password: pass, roleId: role });
+        async registerUser(email, name, pass, role, roleName) {
+            const data = User.toModel({ email: email, name: name, pass: pass, roleId: role, role: { id: Number(role), roleName: roleName } });
             await fetch("/api/v1/user", {
                 method: "POST",
                 body: JSON.stringify(data),
                 headers: this.apiHeaders(),
             }).catch({});
-        },
-
-        calcRemainingTimeAndString(question) {
-            const [hours, minutes] = this.calcRemainingTime(new Date(question.due), this.timeNow)
-            return `${hours}時間${minutes}分`;
-        },
-
-
-        calcRemainingTime(baseDate, d = new Date()) {
-            const diff = baseDate - d;
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-            return [hours, minutes];
         },
 
         refreshIcons() {

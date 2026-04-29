@@ -266,9 +266,10 @@ func TagToEntity(f TagForm) Tag {
 		Usage:      f.Usage,
 		CategoryID: f.CategoryIDInt64(),
 	}
-	if f.Category != nil {
-		e.Category = CategoryToEntity(*f.Category)
-	}
+	// DB に追加の category が入らないよう、明示的関連はセットしない。
+	// if f.Category != nil {
+	// 	e.Category = CategoryToEntity(*f.Category)
+	// }
 	for _, qf := range f.Questions {
 		tm := TagManager{
 			TagID:      f.ID,
@@ -480,6 +481,13 @@ func NoticeFromEntity(e Notice) NoticeForm {
 	return f
 }
 
+func NoticeFromEntities(ns []Notice) (forms []NoticeForm) {
+	for _, n := range ns {
+		forms = append(forms, NoticeFromEntity(n))
+	}
+	return forms
+}
+
 func NoticeToEntity(f NoticeForm) Notice {
 	var questionID *int64
 	if v := f.QuestionIDInt64(); v >= 0 {
@@ -581,18 +589,6 @@ func QuestionToEntity(f QuestionForm) Question {
 		e.CreatedAt = isoToTime(f.CreatedAt)
 	}
 	qid := f.ID
-	seenRelated := make(map[int64]struct{})
-	for _, rf := range f.RelatedQuestions {
-		rq := RelatedQuestionToEntity(rf, qid)
-		if rq.RelatedQuestionID == 0 || rq.RelatedQuestionID == qid {
-			continue
-		}
-		if _, ok := seenRelated[rq.RelatedQuestionID]; ok {
-			continue
-		}
-		seenRelated[rq.RelatedQuestionID] = struct{}{}
-		e.RelatedQuestions = append(e.RelatedQuestions, rq)
-	}
 	if f.Answer != nil {
 		a := AnswerToEntity(*f.Answer)
 		e.Answer = &a
@@ -618,6 +614,18 @@ func QuestionToEntity(f QuestionForm) Question {
 			Tag:        Tag{ID: tf.ID},
 		}
 		e.TagManagers = append(e.TagManagers, tm)
+	}
+	seenRelated := make(map[int64]struct{})
+	for _, rf := range f.RelatedQuestions {
+		rq := RelatedQuestionToEntity(rf, qid)
+		if rq.RelatedQuestionID == 0 || rq.RelatedQuestionID == qid {
+			continue
+		}
+		if _, ok := seenRelated[rq.RelatedQuestionID]; ok {
+			continue
+		}
+		seenRelated[rq.RelatedQuestionID] = struct{}{}
+		e.RelatedQuestions = append(e.RelatedQuestions, rq)
 	}
 	if f.Support != nil {
 		sup := SupportToEntity(*f.Support)

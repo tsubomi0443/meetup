@@ -1,6 +1,6 @@
 import { Question, User, Tag, Notice } from '/static/js/model.js';
 
-export const SSE_KEY = {
+export const SSE = {
     system: {
         timeTick: 'time-tick',
     },
@@ -65,7 +65,22 @@ export const SSE_KEY = {
             includeDelete ? this.data.delete.notice : '',
         );
     },
+    create() {
+        return Object.values(this.data.create).map((v) => v);
+    },
+    update() {
+        return Object.values(this.data.update).map((v) => v);
+    },
+    get() {
+        return Object.values(this.data.get).map((v) => v);
+    },
+    delete() {
+        return Object.values(this.data.delete).map((v) => v);
+    },
 };
+
+/** 既存インポート互換 */
+export const SSE_KEY = SSE;
 
 document.addEventListener('DOMContentLoaded', () => {
     const es = new EventSource('/sse');
@@ -82,8 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     };
 
-    es.addEventListener(SSE_KEY.system.timeTick, (event) => {
-        document.dispatchEvent(new CustomEvent(SSE_KEY.system.timeTick, {
+    es.addEventListener(SSE.system.timeTick, (event) => {
+        document.dispatchEvent(new CustomEvent(SSE.system.timeTick, {
             detail: new Date(event.data),
         }));
     });
@@ -104,15 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log(eventName, model);
                     let domEvent = normalizedEvent;
                     if (eventName.startsWith('get-') || eventName.startsWith('update-')) {
-                        if (eventName.endsWith('-notice')) domEvent = SSE_KEY.data.update.notice;
-                        else if (eventName.endsWith('-question')) domEvent = SSE_KEY.data.update.question;
-                        else if (eventName.endsWith('-user')) domEvent = SSE_KEY.data.update.user;
-                        else if (eventName.endsWith('-tag')) domEvent = SSE_KEY.data.update.tag;
+                        if (eventName.endsWith('-notice')) domEvent = SSE.data.update.notice;
+                        else if (eventName.endsWith('-question')) domEvent = SSE.data.update.question;
+                        else if (eventName.endsWith('-user')) domEvent = SSE.data.update.user;
+                        else if (eventName.endsWith('-tag')) domEvent = SSE.data.update.tag;
                     } else if (eventName.startsWith('create-')) {
-                        if (eventName.endsWith('-notice')) domEvent = SSE_KEY.data.create.notice;
-                        else if (eventName.endsWith('-question')) domEvent = SSE_KEY.data.create.question;
-                        else if (eventName.endsWith('-user')) domEvent = SSE_KEY.data.create.user;
-                        else if (eventName.endsWith('-tag')) domEvent = SSE_KEY.data.create.tag;
+                        if (eventName.endsWith('-notice')) domEvent = SSE.data.create.notice;
+                        else if (eventName.endsWith('-question')) domEvent = SSE.data.create.question;
+                        else if (eventName.endsWith('-user')) domEvent = SSE.data.create.user;
+                        else if (eventName.endsWith('-tag')) domEvent = SSE.data.create.tag;
                     }
                     document.dispatchEvent(new CustomEvent(domEvent, {
                         detail: model,
@@ -124,8 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    bindSSE(es, SSE_KEY.notice(true), Notice.fromJSON, SSE_KEY.data.create.notice, SSE_KEY.data.delete.notice);
-    bindSSE(es, SSE_KEY.question(true), Question.fromJSON, SSE_KEY.data.create.question, SSE_KEY.data.delete.question);
-    bindSSE(es, SSE_KEY.user(true), User.fromJSON, SSE_KEY.data.create.user, SSE_KEY.data.delete.user);
-    bindSSE(es, SSE_KEY.tag(true), Tag.fromJSON, SSE_KEY.data.create.tag, SSE_KEY.data.delete.tag);
+    bindSSE(es, SSE.notice(true), Notice.fromJSON, SSE.data.create.notice, SSE.data.delete.notice);
+    bindSSE(es, SSE.question(true), Question.fromJSON, SSE.data.create.question, SSE.data.delete.question);
+    bindSSE(es, SSE.user(true), User.fromJSON, SSE.data.create.user, SSE.data.delete.user);
+    bindSSE(es, SSE.tag(true), Tag.fromJSON, SSE.data.create.tag, SSE.data.delete.tag);
 });
