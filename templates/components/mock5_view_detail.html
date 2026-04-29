@@ -41,11 +41,12 @@
             <div class="p-4 border-t border-gray-100 bg-white">
                 <textarea
                     class="textarea textarea-bordered w-full h-24 text-sm focus:border-slate-800 focus:outline-none"
+                    x-model="detailComposerDraft"
                     placeholder="回答またはメモを入力..."></textarea>
                 <div class="flex gap-1 flex-row-reverse">
                     <div class="mt-3 mr-5 flex justify-end">
                         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold px-6 shadow-md"
-                            @click="alert('送信しました'); setView('home')">メモ登録</button>
+                            @click="submitMemo()">メモ登録</button>
                     </div>
                     <div class="mt-3 flex justify-end">
                         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold px-6 shadow-md"

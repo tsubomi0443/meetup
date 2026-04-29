@@ -84,6 +84,9 @@ document.addEventListener('alpine:init', () => {
 
         relatedSearchQuery: '',
 
+        /** 詳細画面の回答・メモ入力下書き（mock5_view_detail） */
+        detailComposerDraft: '',
+
         titleMap: {
             home: '質問一覧',
             detail: '質問詳細',
@@ -754,6 +757,7 @@ document.addEventListener('alpine:init', () => {
             this.originalQuestion = _.cloneDeep(v);
             this.activeQuestion = v;
             this.relatedSearchQuery = '';
+            this.detailComposerDraft = '';
             this.setView('detail');
         },
 
@@ -811,6 +815,51 @@ document.addEventListener('alpine:init', () => {
             this.refreshIcons();
         },
 
+        /**
+         * メモを activeQuestion.memos に追加し PUT する。サーバは memos を全件差し替えのため既存分は aq.memos ごと送る。
+         * Go MemoForm は questionId / userId が文字列想定のため updateQuestion 内で正規化する。
+         */
+        async submitMemo() {
+            const text = String(this.detailComposerDraft ?? '').trim();
+            if (!text) return;
+
+            const uid = this.loginUser?.id;
+            if (uid == null || uid === '') {
+                window.alert('ログイン情報がありません');
+                return;
+            }
+
+            const qid = this.activeQuestion?.id;
+            if (!qid) return;
+
+            if (!Array.isArray(this.activeQuestion.memos)) {
+                this.activeQuestion.memos = [];
+            }
+
+            const newMemo = {
+                id: 0,
+                questionId: String(qid),
+                userId: String(uid),
+                content: text,
+                createdAt: new Date(),
+                user: {
+                    id: uid,
+                    name: String(this.loginUser?.name ?? ''),
+                },
+            };
+            this.activeQuestion.memos.push(newMemo);
+
+            const ok = await this.updateQuestion();
+            if (ok) {
+                this.detailComposerDraft = '';
+            } else {
+                this.activeQuestion.memos.pop();
+                window.alert('メモの送信に失敗しました');
+            }
+            this.refreshIcons();
+        },
+
+        /** @returns {Promise<boolean>} PUT が成功したか、または送信不要で問題ない場合 true */
         async updateQuestion() {
             const question = this.questions.filter(q => q.id === this.activeQuestion.id)[0];
 
@@ -848,18 +897,43 @@ document.addEventListener('alpine:init', () => {
                     }))
                     : [];
 
+                /** PUT: MemoForm は questionId / userId が文字列（Go の json との整合） */
+                const memosPayload = Array.isArray(aq.memos)
+                    ? aq.memos.map((m) => ({
+                        id: m?.id != null ? Number(m.id) || 0 : 0,
+                        questionId:
+                            m?.questionId != null && m.questionId !== ''
+                                ? String(m.questionId)
+                                : String(aq.id ?? ''),
+                        userId:
+                            m?.userId != null && m.userId !== ''
+                                ? String(m.userId)
+                                : '',
+                        content:
+                            m?.content != null ? String(m.content) : '',
+                    }))
+                    : [];
+
                 const payload = {
                     ...aq,
                     createdAt: createdAtISO,
                     due: dueISO,
                     relatedQuestions: relatedQuestionsPayload,
+                    memos: memosPayload,
                 };
-                await fetch("/api/v1/question", {
+                const res = await fetch("/api/v1/question", {
                     method: "PUT",
                     headers: this.apiHeaders(),
                     body: JSON.stringify(Question.toModel(payload))
                 });
+                if (!res.ok) {
+                    const errText = await res.text().catch(() => '');
+                    console.error('updateQuestion failed:', res.status, errText);
+                    return false;
+                }
+                return true;
             }
+            return true;
         },
 
         async getQuestions() {
