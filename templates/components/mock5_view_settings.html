@@ -1,0 +1,65 @@
+{{define "mock5_view_settings"}}
+<div x-show="currentView === 'settings'" class="max-w-2xl mx-auto" style="display: none;">
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 bg-gray-50/50 text-center lg:text-left">
+            <h2 class="text-lg font-bold text-gray-800 tracking-tight">プロフィール設定</h2>
+        </div>
+        <div class="p-8 space-y-6">
+            <div class="flex flex-col sm:flex-row items-center gap-8">
+                <img
+                    :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${loginUser?.name ?? 'User'}&backgroundColor=eff6ff`"
+                    class="w-24 h-24 rounded-2xl border-2 border-white shadow-lg" />
+                <div class="lg:tooltip-top" data-tip="現在未実装です。今後のアップデートで追加予定です。">
+                    <button class="btn btn-sm btn-outline font-bold shadow-sm disabled">画像をアップロード</button>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">氏名</label>
+                    <input type="text" value="自分" class="input input-bordered w-full text-sm font-bold shadow-inner"
+                        x-model="loginUser.name" />
+                </div>
+                <div x-data="{ isValid: false }"><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">メールアドレス</label><input
+                        type="email" value="example@example.mail.com"
+                        @input="isValid = /^\S+@\S+\.\S+$/.test(loginUser.email)"
+                        class="input input-bordered w-full text-sm font-bold shadow-inner" x-model="loginUser.email"
+                        :class="!isValid ? 'input-error' : 'input-primary'" />
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">新しいパスワード</label>
+                    <div x-data="{ show: false }" class="relative flex items-center mt-2">
+                        <input type="password" placeholder="変更する場合のみ入力"
+                            class="input input-bordered w-full text-sm shadow-inner" :type="show ? 'text' : 'password'"
+                            x-model="loginUser.pass" />
+                        <button type="button"
+                            class="absolute right-2 bg-transparent flex items-center justify-center hover:text-blue-600"
+                            @click="show = !show">
+                            <svg x-show="!show" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                                </path>
+                            </svg>
+                            <svg x-show="show" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">自己紹介・メモ</label><textarea
+                        class="textarea textarea-bordered w-full h-24 text-sm font-bold shadow-inner" x-model="loginUser.memo"
+                        placeholder="対応のメモなど..."></textarea></div>
+            </div>
+        </div>
+        <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            <button class="btn btn-ghost font-bold text-gray-500" @click="setView('home')">キャンセル</button>
+            <button class="btn bg-slate-800 text-white border-none font-bold px-10 shadow-md"
+                @click="updateLoginUser()">保存する</button>
+        </div>
+    </div>
+</div>
+{{end}}

@@ -1,0 +1,23 @@
+{{define "mock5_modal_edit_tag"}}
+<div class="modal" :class="{'modal-open': showEditTagModal}">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl">
+        <h3 class="font-bold text-lg mb-6 tracking-tight">タグの更新</h3>
+        <div class="space-y-4">
+            <input type="text" placeholder="タグ名" class="input input-bordered w-full text-sm shadow-inner" x-model="activeTag.title" />
+            <select class="select select-bordered w-full text-sm font-bold shadow-inner" x-model="activeTag.categoryId">
+                <option value="0" selected disabled>カテゴリを選択</option>
+                <option value="1">総務</option>
+                <option value="2">人事</option>
+                <option value="3">その他</option>
+            </select>
+        </div>
+        <div class="modal-action">
+            <button class="btn btn-ghost font-bold" @click="showEditTagModal = false">キャンセル</button>
+            <button class="btn btn-danger font-bold" @click="showEditTagModal = false; deleteTag(activeTag.id); alert('タグを削除しました')">削除</button>
+            <button class="btn bg-slate-400 border-none font-bold px-8 shadow-md"
+                @click="showEditTagModal = false; updateTag(activeTag.categoryId, categoryTitleMap[activeTag.categoryId] || ''); alert('タグを更新しました')">更新</button>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop bg-gray-900 bg-opacity-50" @click="showEditTagModal = false"></div>
+{{end}}

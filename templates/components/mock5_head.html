@@ -1,0 +1,50 @@
+{{define "mock5_head"}}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HR FAQ Management v0.2</title>
+
+<!-- 1. Tailwind CSS + DaisyUI (built) -->
+<link href="/static/css/output.css" rel="stylesheet">
+
+<!-- 2. Lucide Icons -->
+<script src="/static/vendor/lucide.min.js"></script>
+
+<!-- 3. htmx -->
+<script src="/static/vendor/htmx.min.js"></script>
+
+<!-- 4. htmx ext sse -->
+<script src="/static/vendor/sse.min.js"></script>
+
+<!-- 5. estoolkit -->
+<script src="/static/vendor/es-toolkit-global.js"></script>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    [x-cloak] {
+        display: none !important;
+    }
+
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+
+    .sidebar-transition {
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+</style>
+
+<!-- 6. App scripts -->
+<script type="module" src="/static/js/hrAppData.js"></script>
+<script type="module" src="/static/js/sse.js"></script>
+
+<!-- 7. Alpine.js -->
+<script defer src="/static/vendor/alpine.min.js"></script>
+{{end}}

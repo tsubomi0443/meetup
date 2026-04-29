@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HR FAQ Management v0.2</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- 2. DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
+    
+    <!-- 3. Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- 4. Alpine.js -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        [x-cloak] { display: none !important; }
+        .transition-all { transition: all 0.3s ease; }
+        .sidebar-transition { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
+
+    <script>
+        function hrAppData() {
+            return {
+                isLoggedIn: false,
+                isSidebarOpen: true, // サイドバーの開閉ステート
+                currentView: 'home',
+                viewMode: 'card',
+                isManager: true,
+                showAddUserModal: false,
+                unreadNotices: 1,
+                activeQuestion: {},
+                
+                selectedTags: [],
+                availableTags: ['諸手当', '休暇', '規程', '健康診断'],
+                searchQuery: '',
+                statusFilter: 'all',
+
+                titleMap: {
+                    home: '質問一覧',
+                    detail: '質問詳細',
+                    notice: '通知センター',
+                    users: 'ユーザー管理',
+                    settings: 'プロフィール設定'
+                },
+
+                statusColorMap: {
+                    '未対応': 'bg-red-100 text-red-800',
+                    '対応中': 'bg-blue-100 text-blue-800',
+                    '完了': 'bg-gray-100 text-gray-600'
+                },
+
+                questions: [
+                    { id: 1002, sender: '鈴木 一郎', department: '営業部', title: '通勤手当の経路変更について', content: '引越しに伴い、通勤経路が変更になります。申請手順と必要な書類を教えてください。', status: '未対応', tags: ['諸手当'], daysLeft: 1 },
+                    { id: 1003, sender: '田中 花子', department: '開発部', title: '育児休業の延長申請', content: '現在取得中の育休を半年間延長したいと考えています。手続きの流れを教えてください。', status: '対応中', tags: ['休暇'], daysLeft: 5 },
+                    { id: 1004, sender: '佐藤 次郎', department: '総務部', title: '健康診断の受診日変更', content: '指定された健康診断の日程ですが、出張と重なってしまいました。', status: '完了', tags: ['健康診断'], daysLeft: 0 },
+                    { id: 1005, sender: '高橋 三郎', department: 'デザイン部', title: '慶弔休暇の適用範囲', content: '配偶者の祖父母が亡くなった場合、忌引休暇の対象になりますでしょうか？', status: '未対応', tags: ['規程'], daysLeft: 2 }
+                ],
+
+                notices: [
+                    { id: 1, type: 'alert', title: '期日接近: 質問 #1002', time: '10分前', content: '「通勤手当の経路変更」の期日が明日です。早急な対応をお願いします。' },
+                    { id: 2, type: 'info', title: 'システムアップデート完了', time: '1時間前', content: 'FAQ検索エンジンの精度を向上させるアップデートを適用しました。' }
+                ],
+
+                users: [
+                    { name: '自分', email: 'jinji.taro@example.com', role: 'Manager' },
+                    { name: '鈴木 一郎', email: 'suzuki@example.com', role: 'Creator' },
+                    { name: '田中 花子', email: 'tanaka@example.com', role: 'Creator' }
+                ],
+
+                get filteredQuestions() {
+                    return this.questions.filter(q => {
+                        const matchesTag = this.selectedTags.length === 0 || q.tags.some(tag => this.selectedTags.includes(tag));
+                        const matchesSearch = q.title.includes(this.searchQuery) || q.content.includes(this.searchQuery) || q.sender.includes(this.searchQuery);
+                        let matchesStatus = true;
+                        if (this.statusFilter === 'unanswered') matchesStatus = q.status === '未対応';
+                        else if (this.statusFilter === 'progress') matchesStatus = q.status === '対応中';
+                        else if (this.statusFilter === 'open') matchesStatus = (q.status === '未対応' || q.status === '対応中');
+                        else if (this.statusFilter === 'completed') matchesStatus = q.status === '完了';
+                        return matchesTag && matchesSearch && matchesStatus;
+                    });
+                },
+
+                init() {
+                    this.refreshIcons();
+                },
+
+                login() {
+                    this.isLoggedIn = true;
+                    this.refreshIcons();
+                },
+
+                logout() {
+                    if(confirm('ログアウトしますか？')) {
+                        this.isLoggedIn = false;
+                        this.currentView = 'home';
+                        this.refreshIcons();
+                    }
+                },
+
+                setView(view) {
+                    this.currentView = view;
+                    this.refreshIcons();
+                },
+
+                openDetail(q) {
+                    this.activeQuestion = q;
+                    this.setView('detail');
+                },
+
+                toggleTag(tag) {
+                    if (this.selectedTags.includes(tag)) {
+                        this.selectedTags = this.selectedTags.filter(t => t !== tag);
+                    } else {
+                        this.selectedTags.push(tag);
+                    }
+                },
+
+                toggleSidebar() {
+                    this.isSidebarOpen = !this.isSidebarOpen;
+                },
+
+                refreshIcons() {
+                    this.$nextTick(() => {
+                        if (typeof lucide !== 'undefined') {
+                            lucide.createIcons();
+                        }
+                    });
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-50 text-gray-900 font-sans antialiased overflow-x-hidden" x-data="hrAppData()">
+
+    <!-- 1. ログインビュー -->
+    <div x-show="!isLoggedIn" class="min-h-screen flex items-center justify-center p-4 bg-gray-100">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden transition-all">
+            <div class="bg-slate-50 p-8 text-center border-b border-gray-100">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4 shadow-inner">
+                    <i data-lucide="boxes" class="w-8 h-8 text-slate-700"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">HR Assist</h1>
+                <p class="text-sm text-gray-500 mt-2 font-medium">総務人事FAQ管理システム</p>
+            </div>
+            <div class="p-8 space-y-6">
+                <button @click="login()" class="w-full flex items-center justify-center gap-3 bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm">
+                    <svg class="w-5 h-5" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+                    </svg>
+                    社内アカウントでログイン
+                </button>
+                <div class="divider text-xs text-gray-400 font-bold uppercase">または</div>
+                <form @submit.prevent="login()" class="space-y-4">
+                    <input type="email" placeholder="メールアドレス" class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" />
+                    <input type="password" placeholder="パスワード" class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" />
+                    <button type="submit" class="btn btn-primary w-full bg-slate-800 border-none hover:bg-slate-900 font-bold shadow-lg transition-transform active:scale-95">ログイン</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. メインアプリケーションビュー -->
+    <div x-show="isLoggedIn" class="flex min-h-screen relative w-full overflow-hidden" x-cloak>
+        
+        <!-- サイドバー -->
+        <aside class="sidebar-transition bg-white border-r border-gray-200 flex flex-col shrink-0 overflow-hidden shadow-sm"
+               :class="isSidebarOpen ? 'w-64' : 'w-20'">
+            
+            <div class="h-16 flex items-center border-b border-gray-200 shrink-0 px-6">
+                <i data-lucide="boxes" class="w-6 h-6 text-slate-800 shrink-0"></i>
+                <span class="text-slate-800 font-bold text-lg tracking-tight ml-2 whitespace-nowrap transition-opacity duration-200"
+                      :class="isSidebarOpen ? 'opacity-100' : 'opacity-0'">HR Assist</span>
+            </div>
+
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto no-scrollbar">
+                <button @click="setView('home')" class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors"
+                        :class="[currentView === 'home' || currentView === 'detail' ? 'bg-slate-100 text-slate-800' : 'text-gray-600 hover:bg-gray-50', isSidebarOpen ? 'px-3' : 'justify-center']">
+                    <i data-lucide="home" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">質問一覧</span>
+                </button>
+                <button @click="setView('notice')" class="w-full flex items-center justify-between py-3 rounded-lg text-sm font-bold transition-colors text-gray-600 hover:bg-gray-50"
+                        :class="[currentView === 'notice' ? 'bg-slate-100 text-slate-800' : '', isSidebarOpen ? 'px-3' : 'justify-center']">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="bell" class="w-5 h-5 shrink-0"></i>
+                        <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">通知</span>
+                    </div>
+                    <span x-show="isSidebarOpen" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full" x-text="unreadNotices"></span>
+                </button>
+                
+                <div class="my-4 border-t border-gray-100" x-show="isManager"></div>
+
+                <button @click="setView('users')" x-show="isManager" class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors"
+                        :class="[currentView === 'users' ? 'bg-slate-100 text-slate-800' : 'text-gray-600 hover:bg-gray-50', isSidebarOpen ? 'px-3' : 'justify-center']">
+                    <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">ユーザー管理</span>
+                </button>
+            </nav>
+
+            <!-- プロフィールフッター -->
+            <div class="p-4 border-t border-gray-200 flex items-center gap-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors" 
+                 :class="isSidebarOpen ? 'px-4' : 'justify-center'"
+                 @click="setView('settings')">
+                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=eff6ff" class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0" alt="Avatar" />
+                <div class="min-w-0" x-show="isSidebarOpen">
+                    <div class="text-sm font-bold text-gray-800 truncate">自分</div>
+                    <div class="text-xs text-gray-500 truncate font-medium uppercase tracking-wider" x-text="isManager ? 'Manager' : 'Creator'"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- メインエリア -->
+        <div class="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm shrink-0">
+                <div class="flex items-center gap-4">
+                    <!-- ハンバーガーメニュー -->
+                    <button @click="toggleSidebar()" class="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <h1 class="text-lg font-bold text-gray-800 tracking-tight" x-text="titleMap[currentView] || 'HR Assist'"></h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer bg-gray-100 px-3 py-1.5 rounded-full hover:bg-gray-200 transition-colors">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest" x-text="isManager ? 'Manager Mode' : 'Creator Mode'"></span>
+                        <input type="checkbox" x-model="isManager" class="toggle toggle-sm toggle-success" />
+                    </label>
+                    <button @click="logout()" class="text-xs font-bold text-gray-400 hover:text-red-600 transition-colors uppercase tracking-widest">ログアウト</button>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-6 w-full max-w-6xl mx-auto no-scrollbar">
+
+                <!-- [View: HOME] -->
+                <div x-show="currentView === 'home'" class="space-y-6">
+                    <!-- ツールバー -->
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-2 flex-1 min-w-[300px]">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
+                                <input type="text" x-model="searchQuery" placeholder="キーワード検索..." class="input input-bordered w-full pl-10 h-10 text-sm border-gray-300 focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-sm" />
+                            </div>
+                            
+                            <div class="dropdown dropdown-end">
+                                <label tabindex="0" class="btn btn-outline btn-sm border-gray-300 normal-case h-10 px-4 font-bold text-gray-600 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800">
+                                    <i data-lucide="filter" class="w-4 h-4 mr-2"></i>
+                                    カテゴリ
+                                    <span x-show="selectedTags.length > 0" class="ml-2 badge bg-slate-800 text-white border-none badge-xs" x-text="selectedTags.length"></span>
+                                </label>
+                                <div tabindex="0" class="dropdown-content z-[50] card card-compact w-64 p-2 shadow-xl bg-white border border-gray-200 mt-2">
+                                    <div class="card-body">
+                                        <h3 class="font-bold text-xs uppercase text-gray-400 tracking-widest mb-2 border-b pb-1">カテゴリ絞り込み</h3>
+                                        <div class="flex flex-col gap-1 max-h-64 overflow-y-auto no-scrollbar">
+                                            <template x-for="tag in availableTags" :key="tag">
+                                                <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group">
+                                                    <input type="checkbox" :checked="selectedTags.includes(tag)" @change="toggleTag(tag)" class="checkbox checkbox-sm checkbox-primary border-gray-300" />
+                                                    <span class="text-sm font-bold text-gray-700 group-hover:text-slate-900" x-text="tag"></span>
+                                                </label>
+                                            </template>
+                                        </div>
+                                        <div class="divider my-1"></div>
+                                        <button @click="selectedTags = []" class="btn btn-ghost btn-xs text-red-500 font-bold" :disabled="selectedTags.length === 0">リセット</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-200 p-1 rounded-lg flex items-center shadow-inner">
+                            <button @click="viewMode = 'card'" class="p-1.5 rounded-md transition-all" :class="viewMode === 'card' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'">
+                                <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                            </button>
+                            <button @click="viewMode = 'list'" class="p-1.5 rounded-md transition-all" :class="viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'">
+                                <i data-lucide="list" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ステータス・クイックフィルタ -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center gap-1 bg-gray-200 p-1 rounded-xl w-max shadow-inner overflow-x-auto no-scrollbar">
+                            <button @click="statusFilter = 'all'" :class="statusFilter === 'all' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">すべて</button>
+                            <button @click="statusFilter = 'unanswered'" :class="statusFilter === 'unanswered' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">未対応のみ</button>
+                            <button @click="statusFilter = 'progress'" :class="statusFilter === 'progress' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">対応中のみ</button>
+                            <button @click="statusFilter = 'open'" :class="statusFilter === 'open' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">未対応と対応中</button>
+                            <button @click="statusFilter = 'completed'" :class="statusFilter === 'completed' ? 'bg-white shadow-sm text-slate-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap">完了のみ</button>
+                        </div>
+                        
+                        <div x-show="selectedTags.length > 0" class="flex flex-wrap gap-1 items-center ml-2">
+                            <template x-for="tag in selectedTags" :key="tag">
+                                <span class="badge bg-slate-100 border-slate-200 text-slate-800 font-bold gap-1 px-2 py-2 text-[10px] shadow-sm">
+                                    <span x-text="tag"></span>
+                                    <i data-lucide="x" class="w-2.5 h-2.5 cursor-pointer hover:text-red-500" @click="toggleTag(tag); refreshIcons()"></i>
+                                </span>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- カード表示 -->
+                    <div x-show="viewMode === 'card'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="q in filteredQuestions" :key="q.id">
+                            <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200 cursor-pointer hover:shadow-md hover:border-slate-300 transition-all flex flex-col group" @click="openDetail(q)">
+                                <div class="flex justify-between mb-3 items-start">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-600 text-sm group-hover:bg-slate-100 group-hover:text-slate-800 transition-colors shrink-0" x-text="q.sender.charAt(0)"></div>
+                                        <div class="min-w-0">
+                                            <div class="text-sm font-bold text-gray-900 truncate" x-text="q.sender"></div>
+                                            <div class="text-[10px] text-gray-400 font-bold uppercase" x-text="q.department"></div>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold shadow-sm" :class="statusColorMap[q.status]" x-text="q.status"></span>
+                                </div>
+                                <h3 class="text-base font-bold text-gray-800 mb-1 group-hover:text-slate-900" x-text="q.title"></h3>
+                                <p class="text-sm text-gray-500 mb-4 flex-1 line-clamp-2" x-text="q.content"></p>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-50 text-[10px] font-bold">
+                                    <span class="bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase" x-text="q.tags[0]"></span>
+                                    <div class="flex items-center gap-1" :class="q.daysLeft <= 1 && q.status !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                                        <i data-lucide="clock" class="w-3.5 h-3.5"></i> 
+                                        <span x-text="q.status === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- リスト表示 -->
+                    <div x-show="viewMode === 'list'" class="flex flex-col gap-2 w-full" style="display: none;">
+                        <template x-for="q in filteredQuestions" :key="q.id">
+                            <div class="bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all flex items-center gap-4 group" @click="openDetail(q)">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 w-16 text-center" :class="statusColorMap[q.status]" x-text="q.status"></span>
+                                <h3 class="text-sm font-bold text-gray-800 truncate w-48 shrink-0 group-hover:text-slate-900" x-text="q.title"></h3>
+                                <p class="text-xs text-gray-500 truncate flex-1 font-medium" x-text="q.content"></p>
+                                <span class="text-[10px] font-bold bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 shrink-0 uppercase" x-text="q.tags[0]"></span>
+                                <div class="text-[10px] font-bold shrink-0 flex items-center gap-1 w-16 justify-end" :class="q.daysLeft <= 1 && q.status !== '完了' ? 'text-red-500' : 'text-gray-400'">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5"></i> 
+                                    <span x-text="q.status === '完了' ? '完了' : `あと${q.daysLeft}日`"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- [View: DETAIL] -->
+                <div x-show="currentView === 'detail'" class="space-y-6" style="display: none;">
+                    <div class="flex items-center justify-between">
+                        <button class="btn btn-ghost btn-sm gap-2 font-bold text-gray-500 hover:text-gray-800" @click="setView('home')">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i> 一覧に戻る
+                        </button>
+                    </div>
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <div class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px]">
+                            <div class="bg-gray-50 p-6 flex-1 space-y-6 overflow-y-auto">
+                                <div class="flex gap-4">
+                                    <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 shrink-0 shadow-sm" x-text="activeQuestion.sender?.charAt(0)"></div>
+                                    <div class="space-y-1 max-w-[80%]">
+                                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest" x-text="(activeQuestion.sender || '') + ' • ' + (activeQuestion.department || '')"></div>
+                                        <div class="bg-white p-4 rounded-2xl rounded-tl-none border border-gray-100 shadow-sm text-sm leading-relaxed" x-text="activeQuestion.content"></div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-4">
+                                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix" class="w-10 h-10 rounded-full border bg-white shrink-0 shadow-sm" />
+                                    <div class="space-y-1 max-w-[80%]">
+                                        <div class="text-[10px] font-bold text-yellow-600 uppercase tracking-widest">自分 • 内部メモ</div>
+                                        <div class="bg-yellow-50 p-4 rounded-2xl rounded-tl-none border border-yellow-100 text-sm text-yellow-900 italic">前回の事例（#1001）を参考に回答を作成中...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 border-t border-gray-100 bg-white">
+                                <div class="flex gap-2 mb-3">
+                                    <button class="text-[10px] font-bold bg-slate-800 text-white px-3 py-1 rounded shadow-sm">質問者に返信</button>
+                                    <button class="text-[10px] font-bold bg-gray-100 text-gray-500 px-3 py-1 rounded">内部メモ</button>
+                                </div>
+                                <textarea class="textarea textarea-bordered w-full h-24 text-sm focus:border-slate-800 focus:outline-none" placeholder="回答またはメモを入力..."></textarea>
+                                <div class="mt-3 flex justify-end">
+                                    <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold px-6 shadow-md" @click="alert('送信しました'); setView('home')">送信</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-full lg:w-72 space-y-4">
+                            <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">ステータス管理</h4>
+                                <select class="select select-bordered select-sm w-full text-sm font-bold" x-model="activeQuestion.status">
+                                    <option>未対応</option>
+                                    <option>対応中</option>
+                                    <option>完了</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- [View: NOTICE] -->
+                <div x-show="currentView === 'notice'" class="max-w-3xl mx-auto space-y-4" style="display: none;">
+                    <template x-for="n in notices" :key="n.id">
+                        <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm flex gap-4 items-start hover:bg-gray-50 transition-colors cursor-pointer" @click="setView('home')">
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" :class="n.type === 'alert' ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-500'">
+                                <i :data-lucide="n.type === 'alert' ? 'alert-circle' : 'info'" class="w-5 h-5"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-center mb-1">
+                                    <h3 class="font-bold text-sm text-gray-800" x-text="n.title"></h3>
+                                    <span class="text-[10px] font-bold text-gray-400" x-text="n.time"></span>
+                                </div>
+                                <p class="text-xs text-gray-500 line-clamp-2" x-text="n.content"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- [View: USERS] -->
+                <div x-show="currentView === 'users'" class="space-y-6" style="display: none;">
+                    <div class="flex justify-between items-center">
+                        <div class="relative w-80">
+                            <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
+                            <input type="text" placeholder="ユーザー検索..." class="input input-bordered w-full pl-10 h-10 text-sm focus:border-slate-800 shadow-sm" />
+                        </div>
+                        <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold shadow-md" @click="showAddUserModal = true">+ ユーザー追加</button>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table class="table w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">氏名</th>
+                                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">役割</th>
+                                    <th class="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-none">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="u in users" :key="u.email">
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td>
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center font-bold text-slate-600 text-xs" x-text="u.name.charAt(0)"></div>
+                                                <div>
+                                                    <div class="font-bold text-sm" x-text="u.name"></div>
+                                                    <div class="text-[10px] text-gray-400" x-text="u.email"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge badge-sm font-bold" :class="u.role === 'Manager' ? 'badge-info bg-slate-100 text-slate-800 border-slate-200' : 'badge-ghost'" x-text="u.role"></span></td>
+                                        <td><button class="text-gray-400 hover:text-slate-800"><i data-lucide="edit-2" class="w-4 h-4"></i></button></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- [View: SETTINGS] -->
+                <div x-show="currentView === 'settings'" class="max-w-2xl mx-auto" style="display: none;">
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                        <div class="p-6 border-b border-gray-100 bg-gray-50/50">
+                            <h2 class="text-lg font-bold text-gray-800 tracking-tight">プロフィール設定</h2>
+                        </div>
+                        <div class="p-8 space-y-6">
+                            <div class="flex flex-col sm:flex-row items-center gap-8">
+                                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix&backgroundColor=eff6ff" class="w-24 h-24 rounded-2xl border-2 border-white shadow-lg" />
+                                <button class="btn btn-sm btn-outline font-bold shadow-sm">画像をアップロード</button>
+                            </div>
+                            <div class="space-y-4">
+                                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">氏名</label><input type="text" value="自分" class="input input-bordered w-full text-sm font-bold shadow-inner" /></div>
+                                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">メールアドレス</label><input type="email" value="jinji.taro@example.com" class="input input-bordered w-full text-sm font-bold shadow-inner" /></div>
+                                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">新しいパスワード</label><input type="password" placeholder="変更する場合のみ入力" class="input input-bordered w-full text-sm font-bold shadow-inner" /></div>
+                                <div><label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">自己紹介・メモ</label><textarea class="textarea textarea-bordered w-full h-24 text-sm font-bold shadow-inner" placeholder="管理担当のメモなど..."></textarea></div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                            <button class="btn btn-ghost font-bold text-gray-500" @click="setView('home')">キャンセル</button>
+                            <button class="btn bg-slate-800 text-white border-none font-bold px-10 shadow-md" @click="setView('home'); alert('設定を保存しました')">保存する</button>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ユーザー招待モーダル -->
+    <div class="modal" :class="{'modal-open': showAddUserModal}">
+        <div class="modal-box bg-white rounded-2xl shadow-2xl">
+            <h3 class="font-bold text-lg mb-6 tracking-tight">新規ユーザーを招待</h3>
+            <div class="space-y-4">
+                <input type="text" placeholder="氏名" class="input input-bordered w-full text-sm shadow-inner" />
+                <input type="email" placeholder="メールアドレス" class="input input-bordered w-full text-sm shadow-inner" />
+                <select class="select select-bordered w-full text-sm font-bold shadow-inner">
+                    <option disabled selected>役割を選択</option>
+                    <option>Manager</option>
+                    <option>Creator</option>
+                </select>
+            </div>
+            <div class="modal-action">
+                <button class="btn btn-ghost font-bold" @click="showAddUserModal = false">キャンセル</button>
+                <button class="btn bg-slate-800 border-none font-bold px-8 shadow-md" @click="showAddUserModal = false; alert('ユーザーを招待しました')">招待を送信</button>
+            </div>
+        </div>
+        <div class="modal-backdrop bg-gray-900 bg-opacity-50" @click="showAddUserModal = false"></div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,51 @@
+{{define "login_head"}}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HR Assist Login</title>
+
+<!-- 1. Tailwind CSS + DaisyUI (built) -->
+<link href="/static/css/output.css" rel="stylesheet">
+
+<!-- 2. Lucide Icons -->
+<script src="/static/vendor/lucide.min.js"></script>
+
+<!-- 3. htmx -->
+<script src="/static/vendor/htmx.min.js"></script>
+
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('hrAppLogin', () => ({
+            login: {},
+            init() {
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            },
+            async doLogin() {
+                console.log(this.login)
+                const res = await fetch('/login', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: this.login.email, pass: this.login.pass })
+                })
+                if (!res.ok) {
+                    console.log("Login error.")
+                    return
+                }
+                const body = await res.json();
+                const redirect = body.redirect;
+                location.href = redirect;
+            }
+        }))
+    })
+</script>
+
+<!-- 4. Alpine.js -->
+<script defer src="/static/vendor/alpine.min.js"></script>
+{{end}}

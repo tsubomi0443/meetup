@@ -1,0 +1,212 @@
+{{define "mock5_view_detail"}}
+<div x-show="currentView === 'detail'" class="space-y-6" style="display: none;">
+    <div class="flex items-center justify-between">
+        <button class="btn btn-ghost btn-sm gap-2 font-bold text-gray-500 hover:text-gray-800" @click="setView('home')">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> 一覧に戻る
+        </button>
+    </div>
+    <div class="flex flex-col lg:flex-row gap-6">
+        <div
+            class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px]">
+            <div class="bg-gray-50 p-6 flex-1 space-y-6 overflow-y-auto">
+                <div class="chat chat-start">
+                    <div class="chat-image avatar">
+                        <div class="w-10 rounded-full">
+                            <img
+                                :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(chatAvatarSeed(activeQuestion.sender))}&backgroundColor=eff6ff`"
+                                class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
+                                alt="" />
+                        </div>
+                    </div>
+                    <div class="chat-header">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"
+                            x-text="activeQuestionHeaderLine()"></span>
+                    </div>
+                    <div class="chat-bubble text-sm leading-relaxed" x-text="chatQuestionContent()"></div>
+                </div>
+                <template x-for="(item, idx) in chatTimelineItems()" :key="(item.kind || 'x') + '-' + String(item.memo?.id ?? item.answer?.id ?? '') + '-' + idx">
+                    <div class="chat" :class="isSelfChatItem(item) ? 'chat-end' : 'chat-start'">
+                        <div class="chat-image avatar">
+                            <div class="w-10 rounded-full">
+                                <img
+                                    :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(chatAvatarSeed(item.userName))}&backgroundColor=eff6ff`"
+                                    class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
+                                    alt="" />
+                            </div>
+                        </div>
+                        <div class="chat-bubble text-sm leading-relaxed" x-text="item.content"></div>
+                    </div>
+                </template>
+            </div>
+            <div class="p-4 border-t border-gray-100 bg-white">
+                <textarea
+                    class="textarea textarea-bordered w-full h-24 text-sm focus:border-slate-800 focus:outline-none"
+                    x-model="detailComposerDraft"
+                    placeholder="回答またはメモを入力..."></textarea>
+                <div class="flex gap-1 flex-row-reverse">
+                    <div class="mt-3 mr-5 flex justify-end">
+                        <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold px-6 shadow-md"
+                            @click="submitMemo()">メモ登録</button>
+                    </div>
+                    <div class="mt-3 flex justify-end">
+                        <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold px-6 shadow-md"
+                            @click="alert('送信しました'); setView('home')">回答送信</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full lg:w-80 space-y-4 shrink-0">
+            <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm space-y-6">
+                <div>
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">質問者</h4>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-sm shadow-inner shrink-0"
+                            x-text="senderInitialChar()"></div>
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.sender"></div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider"
+                                x-text="activeQuestion.department"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divider my-0"></div>
+
+                <div class="mt-0">
+                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">対応情報</h4>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-sm shadow-inner shrink-0"
+                            x-text="supportUserInitialChar()"></div>
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.support.user.name"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">タイトル</h4>
+                        <input type="text" @change="updateQuestion()" x-model="activeQuestion.title"
+                            class="input input-bordered input-sm w-full text-sm font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner" />
+                    </div>
+
+                    <div>
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">ステータス</h4>
+                        <select
+                            class="select select-bordered select-sm w-full text-sm font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner"
+                            @change="updateQuestion()" x-model="activeQuestion.support.supportStatusId">
+                            <option value="1">未対応</option>
+                            <option value="2">対応中</option>
+                            <option value="3">完了</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">タグ</h4>
+                        <div class="relative w-full" x-data="{ isCategoryOpen: false }"
+                            @click.outside="isCategoryOpen = false">
+                            <button type="button" @click="isCategoryOpen = !isCategoryOpen"
+                                class="btn btn-outline btn-sm border-gray-300 normal-case w-full justify-between font-bold text-gray-700 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800 shadow-sm bg-gray-50">
+                                <span class="truncate text-xs"
+                                    x-text="activeQuestionTagButtonLabel()"></span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 ml-2 shrink-0"></i>
+                            </button>
+                            <div x-show="isCategoryOpen" x-transition x-cloak
+                                class="absolute left-0 right-0 z-[50] card card-compact w-full p-2 shadow-xl bg-white border border-gray-200 mt-1">
+                                <div class="card-body p-2">
+                                    <div class="flex flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
+                                        <template x-for="tag in availableTags" :key="tag.id">
+                                            <label
+                                                class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group">
+                                                <input type="checkbox"
+                                                    :checked="isActiveQuestionTagSelected(tag)"
+                                                    @change="toggleQuestionTag(tag)"
+                                                    class="checkbox checkbox-sm checkbox-primary border-gray-300 rounded" />
+                                                <span class="text-sm font-bold text-gray-700 group-hover:text-slate-900"
+                                                    x-text="tag.title"></span>
+                                            </label>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="col-span-4">
+                            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">質問日時</h4>
+                            <div class="text-xs font-bold text-gray-700 bg-gray-50 px-2 rounded-lg border border-gray-200 flex items-center h-8 shadow-inner truncate"
+                                x-text="activeQuestionDateOrPlaceholder()"></div>
+                        </div>
+                        <div class="col-span-full">
+                            <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">期日</h4>
+                            <input type="date" x-model="activeQuestion.dueDate"
+                                class="input input-bordered input-sm w-full text-xs font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner px-2" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm mt-4">
+                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">関連する質問</h4>
+
+                <div class="relative w-full" x-data="{ isRelatedOpen: false }" @click.outside="isRelatedOpen = false">
+                    <button type="button" @click="isRelatedOpen = !isRelatedOpen"
+                        class="btn btn-outline btn-sm border-gray-300 normal-case w-full justify-between font-bold text-gray-700 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800 shadow-sm bg-gray-50">
+                        <span class="truncate text-xs" x-text="relatedQuestionPickerButtonLabel()">
+                        </span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 ml-2 shrink-0"></i>
+                    </button>
+
+                    <div x-show="isRelatedOpen" x-transition x-cloak
+                        class="absolute left-0 right-0 z-[50] card card-compact w-full p-2 shadow-xl bg-white border border-gray-200 mt-1">
+                        <div class="card-body p-2">
+                            <div class="relative mb-2">
+                                <i data-lucide="search" class="w-3 h-3 absolute left-2 top-2.5 text-gray-400"></i>
+                                <input type="text" x-model="relatedSearchQuery" placeholder="検索..."
+                                    class="input input-bordered input-sm w-full pl-7 text-xs focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800" />
+                            </div>
+
+                            <div class="flex flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
+                                <template x-for="rq in availableRelatedQuestions" :key="rq.id">
+                                    <label
+                                        class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group">
+                                        <input type="checkbox"
+                                            :checked="isRelatedQuestionChecked(rq.id)"
+                                            @change="toggleRelatedQuestion(rq.id)"
+                                            class="checkbox checkbox-sm checkbox-primary border-gray-300 rounded" />
+                                        <div class="flex flex-col min-w-0">
+                                            <span
+                                                class="text-xs font-bold text-gray-700 group-hover:text-slate-900 truncate"
+                                                x-text="'#' + rq.id + ' ' + rq.title"></span>
+                                        </div>
+                                    </label>
+                                </template>
+                                <div x-show="!availableRelatedQuestions.length"
+                                    class="text-center py-4 text-xs text-gray-400 font-bold">
+                                    該当なし
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 space-y-2"
+                    x-show="hasActiveRelatedQuestionIds()">
+                    <template x-for="(rqRow, rqIdx) in activeQuestion.relatedQuestions" :key="relatedQuestionRowKey(rqRow, rqIdx)">
+                        <div
+                            class="p-2 bg-gray-50 rounded border text-xs font-bold hover:bg-slate-50 transition-colors flex justify-between items-center group">
+                            <span class="truncate pr-2 cursor-pointer hover:text-blue-600"
+                                x-text="relatedQuestionLineTitle(rqRow)"
+                                @click="openDetail(findQuestionById(relatedQuestionTargetId(rqRow)))"></span>
+                            <i data-lucide="x" class="w-3 h-3 text-gray-400 hover:text-red-500 cursor-pointer shrink-0"
+                                @click="toggleRelatedQuestion(relatedQuestionTargetId(rqRow)); refreshIcons()"></i>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
