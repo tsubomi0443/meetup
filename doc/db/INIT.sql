@@ -9,17 +9,26 @@ GRANT ALL ON SCHEMA public TO public;
 
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,
-    role_name VARCHAR(50) NOT NULL
+    role_name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 CREATE TABLE categories (
     id BIGSERIAL PRIMARY KEY,
-    category_name VARCHAR(255) NOT NULL
+    category_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 CREATE TABLE support_statuses (
     id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL
+    title VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 CREATE TABLE users (
@@ -29,6 +38,9 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL,
     memo TEXT NOT NULL DEFAULT '',
     role_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_users_role
         FOREIGN KEY (role_id)
         REFERENCES roles(id)
@@ -38,6 +50,9 @@ CREATE TABLE supports (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     support_status_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_supports_user
         FOREIGN KEY (user_id)
         REFERENCES users(id),
@@ -52,6 +67,8 @@ CREATE TABLE answers (
     content TEXT NOT NULL,
     answered_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_answers_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
@@ -64,9 +81,10 @@ CREATE TABLE questions (
     support_id BIGINT UNIQUE,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     due TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_questions_origin
         FOREIGN KEY (origin_question_id)
         REFERENCES questions(id),
@@ -83,6 +101,9 @@ CREATE TABLE memos (
     question_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_memos_question
         FOREIGN KEY (question_id)
         REFERENCES questions(id),
@@ -94,7 +115,10 @@ CREATE TABLE memos (
 CREATE TABLE refers (
     id BIGSERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    url TEXT NOT NULL
+    url TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 CREATE TABLE tags (
@@ -102,6 +126,9 @@ CREATE TABLE tags (
     title VARCHAR(255) NOT NULL,
     usage INTEGER NOT NULL DEFAULT 0,
     category_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_tags_category
         FOREIGN KEY (category_id)
         REFERENCES categories(id)
@@ -111,6 +138,9 @@ CREATE TABLE refer_managers (
     id BIGSERIAL PRIMARY KEY,
     answer_id BIGINT NOT NULL,
     refer_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_refer_managers_answer
         FOREIGN KEY (answer_id)
         REFERENCES answers(id),
@@ -123,6 +153,9 @@ CREATE TABLE tag_managers (
     id BIGSERIAL PRIMARY KEY,
     tag_id BIGINT NOT NULL,
     question_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_tag_managers_tag
         FOREIGN KEY (tag_id)
         REFERENCES tags(id),
@@ -136,6 +169,9 @@ CREATE TABLE escalations (
     from_question_id BIGINT NOT NULL,
     to_question_id BIGINT NOT NULL,
     escalated_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_escalations_from_question
         FOREIGN KEY (from_question_id)
         REFERENCES questions(id),
@@ -146,7 +182,10 @@ CREATE TABLE escalations (
 
 CREATE TABLE notice_types (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL
+    name VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 CREATE TABLE notices (
@@ -155,6 +194,9 @@ CREATE TABLE notices (
     question_id BIGINT,
     content TEXT,
     display_due TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
     CONSTRAINT fk_notices_type
         FOREIGN KEY (type_id)
         REFERENCES notice_types(id),
@@ -163,14 +205,15 @@ CREATE TABLE notices (
         REFERENCES questions(id)
 );
 
--- ============================================
--- RELATED_QUESTION
--- ============================================
+-- RELATED_QUESTION（※重複削除済）
 
 CREATE TABLE related_questions (
     id BIGSERIAL PRIMARY KEY,
     question_id BIGINT NOT NULL,
     related_question_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
 
     CONSTRAINT fk_related_questions_question
         FOREIGN KEY (question_id)
@@ -178,18 +221,14 @@ CREATE TABLE related_questions (
 
     CONSTRAINT fk_related_questions_related
         FOREIGN KEY (related_question_id)
-        REFERENCES questions(id)
+        REFERENCES questions(id),
+
+    CONSTRAINT chk_no_self_reference
+        CHECK (question_id <> related_question_id),
+
+    CONSTRAINT uq_related_questions
+        UNIQUE (question_id, related_question_id)
 );
-
--- 自己参照禁止
-ALTER TABLE related_questions
-ADD CONSTRAINT chk_no_self_reference
-CHECK (question_id <> related_question_id);
-
--- 重複登録禁止
-ALTER TABLE related_questions
-ADD CONSTRAINT uq_related_questions
-UNIQUE (question_id, related_question_id);
 
 
 -- ============================================
@@ -275,9 +314,11 @@ INSERT INTO support_statuses (title) VALUES
 ('完了');
 
 INSERT INTO users (name, password, email, role_id) VALUES
-('Admin', 'Admin', 'Admin', 1),
-('Taro Yamada', 'hashed_password_1', 'taro@example.com', 2),
-('Hanako Suzuki', 'hashed_password_2', 'hanako@example.com', 3);
+('admin', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'admin', 1),
+('Taro Yamada', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'taro@example.com', 2),
+('Hanako Suzuki', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'hanako@example.com', 3),
+('Jiro Tanaka', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'jiro@example.com', 3),
+('Sato Hiromichi', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'sato@example.com', 4);
 
 INSERT INTO supports (user_id, support_status_id) VALUES
 (1, 1),
@@ -289,10 +330,10 @@ INSERT INTO answers (user_id, content, answered_at, created_at) VALUES
 (2, 'Answer to follow-up question', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 (3, 'Health check date can be changed via internal form.', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO questions (origin_question_id, answer_id, support_id, title, content, deleted, due, created_at) VALUES
-(NULL, NULL, 1, 'First Question', 'First question body', FALSE, '2026-04-30 12:00:00', CURRENT_TIMESTAMP),
-(1,    NULL, 2, 'Follow-up Question', 'Follow-up body', FALSE, '2026-05-01 12:00:00', CURRENT_TIMESTAMP),
-(NULL, NULL, 3, 'Health Check Schedule', 'Health check schedule details', FALSE, '2026-05-10 09:00:00', CURRENT_TIMESTAMP);
+INSERT INTO questions (origin_question_id, answer_id, support_id, title, content, due, created_at) VALUES
+(NULL, NULL, 1, 'First Question', 'First question body', '2026-04-30 12:00:00', CURRENT_TIMESTAMP),
+(1,    NULL, 2, 'Follow-up Question', 'Follow-up body', '2026-05-01 12:00:00', CURRENT_TIMESTAMP),
+(NULL, NULL, 3, 'Health Check Schedule', 'Health check schedule details', '2026-05-10 09:00:00', CURRENT_TIMESTAMP);
 
 UPDATE questions SET answer_id = 1 WHERE id = 1;
 UPDATE questions SET answer_id = 2 WHERE id = 2;

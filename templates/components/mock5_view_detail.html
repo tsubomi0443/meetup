@@ -24,7 +24,7 @@
                     </div>
                     <div class="chat-bubble text-sm leading-relaxed" x-text="chatQuestionContent()"></div>
                 </div>
-                <template x-for="(item, idx) in chatTimelineItems()" :key="(item.kind || 'x') + '-' + String(item.memo?.id ?? item.answer?.id ?? '') + '-' + idx">
+                <template x-for="(item, idx) in chatTimelineItems()" :key="(item._origIdx || 'x') + '-' + String(item.memo?.id ?? item.answer?.id ?? '')">
                     <div class="chat" :class="isSelfChatItem(item) ? 'chat-end' : 'chat-start'">
                         <div class="chat-image avatar">
                             <div class="w-10 rounded-full">
@@ -84,7 +84,7 @@
                     </div>
                 </div>
 
-                <div class="space-y-4">
+                <div class="space-y-4" :disabled="loginUser.id === Number(activeQuestion.userId)">
                     <div>
                         <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">タイトル</h4>
                         <input type="text" @change="updateQuestion()" x-model="activeQuestion.title"

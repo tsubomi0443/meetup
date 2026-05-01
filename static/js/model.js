@@ -36,11 +36,15 @@ export class Role {
    * @param {number} id
    * @param {string} roleName
    * @param {User[]} [users]
+   * @param {string|null} createdAt ISO8601
+   * @param {string|null} updatedAt ISO8601
    */
-  constructor(id, roleName, users = []) {
+  constructor(id, roleName, users = [], createdAt = null, updatedAt = null) {
     this.id = id;
     this.roleName = roleName;
     this.users = users;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {Role} */
@@ -49,6 +53,8 @@ export class Role {
       json.id,
       json.roleName,
       (json.users ?? []).map(User.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -66,11 +72,15 @@ export class SupportStatus {
    * @param {number} id
    * @param {string} title
    * @param {Support[]} [supports]
+   * @param {string|null} createdAt ISO8601
+   * @param {string|null} updatedAt ISO8601
    */
-  constructor(id, title, supports = []) {
+  constructor(id, title, supports = [], createdAt = null, updatedAt = null) {
     this.id = id;
     this.title = title;
     this.supports = supports;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {SupportStatus} */
@@ -79,6 +89,8 @@ export class SupportStatus {
       json.id,
       json.title,
       (json.supports ?? []).map(Support.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -99,14 +111,27 @@ export class Support {
    * @param {User|null}     [user]
    * @param {SupportStatus|null} [supportStatus]
    * @param {Question|null} [question]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    */
-  constructor(id, userId, supportStatusId, user = null, supportStatus = null, question = null) {
+  constructor(
+    id,
+    userId,
+    supportStatusId,
+    user = null,
+    supportStatus = null,
+    question = null,
+    createdAt = null,
+    updatedAt = null,
+  ) {
     this.id = id;
     this.userId = userId;
     this.supportStatusId = supportStatusId;
     this.user = user;
     this.supportStatus = supportStatus;
     this.question = question;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {Support} */
@@ -118,6 +143,8 @@ export class Support {
       json.user ? User.fromJSON(json.user) : null,
       json.supportStatus ? SupportStatus.fromJSON(json.supportStatus) : null,
       json.question ? Question.fromJSON(json.question) : null,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -142,8 +169,23 @@ export class User {
    * @param {Support[]} [supports]
    * @param {Answer[]}  [answers]
    * @param {Memo[]}    [memos]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    */
-  constructor(id, name, email, memo, pass, roleId, role = null, supports = [], answers = [], memos = []) {
+  constructor(
+    id,
+    name,
+    email,
+    memo,
+    pass,
+    roleId,
+    role = null,
+    supports = [],
+    answers = [],
+    memos = [],
+    createdAt = null,
+    updatedAt = null,
+  ) {
     this.id = id;
     this.name = name;
     this.email = email;
@@ -154,6 +196,8 @@ export class User {
     this.supports = supports;
     this.answers = answers;
     this.memos = memos;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {User} */
@@ -163,12 +207,14 @@ export class User {
       json.name ?? '',
       json.email ?? '',
       json.memo ?? '',
-      '', // PWは画面側で持つことはないので除去
+      '',
       json.roleId,
       json.role ? Role.fromJSON(json.role) : null,
       (json.supports ?? []).map(Support.fromJSON),
       (json.answers ?? []).map(Answer.fromJSON),
       (json.memos ?? []).map(Memo.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -186,11 +232,15 @@ export class Category {
    * @param {number} id
    * @param {string} categoryName
    * @param {Tag[]}  [tags]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    */
-  constructor(id, categoryName, tags = []) {
+  constructor(id, categoryName, tags = [], createdAt = null, updatedAt = null) {
     this.id = id;
     this.categoryName = categoryName;
     this.tags = tags;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {Category} */
@@ -199,6 +249,8 @@ export class Category {
       json.id,
       json.categoryName,
       (json.tags ?? []).map(Tag.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -219,25 +271,22 @@ export class Tag {
    * @param {number}      categoryId
    * @param {Category|null} [category]
    * @param {Question[]}  [questions]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    */
-  constructor(id, title, usage, categoryId, category = null, questions = []) {
+  constructor(id, title, usage, categoryId, category = null, questions = [], createdAt = null, updatedAt = null) {
     this.id = id;
     this.title = title;
     this.usage = usage;
     this.categoryId = categoryId;
     this.category = category;
     this.questions = questions;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {Tag} */
   static fromJSON(json) {
-    // const cid = json.categoryId;
-    // const categoryIdVal =
-    //   cid === null || cid === undefined || cid === ''
-    //     ? cid
-    //     : typeof cid === 'string'
-    //       ? parseInt(cid, 10)
-    //       : cid;
     return new Tag(
       json.id,
       json.title,
@@ -245,6 +294,8 @@ export class Tag {
       json.categoryId,
       json.category ? Category.fromJSON(json.category) : null,
       (json.questions ?? []).map(Question.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -263,12 +314,16 @@ export class Refer {
    * @param {string}   title
    * @param {string}   url
    * @param {Answer[]} [answers]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    */
-  constructor(id, title, url, answers = []) {
+  constructor(id, title, url, answers = [], createdAt = null, updatedAt = null) {
     this.id = id;
     this.title = title;
     this.url = url;
     this.answers = answers;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {Refer} */
@@ -278,6 +333,8 @@ export class Refer {
       json.title,
       json.url,
       (json.answers ?? []).map(Answer.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -298,14 +355,18 @@ export class Memo {
    * @param {string}       content
    * @param {Question|null} [question]
    * @param {User|null}    [user]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    */
-  constructor(id, questionId, userId, content, question = null, user = null) {
+  constructor(id, questionId, userId, content, question = null, user = null, createdAt = null, updatedAt = null) {
     this.id = id;
     this.questionId = questionId;
     this.userId = userId;
     this.content = content;
     this.question = question;
     this.user = user;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {Memo} */
@@ -317,6 +378,8 @@ export class Memo {
       json.content,
       json.question ? Question.fromJSON(json.question) : null,
       json.user ? User.fromJSON(json.user) : null,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -336,15 +399,17 @@ export class Answer {
    * @param {string}       content
    * @param {string|null}  answeredAt  ISO8601 文字列 or null
    * @param {string}       createdAt   ISO8601 文字列
+   * @param {string|null}  updatedAt   ISO8601 文字列
    * @param {User|null}    [user]
    * @param {Refer[]}      [refers]
    */
-  constructor(id, userId, content, answeredAt, createdAt, user = null, refers = []) {
+  constructor(id, userId, content, answeredAt, createdAt, updatedAt, user = null, refers = []) {
     this.id = id;
     this.userId = userId;
     this.content = content;
     this.answeredAt = answeredAt ? new Date(answeredAt) : null;
     this.createdAt = new Date(createdAt);
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
     this.user = user;
     this.refers = refers;
   }
@@ -356,7 +421,8 @@ export class Answer {
       json.userId,
       json.content,
       json.answeredAt ?? null,
-      json.createdAt,
+      json.createdAt ?? json.answeredAt ?? new Date().toISOString(),
+      json.updatedAt ?? null,
       json.user ? User.fromJSON(json.user) : null,
       (json.refers ?? []).map(Refer.fromJSON),
     );
@@ -377,14 +443,18 @@ export class Escalation {
    * @param {number}       fromQuestionId
    * @param {number}       toQuestionId
    * @param {string}       escalatedAt    ISO8601 文字列
+   * @param {string|null}  createdAt
+   * @param {string|null}  updatedAt
    * @param {Question|null} [fromQuestion]
    * @param {Question|null} [toQuestion]
    */
-  constructor(id, fromQuestionId, toQuestionId, escalatedAt, fromQuestion = null, toQuestion = null) {
+  constructor(id, fromQuestionId, toQuestionId, escalatedAt, createdAt = null, updatedAt = null, fromQuestion = null, toQuestion = null) {
     this.id = id;
     this.fromQuestionId = fromQuestionId;
     this.toQuestionId = toQuestionId;
     this.escalatedAt = new Date(escalatedAt);
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
     this.fromQuestion = fromQuestion;
     this.toQuestion = toQuestion;
   }
@@ -396,6 +466,8 @@ export class Escalation {
       json.fromQuestionId,
       json.toQuestionId,
       json.escalatedAt ?? new Date().toISOString(),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
       json.fromQuestion ? Question.fromJSON(json.fromQuestion) : null,
       json.toQuestion ? Question.fromJSON(json.toQuestion) : null,
     );
@@ -415,11 +487,15 @@ export class NoticeType {
    * @param {number} id
    * @param {string} name
    * @param {Notice[]} [notices]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    */
-  constructor(id, name, notices = []) {
+  constructor(id, name, notices = [], createdAt = null, updatedAt = null) {
     this.id = id;
     this.name = name;
     this.notices = notices;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
   }
 
   /** @param {Object} json @returns {NoticeType} */
@@ -428,6 +504,8 @@ export class NoticeType {
       json.id,
       json.name,
       (json.notices ?? []).map(Notice.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
     );
   }
 
@@ -447,15 +525,19 @@ export class Notice {
    * @param {number|null} questionId
    * @param {string|null} content
    * @param {string|null} displayDue ISO8601 or null
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    * @param {NoticeType|null} [noticeType]
    * @param {Question|null} [question]
    */
-  constructor(id, typeId, questionId, content, displayDue, noticeType = null, question = null) {
+  constructor(id, typeId, questionId, content, displayDue, createdAt = null, updatedAt = null, noticeType = null, question = null) {
     this.id = id;
     this.typeId = typeId;
     this.questionId = questionId;
     this.content = content;
     this.displayDue = displayDue ? new Date(displayDue) : null;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
     this.noticeType = noticeType;
     this.question = question;
   }
@@ -468,6 +550,8 @@ export class Notice {
       json.questionId ?? null,
       json.content ?? null,
       json.displayDue ?? null,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
       json.noticeType ? NoticeType.fromJSON(json.noticeType) : null,
       json.question ? Question.fromJSON(json.question) : null,
     );
@@ -487,13 +571,17 @@ export class RelatedQuestion {
    * @param {number} id
    * @param {string} questionId
    * @param {string} relatedQuestionId
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    * @param {Question|null} [question]
    * @param {Question|null} [relatedQuestion]
    */
-  constructor(id, questionId, relatedQuestionId, question = null, relatedQuestion = null) {
+  constructor(id, questionId, relatedQuestionId, createdAt = null, updatedAt = null, question = null, relatedQuestion = null) {
     this.id = id;
     this.questionId = questionId;
     this.relatedQuestionId = relatedQuestionId;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
     this.question = question;
     this.relatedQuestion = relatedQuestion;
   }
@@ -504,6 +592,8 @@ export class RelatedQuestion {
       json.id ?? 0,
       json.questionId != null ? String(json.questionId) : '',
       json.relatedQuestionId != null ? String(json.relatedQuestionId) : '',
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
       json.question ? Question.fromJSON(json.question) : null,
       json.relatedQuestion ? Question.fromJSON(json.relatedQuestion) : null,
     );
@@ -526,9 +616,9 @@ export class Question {
    * @param {number|null}    supportId
    * @param {string}         title
    * @param {string}         content
-   * @param {boolean}        deleted
    * @param {string|null}    due              ISO8601 文字列 or null
    * @param {string}         createdAt        ISO8601 文字列
+   * @param {string|null}    updatedAt
    * @param {Question|null}  [originQuestion]
    * @param {Question[]}     [subQuestions]
    * @param {Support|null}   [support]
@@ -541,10 +631,25 @@ export class Question {
    * @param {RelatedQuestion[]} [relatedQuestions]
    */
   constructor(
-    id, originQuestionId, answerId, supportId, title, content, deleted, due, createdAt,
-    originQuestion = null, subQuestions = [], support = null,
-    answer = null, memos = [], tags = [], notices = [],
-    escalationsFrom = [], escalationsTo = [], relatedQuestions = [],
+    id,
+    originQuestionId,
+    answerId,
+    supportId,
+    title,
+    content,
+    due,
+    createdAt,
+    updatedAt,
+    originQuestion = null,
+    subQuestions = [],
+    support = null,
+    answer = null,
+    memos = [],
+    tags = [],
+    notices = [],
+    escalationsFrom = [],
+    escalationsTo = [],
+    relatedQuestions = [],
   ) {
     this.id = id;
     this.originQuestionId = originQuestionId;
@@ -552,9 +657,9 @@ export class Question {
     this.supportId = supportId;
     this.title = title;
     this.content = content;
-    this.deleted = deleted;
     this.due = due ? new Date(due) : null;
     this.createdAt = new Date(createdAt);
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
     this.originQuestion = originQuestion;
     this.subQuestions = subQuestions;
     this.support = support;
@@ -580,9 +685,9 @@ export class Question {
       json.supportId ?? null,
       json.title,
       json.content,
-      json.deleted ?? false,
       json.due ?? null,
       json.createdAt,
+      json.updatedAt ?? null,
       json.originQuestion ? Question.fromJSON(json.originQuestion) : null,
       (json.subQuestions ?? []).map(Question.fromJSON),
       json.support ? Support.fromJSON(json.support) : null,
@@ -610,13 +715,17 @@ export class ReferManager {
    * @param {number}      id
    * @param {number}      answerId
    * @param {number}      referId
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
    * @param {Answer|null} [answer]
    * @param {Refer|null}  [refer]
    */
-  constructor(id, answerId, referId, answer = null, refer = null) {
+  constructor(id, answerId, referId, createdAt = null, updatedAt = null, answer = null, refer = null) {
     this.id = id;
     this.answerId = answerId;
     this.referId = referId;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
     this.answer = answer;
     this.refer = refer;
   }
@@ -627,6 +736,8 @@ export class ReferManager {
       json.id,
       json.answerId,
       json.referId,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
       json.answer ? Answer.fromJSON(json.answer) : null,
       json.refer ? Refer.fromJSON(json.refer) : null,
     );
@@ -646,13 +757,17 @@ export class TagManager {
    * @param {number}       id
    * @param {number}       tagId
    * @param {number}       questionId
+   * @param {string|null}  createdAt
+   * @param {string|null}  updatedAt
    * @param {Tag|null}     [tag]
    * @param {Question|null} [question]
    */
-  constructor(id, tagId, questionId, tag = null, question = null) {
+  constructor(id, tagId, questionId, createdAt = null, updatedAt = null, tag = null, question = null) {
     this.id = id;
     this.tagId = tagId;
     this.questionId = questionId;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
     this.tag = tag;
     this.question = question;
   }
@@ -663,6 +778,8 @@ export class TagManager {
       json.id,
       json.tagId,
       json.questionId,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
       json.tag ? Tag.fromJSON(json.tag) : null,
       json.question ? Question.fromJSON(json.question) : null,
     );

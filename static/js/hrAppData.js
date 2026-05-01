@@ -114,12 +114,7 @@ document.addEventListener('alpine:init', () => {
             '完了': 'bg-gray-100 text-gray-600'
         },
 
-        questions: [
-            { id: 1002, sender: '鈴木 一郎', department: 'ここに部署名', title: '通勤手当の経路変更について', content: '引越しに伴い、通勤経路が変更になります。申請手順と必要な書類を教えてください。', support: { supportStatusId: "1", supportStatus: { id: "1", title: '未対応' } }, tags: [{ id: 50, title: '諸手当' }], daysLeft: 1, date: '2026-04-08 09:30', dueDate: '2026-04-10', relatedQuestions: [], memos: [], answer: null },
-            { id: 1003, sender: '田中 花子', department: 'ここに部署名', title: '育児休業の延長申請', content: '現在取得中の育休を半年間延長したいと考えています。手続きの流れを教えてください。', support: { supportStatusId: "2", supportStatus: { id: "2", title: '対応中' } }, tags: [{ id: 60, title: '休暇' }], daysLeft: 5, date: '2026-04-04 14:00', dueDate: '2026-04-14', relatedQuestions: [], memos: [], answer: null },
-            { id: 1004, sender: '佐藤 次郎', department: 'ここに部署名', title: '健康診断の受診日変更', content: '指定された健康診断の日程ですが、出張と重なってしまいました。', support: { supportStatusId: "3", supportStatus: { id: "3", title: '完了' } }, tags: [{ id: 70, title: '健康診断' }], daysLeft: 0, date: '2026-04-01 11:15', dueDate: '2026-04-09', relatedQuestions: [], memos: [], answer: null },
-            { id: 1005, sender: '高橋 三郎', department: 'ここに部署名', title: '慶弔休暇の適用範囲', content: '配偶者の祖父母が亡くなった場合、忌引休暇の対象になりますでしょうか？', support: { supportStatusId: "1", supportStatus: { id: "1", title: '未対応' } }, tags: [{ id: 80, title: '規程' }, { id: 70, title: '健康診断' }], daysLeft: 2, date: '2026-04-07 16:45', dueDate: '2026-04-11', relatedQuestions: [], memos: [], answer: null }
-        ],
+        questions: [],
 
         notices: [],
 
@@ -220,7 +215,6 @@ document.addEventListener('alpine:init', () => {
 
             document.addEventListener(SSE.data.delete.notice, (event) => {
                 const id = event.detail;
-                console.log(this.notices, id);
                 this.notices = this.notices.filter((n) => n.id !== id);
             });
 
@@ -253,7 +247,12 @@ document.addEventListener('alpine:init', () => {
 									const originalVal = _.get(this.originalQuestion, key)
 									// ローカル変更されてたら優先
 									if (!_.isEqual(localVal, originalVal)) {
-                                        if (key === "support") return serverVal; // support.supportStatusの更新が必ずLocalWinになってしまうため例外
+										switch (key) {
+											// support.supportStatusの更新が必ずLocalWinになってしまうため例外
+											case 'support':
+											case 'memos':
+												return serverVal;
+										}
 										return localVal;
 									}
 									// server採用
@@ -453,26 +452,25 @@ document.addEventListener('alpine:init', () => {
         },
 
         chatTimelineItems() {
-            const memos = (this.activeQuestion?.memos ?? []).map((m, i) => ({
+            const memos = (this.activeQuestion?.memos ?? []).sort((m1, m2) => Number(m1.id) - Number(m2.id)).map((memo, i) => ({
                 kind: 'memo',
-                userId: m.userId,
-                userName: m.user?.name ?? '',
-                content: this.chatMemoContent(m),
-                createdAt: m.createdAt ? new Date(m.createdAt) : null,
+                userId: memo.userId,
+                userName: memo.user?.name ?? '',
+                content: this.chatMemoContent(memo),
                 _origIdx: i,
-                memo: m,
+                memo: memo,
             }));
-            const a = this.activeQuestion?.answer;
+
+            const answer = this.activeQuestion?.answer;
             const items = [...memos];
-            if (a) {
+            if (answer) {
                 items.push({
                     kind: 'answer',
-                    userId: a.userId,
-                    userName: a.user?.name ?? '',
+                    userId: answer.userId,
+                    userName: answer.user?.name ?? '',
                     content: this.chatAnswerContent(),
-                    createdAt: a.createdAt ? new Date(a.createdAt) : null,
                     _origIdx: memos.length,
-                    answer: a,
+                    answer: answer,
                 });
             }
             items.sort((x, y) => {
@@ -675,6 +673,7 @@ document.addEventListener('alpine:init', () => {
                 : 0;
             return {
                 id: question.id,
+                userId: question.support?.user?.id ?? null,
                 sender: question.support?.user?.name ?? '不明',
                 department: 'ここに部署名',
                 title: question.title ?? '',
@@ -841,7 +840,6 @@ document.addEventListener('alpine:init', () => {
                 questionId: String(qid),
                 userId: String(uid),
                 content: text,
-                createdAt: new Date(),
                 user: {
                     id: uid,
                     name: String(this.loginUser?.name ?? ''),

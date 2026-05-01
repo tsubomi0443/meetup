@@ -2,27 +2,40 @@ package infrastructure
 
 import "strconv"
 
-// Form types mirror static/js/model.js (camelCase JSON for the UI layer).
-
-// RoleForm corresponds to Role.
+// =====================
+// ROLE
+// =====================
 type RoleForm struct {
-	ID       int64      `json:"id"`
-	RoleName string     `json:"roleName"`
-	Users    []UserForm `json:"users,omitempty"`
+	ID        int64      `json:"id"`
+	RoleName  string     `json:"roleName"`
+	CreatedAt *string    `json:"createdAt,omitempty"`
+	UpdatedAt *string    `json:"updatedAt,omitempty"`
+	DeletedAt *string    `json:"deletedAt,omitempty"`
+	Users     []UserForm `json:"users,omitempty"`
 }
 
-// SupportStatusForm corresponds to SupportStatus.
+// =====================
+// SUPPORT_STATUS
+// =====================
 type SupportStatusForm struct {
-	ID       int64         `json:"id"`
-	Title    string        `json:"title"`
-	Supports []SupportForm `json:"supports,omitempty"`
+	ID        int64         `json:"id"`
+	Title     string        `json:"title"`
+	CreatedAt *string       `json:"createdAt,omitempty"`
+	UpdatedAt *string       `json:"updatedAt,omitempty"`
+	DeletedAt *string       `json:"deletedAt,omitempty"`
+	Supports  []SupportForm `json:"supports,omitempty"`
 }
 
-// SupportForm corresponds to Support.
+// =====================
+// SUPPORT
+// =====================
 type SupportForm struct {
 	ID              int64              `json:"id"`
 	UserID          string             `json:"userId"`
 	SupportStatusID string             `json:"supportStatusId"`
+	CreatedAt       *string            `json:"createdAt,omitempty"`
+	UpdatedAt       *string            `json:"updatedAt,omitempty"`
+	DeletedAt       *string            `json:"deletedAt,omitempty"`
 	User            *UserForm          `json:"user,omitempty"`
 	SupportStatus   *SupportStatusForm `json:"supportStatus,omitempty"`
 	Question        *QuestionForm      `json:"question,omitempty"`
@@ -42,18 +55,23 @@ func (f SupportForm) SupportStatusIDInt64() int64 {
 	return -1
 }
 
-// UserForm corresponds to User.
+// =====================
+// USER
+// =====================
 type UserForm struct {
-	ID       int64         `json:"id"`
-	Name     string        `json:"name"`
-	Email    string        `json:"email"`
-	Memo     string        `json:"memo"`
-	RoleID   string        `json:"roleId"`
-	Role     *RoleForm     `json:"role,omitempty"`
-	Supports []SupportForm `json:"supports,omitempty"`
-	Answers  []AnswerForm  `json:"answers,omitempty"`
-	Memos    []MemoForm    `json:"memos,omitempty"`
-	Password string        `json:"pass,omitempty"`
+	ID        int64         `json:"id"`
+	Name      string        `json:"name"`
+	Email     string        `json:"email"`
+	Memo      string        `json:"memo"`
+	RoleID    string        `json:"roleId"`
+	CreatedAt *string       `json:"createdAt,omitempty"`
+	UpdatedAt *string       `json:"updatedAt,omitempty"`
+	DeletedAt *string       `json:"deletedAt,omitempty"`
+	Role      *RoleForm     `json:"role,omitempty"`
+	Supports  []SupportForm `json:"supports,omitempty"`
+	Answers   []AnswerForm  `json:"answers,omitempty"`
+	Memos     []MemoForm    `json:"memos,omitempty"`
+	Password  string        `json:"pass,omitempty"`
 }
 
 func (uf UserForm) RoleIDInt64() int64 {
@@ -63,19 +81,29 @@ func (uf UserForm) RoleIDInt64() int64 {
 	return -1
 }
 
-// CategoryForm corresponds to Category.
+// =====================
+// CATEGORY
+// =====================
 type CategoryForm struct {
 	ID           int64     `json:"id"`
 	CategoryName string    `json:"categoryName"`
+	CreatedAt    *string   `json:"createdAt,omitempty"`
+	UpdatedAt    *string   `json:"updatedAt,omitempty"`
+	DeletedAt    *string   `json:"deletedAt,omitempty"`
 	Tags         []TagForm `json:"tags,omitempty"`
 }
 
-// TagForm corresponds to Tag.
+// =====================
+// TAG
+// =====================
 type TagForm struct {
 	ID         int64          `json:"id"`
 	Title      string         `json:"title"`
 	Usage      int            `json:"usage"`
 	CategoryID string         `json:"categoryId"`
+	CreatedAt  *string        `json:"createdAt,omitempty"`
+	UpdatedAt  *string        `json:"updatedAt,omitempty"`
+	DeletedAt  *string        `json:"deletedAt,omitempty"`
 	Category   *CategoryForm  `json:"category,omitempty"`
 	Questions  []QuestionForm `json:"questions,omitempty"`
 }
@@ -87,20 +115,30 @@ func (tf TagForm) CategoryIDInt64() int64 {
 	return -1
 }
 
-// ReferForm corresponds to Refer.
+// =====================
+// REFER
+// =====================
 type ReferForm struct {
-	ID      int64        `json:"id"`
-	Title   string       `json:"title"`
-	URL     string       `json:"url"`
-	Answers []AnswerForm `json:"answers,omitempty"`
+	ID        int64        `json:"id"`
+	Title     string       `json:"title"`
+	URL       string       `json:"url"`
+	CreatedAt *string      `json:"createdAt,omitempty"`
+	UpdatedAt *string      `json:"updatedAt,omitempty"`
+	DeletedAt *string      `json:"deletedAt,omitempty"`
+	Answers   []AnswerForm `json:"answers,omitempty"`
 }
 
-// MemoForm corresponds to Memo.
+// =====================
+// MEMO
+// =====================
 type MemoForm struct {
 	ID         int64         `json:"id"`
 	QuestionID string        `json:"questionId"`
 	UserID     string        `json:"userId"`
 	Content    string        `json:"content"`
+	CreatedAt  *string       `json:"createdAt,omitempty"`
+	UpdatedAt  *string       `json:"updatedAt,omitempty"`
+	DeletedAt  *string       `json:"deletedAt,omitempty"`
 	Question   *QuestionForm `json:"question,omitempty"`
 	User       *UserForm     `json:"user,omitempty"`
 }
@@ -119,13 +157,17 @@ func (f MemoForm) UserIDInt64() int64 {
 	return -1
 }
 
-// AnswerForm corresponds to Answer.
+// =====================
+// ANSWER
+// =====================
 type AnswerForm struct {
 	ID         int64       `json:"id"`
 	UserID     string      `json:"userId"`
 	Content    string      `json:"content"`
 	AnsweredAt *string     `json:"answeredAt,omitempty"`
 	CreatedAt  *string     `json:"createdAt,omitempty"`
+	UpdatedAt  *string     `json:"updatedAt,omitempty"`
+	DeletedAt  *string     `json:"deletedAt,omitempty"`
 	User       *UserForm   `json:"user,omitempty"`
 	Refers     []ReferForm `json:"refers,omitempty"`
 }
@@ -137,12 +179,17 @@ func (f AnswerForm) UserIDInt64() int64 {
 	return -1
 }
 
-// EscalationForm corresponds to Escalation.
+// =====================
+// ESCALATION
+// =====================
 type EscalationForm struct {
 	ID             int64         `json:"id"`
 	FromQuestionID string        `json:"fromQuestionId"`
 	ToQuestionID   string        `json:"toQuestionId"`
 	EscalatedAt    *string       `json:"escalatedAt,omitempty"`
+	CreatedAt      *string       `json:"createdAt,omitempty"`
+	UpdatedAt      *string       `json:"updatedAt,omitempty"`
+	DeletedAt      *string       `json:"deletedAt,omitempty"`
 	FromQuestion   *QuestionForm `json:"fromQuestion,omitempty"`
 	ToQuestion     *QuestionForm `json:"toQuestion,omitempty"`
 }
@@ -161,20 +208,30 @@ func (f EscalationForm) ToQuestionIDInt64() int64 {
 	return -1
 }
 
-// NoticeTypeForm corresponds to NoticeType.
+// =====================
+// NOTICE_TYPE
+// =====================
 type NoticeTypeForm struct {
-	ID      int64        `json:"id"`
-	Name    string       `json:"name"`
-	Notices []NoticeForm `json:"notices,omitempty"`
+	ID        int64        `json:"id"`
+	Name      string       `json:"name"`
+	CreatedAt *string      `json:"createdAt,omitempty"`
+	UpdatedAt *string      `json:"updatedAt,omitempty"`
+	DeletedAt *string      `json:"deletedAt,omitempty"`
+	Notices   []NoticeForm `json:"notices,omitempty"`
 }
 
-// NoticeForm corresponds to Notice.
+// =====================
+// NOTICE
+// =====================
 type NoticeForm struct {
 	ID         int64           `json:"id"`
 	TypeID     int64           `json:"typeId"`
 	QuestionID *string         `json:"questionId,omitempty"`
 	Content    *string         `json:"content,omitempty"`
 	DisplayDue *string         `json:"displayDue,omitempty"`
+	CreatedAt  *string         `json:"createdAt,omitempty"`
+	UpdatedAt  *string         `json:"updatedAt,omitempty"`
+	DeletedAt  *string         `json:"deletedAt,omitempty"`
 	NoticeType *NoticeTypeForm `json:"noticeType,omitempty"`
 	Question   *QuestionForm   `json:"question,omitempty"`
 }
@@ -189,7 +246,9 @@ func (f NoticeForm) QuestionIDInt64() int64 {
 	return -1
 }
 
-// QuestionForm corresponds to Question.
+// =====================
+// QUESTION（Deleted削除済）
+// =====================
 type QuestionForm struct {
 	ID               int64                 `json:"id"`
 	OriginQuestionID *string               `json:"originQuestionId,omitempty"`
@@ -197,9 +256,10 @@ type QuestionForm struct {
 	SupportID        *int64                `json:"supportId,omitempty"`
 	Title            string                `json:"title"`
 	Content          string                `json:"content"`
-	Deleted          bool                  `json:"deleted"`
 	Due              *string               `json:"due,omitempty"`
 	CreatedAt        *string               `json:"createdAt,omitempty"`
+	UpdatedAt        *string               `json:"updatedAt,omitempty"`
+	DeletedAt        *string               `json:"deletedAt,omitempty"`
 	OriginQuestion   *QuestionForm         `json:"originQuestion,omitempty"`
 	SubQuestions     []QuestionForm        `json:"subQuestions,omitempty"`
 	Support          *SupportForm          `json:"support,omitempty"`
@@ -221,13 +281,18 @@ func (f QuestionForm) OriginQuestionIDInt64() int64 {
 	return -1
 }
 
-// ReferManagerForm corresponds to ReferManager.
+// =====================
+// REFER_MANAGER
+// =====================
 type ReferManagerForm struct {
-	ID       int64       `json:"id"`
-	AnswerID string      `json:"answerId"`
-	ReferID  string      `json:"referId"`
-	Answer   *AnswerForm `json:"answer,omitempty"`
-	Refer    *ReferForm  `json:"refer,omitempty"`
+	ID        int64       `json:"id"`
+	AnswerID  string      `json:"answerId"`
+	ReferID   string      `json:"referId"`
+	CreatedAt *string     `json:"createdAt,omitempty"`
+	UpdatedAt *string     `json:"updatedAt,omitempty"`
+	DeletedAt *string     `json:"deletedAt,omitempty"`
+	Answer    *AnswerForm `json:"answer,omitempty"`
+	Refer     *ReferForm  `json:"refer,omitempty"`
 }
 
 func (f ReferManagerForm) AnswerIDInt64() int64 {
@@ -244,11 +309,16 @@ func (f ReferManagerForm) ReferIDInt64() int64 {
 	return -1
 }
 
-// TagManagerForm corresponds to TagManager.
+// =====================
+// TAG_MANAGER
+// =====================
 type TagManagerForm struct {
 	ID         int64         `json:"id"`
 	TagID      string        `json:"tagId"`
 	QuestionID string        `json:"questionId"`
+	CreatedAt  *string       `json:"createdAt,omitempty"`
+	UpdatedAt  *string       `json:"updatedAt,omitempty"`
+	DeletedAt  *string       `json:"deletedAt,omitempty"`
 	Tag        *TagForm      `json:"tag,omitempty"`
 	Question   *QuestionForm `json:"question,omitempty"`
 }
@@ -267,11 +337,16 @@ func (f TagManagerForm) QuestionIDInt64() int64 {
 	return -1
 }
 
-// RelatedQuestionForm corresponds to RelatedQuestion (related_questions).
+// =====================
+// RELATED_QUESTION
+// =====================
 type RelatedQuestionForm struct {
 	ID                int64         `json:"id"`
 	QuestionID        string        `json:"questionId"`
 	RelatedQuestionID string        `json:"relatedQuestionId"`
+	CreatedAt         *string       `json:"createdAt,omitempty"`
+	UpdatedAt         *string       `json:"updatedAt,omitempty"`
+	DeletedAt         *string       `json:"deletedAt,omitempty"`
 	Question          *QuestionForm `json:"question,omitempty"`
 	RelatedQuestion   *QuestionForm `json:"relatedQuestion,omitempty"`
 }

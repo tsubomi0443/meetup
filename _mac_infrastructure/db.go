@@ -2,6 +2,8 @@ package infrastructure
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"strings"
 
 	"gorm.io/gorm"
@@ -10,7 +12,7 @@ import (
 
 func GetUserByID(ctx context.Context, db *gorm.DB, id int64) (model User, err error) {
 	model, err = gorm.G[User](db).Where("id = ?", id).Select("id, name, email, memo, role_id").
-		Preload("Role", nil).
+		Preload("Role", commonPreloadBuilder()).
 		First(ctx)
 	return
 }
@@ -23,9 +25,11 @@ func GetUserInfo(ctx context.Context, db *gorm.DB, emailOrName, pass string) (us
 func GetUsers(ctx context.Context, db *gorm.DB) (models []User, err error) {
 	models, err = gorm.G[User](db).
 		Where("role_id <> ?", 1).
-		Preload("Role", nil).
+		Preload("Role", commonPreloadBuilder()).
 		Not("role_id = 1").
-		Select("id, name, email, memo, role_id").Find(ctx)
+		Select("id, name, email, memo, role_id").
+		Order("id").
+		Find(ctx)
 	return
 }
 
@@ -66,6 +70,117 @@ func UpdateInTransaction[T any](ctx context.Context, db *gorm.DB, model T, omit 
 		return res.Error
 	})
 	return
+}
+
+// postgresTableCoalesceMaxID returns COALESCE(MAX(id), 0) for a whitelisted table name.
+func postgresTableCoalesceMaxID(tx *gorm.DB, table string) (int64, error) {
+	switch table {
+	case "memos", "tag_managers", "related_questions":
+	default:
+		return 0, fmt.Errorf("postgresTableCoalesceMaxID: unsupported table %q", table)
+	}
+	var max int64
+	q := fmt.Sprintf("SELECT COALESCE(MAX(id), 0) FROM %s", table)
+	if err := tx.Raw(q).Scan(&max).Error; err != nil {
+		return 0, err
+	}
+	return max, nil
+}
+
+// assignPostgreSQLBulkInsertZeros assigns sequential explicit primary keys to rows with ID==0 before
+// GORM emits a multi-row INSERT. Otherwise one statement can mix RETURNING/Default nextval rows with rows
+// that reuse client ids already present in MAX(id)...nextval bracket, producing memos_pkey duplicate key.
+func assignMemoBulkInsertZeros(tx *gorm.DB, rows []Memo) error {
+	hasZero := false
+	batchMax := int64(0)
+	for i := range rows {
+		id := rows[i].ID
+		if id == 0 {
+			hasZero = true
+		} else if id > batchMax {
+			batchMax = id
+		}
+	}
+	if !hasZero {
+		return nil
+	}
+	dbMax, err := postgresTableCoalesceMaxID(tx, "memos")
+	if err != nil {
+		return err
+	}
+	next := batchMax
+	if dbMax > next {
+		next = dbMax
+	}
+	for i := range rows {
+		if rows[i].ID == 0 {
+			next++
+			rows[i].ID = next
+		}
+	}
+	return nil
+}
+
+func assignTagManagerBulkInsertZeros(tx *gorm.DB, rows []TagManager) error {
+	hasZero := false
+	batchMax := int64(0)
+	for i := range rows {
+		id := rows[i].ID
+		if id == 0 {
+			hasZero = true
+		} else if id > batchMax {
+			batchMax = id
+		}
+	}
+	if !hasZero {
+		return nil
+	}
+	dbMax, err := postgresTableCoalesceMaxID(tx, "tag_managers")
+	if err != nil {
+		return err
+	}
+	next := batchMax
+	if dbMax > next {
+		next = dbMax
+	}
+	for i := range rows {
+		if rows[i].ID == 0 {
+			next++
+			rows[i].ID = next
+		}
+	}
+	return nil
+}
+
+func assignRelatedQuestionBulkInsertZeros(tx *gorm.DB, rows []RelatedQuestion) error {
+	hasZero := false
+	batchMax := int64(0)
+	for i := range rows {
+		id := rows[i].ID
+		if id == 0 {
+			hasZero = true
+		} else if id > batchMax {
+			batchMax = id
+		}
+	}
+	if !hasZero {
+		return nil
+	}
+	dbMax, err := postgresTableCoalesceMaxID(tx, "related_questions")
+	if err != nil {
+		return err
+	}
+	next := batchMax
+	if dbMax > next {
+		next = dbMax
+	}
+	for i := range rows {
+		if rows[i].ID == 0 {
+			next++
+			rows[i].ID = next
+		}
+	}
+	return nil
 }
 
 // updateQuestionInTransaction は Question の1行更新と、QuestionToEntity で組み立てた
@@ -124,7 +239,6 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 			Updates(ctx, q); err != nil {
 			return err
 		}
-		// ref := Question{ID: q.ID}
 		// 4) タグ紐づけ（tag_managers）— has_many Replace は子の FK を NULL 更新するため
 		// NOT NULL 制約（question_id）と相性が悪い。DELETE + INSERT で置き換える。
 		var tagRows []TagManager
@@ -133,15 +247,18 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 				continue
 			}
 			tagRows = append(tagRows, TagManager{
-				ID:         0,
+				ID:         tm.ID,
 				TagID:      tm.TagID,
 				QuestionID: q.ID,
 			})
 		}
-		if err := tx.Where("question_id = ?", q.ID).Delete(&TagManager{}).Error; err != nil {
+		if err := tx.Unscoped().Where("question_id = ?", q.ID).Delete(&TagManager{}).Error; err != nil {
 			return err
 		}
 		if len(tagRows) > 0 {
+			if err := assignTagManagerBulkInsertZeros(tx, tagRows); err != nil {
+				return err
+			}
 			if err := tx.Create(&tagRows).Error; err != nil {
 				return err
 			}
@@ -153,17 +270,21 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 			if m.UserID == 0 || content == "" {
 				continue
 			}
-			memoRows = append(memoRows, Memo{
-				ID:         0,
+			memo := Memo{
+				ID:         m.ID,
 				UserID:     m.UserID,
 				Content:    content,
 				QuestionID: q.ID,
-			})
+			}
+			memoRows = append(memoRows, memo)
 		}
-		if err := tx.Where("question_id = ?", q.ID).Delete(&Memo{}).Error; err != nil {
+		if err := tx.Unscoped().Where("question_id = ?", q.ID).Delete(&Memo{}).Error; err != nil {
 			return err
 		}
 		if len(memoRows) > 0 {
+			if err := assignMemoBulkInsertZeros(tx, memoRows); err != nil {
+				return err
+			}
 			if err := tx.Create(&memoRows).Error; err != nil {
 				return err
 			}
@@ -175,35 +296,22 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 				continue
 			}
 			relatedRows = append(relatedRows, RelatedQuestion{
-				ID:                0,
+				ID:                rq.ID,
 				QuestionID:        q.ID,
 				RelatedQuestionID: rq.RelatedQuestionID,
 			})
 		}
-		if err := tx.Where("question_id = ?", q.ID).Delete(&RelatedQuestion{}).Error; err != nil {
+		if err := tx.Unscoped().Where("question_id = ?", q.ID).Delete(&RelatedQuestion{}).Error; err != nil {
 			return err
 		}
 		if len(relatedRows) > 0 {
+			if err := assignRelatedQuestionBulkInsertZeros(tx, relatedRows); err != nil {
+				return err
+			}
 			if err := tx.Create(&relatedRows).Error; err != nil {
 				return err
 			}
 		}
-		// // 7) 通知
-		// for i := range q.Notices {
-		// 	if q.Notices[i].QuestionID == nil {
-		// 		qid := q.ID
-		// 		q.Notices[i].QuestionID = &qid
-		// 	}
-		// }
-		// if len(q.Notices) == 0 {
-		// 	if err := tx.Model(&ref).Association("Notices").Clear(); err != nil {
-		// 		return err
-		// 	}
-		// } else {
-		// 	if err := tx.Model(&ref).Association("Notices").Replace(q.Notices); err != nil {
-		// 		return err
-		// 	}
-		// }
 		return nil
 	})
 }
@@ -215,21 +323,21 @@ func DeleteQuestionByID(ctx context.Context, db *gorm.DB, id int64) error {
 		return err
 	}
 	if _, err := gorm.G[Question](db).
-		Preload("Answer", nil).
-		Preload("Answer.User", nil).
-		Preload("Answer.User.Role", nil).
-		Preload("Answer.ReferManagers", nil).
-		Preload("Answer.ReferManagers.Refer", nil).
-		Preload("Memos", nil).
-		Preload("Memos.User", nil).
-		Preload("Memos.User.Role", nil).
-		Preload("TagManagers", nil).
-		Preload("TagManagers.Tag", nil).
-		Preload("TagManagers.Tag.Category", nil).
-		Preload("Support", nil).
-		Preload("Support.User", nil).
-		Preload("Support.User.Role", nil).
-		Preload("Support.SupportStatus", nil).
+		Preload("Answer", commonPreloadBuilder()).
+		Preload("Answer.User", commonPreloadBuilder()).
+		Preload("Answer.User.Role", commonPreloadBuilder()).
+		Preload("Answer.ReferManagers", commonPreloadBuilder()).
+		Preload("Answer.ReferManagers.Refer", commonPreloadBuilder()).
+		Preload("Memos", commonPreloadBuilder()).
+		Preload("Memos.User", commonPreloadBuilder()).
+		Preload("Memos.User.Role", commonPreloadBuilder()).
+		Preload("TagManagers", commonPreloadBuilder()).
+		Preload("TagManagers.Tag", commonPreloadBuilder()).
+		Preload("TagManagers.Tag.Category", commonPreloadBuilder()).
+		Preload("Support", commonPreloadBuilder()).
+		Preload("Support.User", commonPreloadBuilder()).
+		Preload("Support.User.Role", commonPreloadBuilder()).
+		Preload("Support.SupportStatus", commonPreloadBuilder()).
 		Where("id = ?", id).
 		Limit(1).
 		Delete(ctx); err != nil {
@@ -240,7 +348,7 @@ func DeleteQuestionByID(ctx context.Context, db *gorm.DB, id int64) error {
 
 func DeleteUserByID(ctx context.Context, db *gorm.DB, id int64) error {
 	if _, err := gorm.G[User](db).
-		Preload("Role", nil).
+		Preload("Role", commonPreloadBuilder()).
 		Where("id = ?", id).
 		Limit(1).
 		Delete(ctx); err != nil {
@@ -251,32 +359,25 @@ func DeleteUserByID(ctx context.Context, db *gorm.DB, id int64) error {
 
 func GetQuestion(ctx context.Context, db *gorm.DB, id int64) (model Question, err error) {
 	model, err = gorm.G[Question](db).
-		Preload("Answer", nil).
-		Preload("Answer.User", func(pb gorm.PreloadBuilder) error {
-			pb.Select("id", "name", "email", "role_id")
-			return nil
-		}).
-		Preload("Answer.User.Role", nil).
-		Preload("Answer.ReferManagers", nil).
-		Preload("Answer.ReferManagers.Refer", nil).
-		Preload("Memos", nil).
-		Preload("Memos.User", func(pb gorm.PreloadBuilder) error {
-			pb.Select("id", "name", "email", "role_id")
-			return nil
-		}).
-		Preload("Memos.User.Role", nil).
-		Preload("TagManagers", nil).
-		Preload("TagManagers.Tag", nil).
-		Preload("TagManagers.Tag.Category", nil).
-		Preload("RelatedQuestions", nil).
-		Preload("RelatedQuestions.RelatedQuestion", nil).
-		Preload("Support", nil).
-		Preload("Support.User", func(pb gorm.PreloadBuilder) error {
-			pb.Select("id", "name", "email", "role_id")
-			return nil
-		}).
-		Preload("Support.User.Role", nil).
-		Preload("Support.SupportStatus", nil).
+		Preload("Answer", commonPreloadBuilder()).
+		Preload("Answer.User", userPreloadBuilder(false)).
+		Preload("Answer.User.Role", commonPreloadBuilder()).
+		Preload("Answer.ReferManagers", commonPreloadBuilder()).
+		Preload("Answer.ReferManagers.Refer", commonPreloadBuilder()).
+		Preload("Memos", commonPreloadBuilder()).
+		Preload("Memos.User", userPreloadBuilder(false)).
+		Preload("Memos.User.Role", commonPreloadBuilder()).
+		Preload("TagManagers", commonPreloadBuilder()).
+		Preload("TagManagers.Tag", commonPreloadBuilder()).
+		Preload("TagManagers.Tag.Category", commonPreloadBuilder()).
+		Preload("RelatedQuestions", commonPreloadBuilder()).
+		Preload("RelatedQuestions.RelatedQuestion", commonPreloadBuilder()).
+		Preload("Support", commonPreloadBuilder()).
+		Preload("Support.User", userPreloadBuilder(false)).
+		Preload("Support.User.Role", commonPreloadBuilder()).
+		Preload("Support.SupportStatus", commonPreloadBuilder()).
+		Preload("RelatedQuestions", commonPreloadBuilder()).
+		Preload("RelatedQuestions.RelatedQuestion", commonPreloadBuilder()).
 		Where("id = ?", id).
 		First(ctx)
 	return
@@ -284,46 +385,41 @@ func GetQuestion(ctx context.Context, db *gorm.DB, id int64) (model Question, er
 
 func GetQuestions(ctx context.Context, db *gorm.DB) (models []Question, err error) {
 	models, err = gorm.G[Question](db).
-		Preload("Answer", nil).
-		Preload("Answer.User", func(pb gorm.PreloadBuilder) error {
-			pb.Select("id", "name", "email", "role_id")
-			return nil
-		}).
-		Preload("Answer.User.Role", nil).
-		Preload("Answer.ReferManagers", nil).
-		Preload("Answer.ReferManagers.Refer", nil).
-		Preload("Memos", nil).
-		Preload("Memos.User", func(pb gorm.PreloadBuilder) error {
-			pb.Select("id", "name", "email", "role_id")
-			return nil
-		}).
-		Preload("Memos.User.Role", nil).
-		Preload("TagManagers", nil).
-		Preload("TagManagers.Tag", nil).
-		Preload("TagManagers.Tag.Category", nil).
-		Preload("RelatedQuestions", nil).
-		Preload("RelatedQuestions.RelatedQuestion", nil).
-		Preload("Support", nil).
-		Preload("Support.User", func(pb gorm.PreloadBuilder) error {
-			pb.Select("id", "name", "email", "role_id")
-			return nil
-		}).
-		Preload("Support.User.Role", nil).
-		Preload("Support.SupportStatus", nil).
+		Preload("Answer", commonPreloadBuilder()).
+		Preload("Answer.User", userPreloadBuilder(false)).
+		Preload("Answer.User.Role", commonPreloadBuilder()).
+		Preload("Answer.ReferManagers", commonPreloadBuilder()).
+		Preload("Answer.ReferManagers.Refer", commonPreloadBuilder()).
+		Preload("Memos", commonPreloadBuilder()).
+		Preload("Memos.User", userPreloadBuilder(false)).
+		Preload("Memos.User.Role", commonPreloadBuilder()).
+		Preload("TagManagers", commonPreloadBuilder()).
+		Preload("TagManagers.Tag", commonPreloadBuilder()).
+		Preload("TagManagers.Tag.Category", commonPreloadBuilder()).
+		Preload("RelatedQuestions", commonPreloadBuilder()).
+		Preload("RelatedQuestions.RelatedQuestion", commonPreloadBuilder()).
+		Preload("Support", commonPreloadBuilder()).
+		Preload("Support.User", userPreloadBuilder(false)).
+		Preload("Support.User.Role", commonPreloadBuilder()).
+		Preload("Support.SupportStatus", commonPreloadBuilder()).
+		Preload("RelatedQuestions", commonPreloadBuilder()).
+		Preload("RelatedQuestions.RelatedQuestion", commonPreloadBuilder()).
+		Order("id").
 		Find(ctx)
 	return
 }
 
 func GetTags(ctx context.Context, db *gorm.DB) (models []Tag, err error) {
 	models, err = gorm.G[Tag](db).
-		Preload("Category", nil).
+		Preload("Category", commonPreloadBuilder()).
+		Order("id").
 		Find(ctx)
 	return
 }
 
 func GetTagByID(ctx context.Context, db *gorm.DB, id int64) (models Tag, err error) {
 	models, err = gorm.G[Tag](db).
-		Preload("Category", nil).
+		Preload("Category", commonPreloadBuilder()).
 		Where("id = ?", id).
 		First(ctx)
 	return
@@ -338,7 +434,7 @@ func DeleteTagByID(ctx context.Context, db *gorm.DB, id int64) error {
 
 func GetNoticeByQuestionIDs(ctx context.Context, db *gorm.DB, questionIDs []int64) (models []Notice, err error) {
 	if len(questionIDs) > 0 {
-		models, err = gorm.G[Notice](db).Where("question_id IN ?", questionIDs).Find(ctx)
+		models, err = gorm.G[Notice](db).Where("question_id IN ?", questionIDs).Order("id").Find(ctx)
 	}
 	return
 }
@@ -350,12 +446,13 @@ func GetNoticeByQuestion(ctx context.Context, db *gorm.DB, question Question) (m
 
 func GetNotice(ctx context.Context, db *gorm.DB) (models []Notice, err error) {
 	models, err = gorm.G[Notice](db).
-		Preload("NoticeType", nil).
-		Preload("Question", nil).
-		Preload("Question.Support", nil).
-		Preload("Question.Support.SupportStatus", nil).
-		Preload("Question.TagManagers", nil).
-		Preload("Question.TagManagers.Tag", nil).
+		Preload("NoticeType", commonPreloadBuilder()).
+		Preload("Question", commonPreloadBuilder()).
+		Preload("Question.Support", commonPreloadBuilder()).
+		Preload("Question.Support.SupportStatus", commonPreloadBuilder()).
+		Preload("Question.TagManagers", commonPreloadBuilder()).
+		Preload("Question.TagManagers.Tag", commonPreloadBuilder()).
+		Order("id").
 		Find(ctx)
 	return
 }
@@ -370,9 +467,9 @@ func GetNoticeByQuestionSilent(ctx context.Context, db *gorm.DB, question Questi
 func RegisterNoticeByQuestionID(ctx context.Context, db *gorm.DB, questionID int64) error {
 	var content = "質問の回答期日が近づいています。"
 	notice := Notice{
-		TypeID:     3,
-		QuestionID: &questionID,
-		Content:    &content,
+		TypeID:       3,
+		QuestionID:   &questionID,
+		Content:      &content,
 	}
 	return gorm.G[Notice](db).Create(ctx, &notice)
 }
@@ -409,4 +506,39 @@ func DeleteNoticeByQuestionID(ctx context.Context, db *gorm.DB, questionID int64
 		}
 	}
 	return -1, gorm.ErrRecordNotFound
+}
+
+func GetMaxByColumn[T any](ctx context.Context, db *gorm.DB, columnName string) int64 {
+	var max sql.NullInt64
+	err := db.WithContext(ctx).Model(new(T)).
+		Select(fmt.Sprintf("MAX(%s)", columnName)).
+		Take(&max).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return -1
+	}
+
+	if !max.Valid {
+		return -1
+	}
+	return max.Int64
+
+}
+
+func commonPreloadBuilder() func(db gorm.PreloadBuilder) error {
+	return func(db gorm.PreloadBuilder) error {
+		db.Order("id")
+		return nil
+	}
+}
+
+func userPreloadBuilder(includePassword bool) func(db gorm.PreloadBuilder) error {
+	return func(db gorm.PreloadBuilder) error {
+		if includePassword {
+			db.Select("id, name, email, password, memo, role_id")
+		} else {
+			db.Select("id, name, email, memo, role_id")
+		}
+		db.Order("id ASC")
+		return nil
+	}
 }

@@ -31,6 +31,7 @@ func main() {
 	hub := handler.NewHub()
 	ne := handler.NewNoticeEvent()
 	handlerManager := handler.NewHandlerManager(db, e, hub, ne)
+	hub.SetLogger(handlerManager.Logging)
 	go handlerManager.PollingStart(context.Background())
 	fmt.Println(handlerManager.SetupHandlers())
 

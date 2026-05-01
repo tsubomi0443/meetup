@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	infrastructure "meetup/_mac_infrastructure"
-	"meetup/env"
+	"meetup/crypto"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,12 +18,6 @@ const (
 	apiVersion = "v1"
 	apiPath    = "/api/" + apiVersion
 )
-
-func encryptSha256(target string) string {
-	newTarget := fmt.Sprintf("%s-%s", target, env.GetJWTKey())
-	hash := sha256.Sum256([]byte(newTarget))
-	return hex.EncodeToString(hash[:])
-}
 
 func (hm *HandlerManager) SetAPIHandler() (routeInfos []echo.RouteInfo) {
 	group := hm.e.Group(apiPath, GetJWTConfig())
@@ -94,7 +86,7 @@ func (hm *HandlerManager) registerUser(api string, sendEvent func(string, string
 			return err
 		}
 		if strings.TrimSpace(form.Password) != "" {
-			form.Password = encryptSha256(form.Password)
+			form.Password = crypto.EncryptSHA256(form.Password)
 		}
 		data := infrastructure.UserToEntityNoRole(form)
 		if err := infrastructure.Register(c.Request().Context(), hm.db, &data); err != nil {
@@ -249,7 +241,17 @@ func (hm *HandlerManager) updateQuestionByID(api string, sendEvent func(string, 
 			return err
 		}
 		hm.ne.UpdateQuestion(updatedModel)
-		sendEvent(api, string(body))
+
+		sendData := body
+		for idx, memo := range form.Memos {
+			if memo.ID == 0 {
+				form.Memos[idx].ID = infrastructure.GetMaxByColumn[infrastructure.Memo](c.Request().Context(), hm.db, "id") + 1
+			}
+		}
+		if sendData, err = json.Marshal(form); err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		sendEvent(api, string(sendData))
 		return c.JSON(http.StatusOK, nil)
 	}
 }
@@ -320,7 +322,7 @@ func (hm *HandlerManager) updateUserByID(api string, sendEvent func(string, stri
 			return err
 		}
 		if strings.TrimSpace(form.Password) != "" {
-			form.Password = encryptSha256(form.Password)
+			form.Password = crypto.EncryptSHA256(form.Password)
 		}
 		updatedModel := infrastructure.UserToEntityNoRole(form)
 		if _, err := infrastructure.UpdateByID(c.Request().Context(), hm.db, updatedModel.ID, updatedModel, "Role"); err != nil {

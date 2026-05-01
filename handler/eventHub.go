@@ -3,7 +3,10 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
+
+	"meetup/crypto"
 
 	"gorm.io/gorm"
 )
@@ -36,6 +39,7 @@ type Hub struct {
 	Register   chan *Client
 	Unregister chan *Client
 	Broadcast  chan Event
+	logger     func(ctx context.Context, level slog.Level, msg string, args ...any)
 }
 
 // NewHub はHubを初期化して返す。
@@ -46,6 +50,10 @@ func NewHub() *Hub {
 		Unregister: make(chan *Client, 4),
 		Broadcast:  make(chan Event),
 	}
+}
+
+func (h *Hub) SetLogger(logger func(ctx context.Context, level slog.Level, msg string, args ...any)) {
+	h.logger = logger
 }
 
 func (h *Hub) Send(data, event string) {
@@ -108,36 +116,36 @@ func (h *Hub) sendTimeTicker(data string) {
 
 func (h *Hub) sendError(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseError, api)
-	fmt.Println(time.Now().Format("2006/01/02 15:04:05"), event)
+	h.logger(context.Background(), slog.LevelError, event, crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendGetEvent(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseGet, api)
-	fmt.Println(time.Now().Format("2006/01/02 15:04:05"), event)
+	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendCreateEvent(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseCreate, api)
-	fmt.Println(time.Now().Format("2006/01/02 15:04:05"), event)
+	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendUpdateEvent(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseUpdate, api)
-	fmt.Println(time.Now().Format("2006/01/02 15:04:05"), event)
+	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendDeleteEvent(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseDelete, api)
-	fmt.Println(time.Now().Format("2006/01/02 15:04:05"), event)
+	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendNotice(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseNotice, api)
-	fmt.Println(time.Now().Format("2006/01/02 15:04:05"), event)
+	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }

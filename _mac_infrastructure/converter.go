@@ -3,6 +3,8 @@ package infrastructure
 import (
 	"strconv"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // --- time helpers (ISO8601 / RFC3339) ---
@@ -48,10 +50,26 @@ func isoToTime(s *string) time.Time {
 	return t
 }
 
+// gorm.DeletedAtを渡すことで論理削除をチェックできるようになっている。
+func deletedAtToISO(d gorm.DeletedAt) *string {
+	// 論理削除されていないかつ、値がない場合はNilを返却する。
+	if !d.Valid || d.Time.IsZero() {
+		return nil
+	}
+	s := d.Time.UTC().Format(time.RFC3339Nano)
+	return &s
+}
+
 // --- Role ---
 
 func RoleFromEntity(e Role) RoleForm {
-	f := RoleForm{ID: e.ID, RoleName: e.RoleName}
+	f := RoleForm{
+		ID:        e.ID,
+		RoleName:  e.RoleName,
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
+	}
 	if len(e.Users) > 0 {
 		f.Users = make([]UserForm, len(e.Users))
 		for i := range e.Users {
@@ -62,11 +80,20 @@ func RoleFromEntity(e Role) RoleForm {
 }
 
 func roleFromEntityShallow(e Role) RoleForm {
-	return RoleForm{ID: e.ID, RoleName: e.RoleName}
+	return RoleForm{
+		ID:        e.ID,
+		RoleName:  e.RoleName,
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
+	}
 }
 
 func RoleToEntity(f RoleForm) Role {
-	e := Role{ID: f.ID, RoleName: f.RoleName}
+	e := Role{
+		ID:       f.ID,
+		RoleName: f.RoleName,
+	}
 	for _, uf := range f.Users {
 		e.Users = append(e.Users, UserToEntity(uf))
 	}
@@ -76,7 +103,13 @@ func RoleToEntity(f RoleForm) Role {
 // --- SupportStatus ---
 
 func SupportStatusFromEntity(e SupportStatus) SupportStatusForm {
-	f := SupportStatusForm{ID: e.ID, Title: e.Title}
+	f := SupportStatusForm{
+		ID:        e.ID,
+		Title:     e.Title,
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
+	}
 	for _, s := range e.Supports {
 		f.Supports = append(f.Supports, SupportFromEntity(s))
 	}
@@ -84,7 +117,10 @@ func SupportStatusFromEntity(e SupportStatus) SupportStatusForm {
 }
 
 func SupportStatusToEntity(f SupportStatusForm) SupportStatus {
-	e := SupportStatus{ID: f.ID, Title: f.Title}
+	e := SupportStatus{
+		ID:    f.ID,
+		Title: f.Title,
+	}
 	for _, sf := range f.Supports {
 		e.Supports = append(e.Supports, SupportToEntity(sf))
 	}
@@ -98,6 +134,9 @@ func SupportFromEntity(e Support) SupportForm {
 		ID:              e.ID,
 		UserID:          strconv.FormatInt(e.UserID, 10),
 		SupportStatusID: strconv.FormatInt(e.SupportStatusID, 10),
+		CreatedAt:       timeToISO(e.CreatedAt),
+		UpdatedAt:       timeToISO(e.UpdatedAt),
+		DeletedAt:       deletedAtToISO(e.DeletedAt),
 	}
 	if e.User.ID != 0 {
 		u := UserFromEntity(e.User)
@@ -111,7 +150,13 @@ func SupportFromEntity(e Support) SupportForm {
 }
 
 func supportStatusFromEntityShallow(e SupportStatus) SupportStatusForm {
-	return SupportStatusForm{ID: e.ID, Title: e.Title}
+	return SupportStatusForm{
+		ID:        e.ID,
+		Title:     e.Title,
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
+	}
 }
 
 func SupportToEntity(f SupportForm) Support {
@@ -133,11 +178,14 @@ func SupportToEntity(f SupportForm) Support {
 
 func UserFromEntity(e User) UserForm {
 	f := UserForm{
-		ID:     e.ID,
-		Name:   e.Name,
-		Email:  e.Email,
-		Memo:   e.Memo,
-		RoleID: strconv.FormatInt(e.RoleID, 10),
+		ID:        e.ID,
+		Name:      e.Name,
+		Email:     e.Email,
+		Memo:      e.Memo,
+		RoleID:    strconv.FormatInt(e.RoleID, 10),
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
 	}
 	if e.Role.ID != 0 {
 		r := roleFromEntityShallow(e.Role)
@@ -149,11 +197,14 @@ func UserFromEntity(e User) UserForm {
 // UserFromEntityNoRole avoids Role when embedding User under Role.Users.
 func UserFromEntityNoRole(e User) UserForm {
 	return UserForm{
-		ID:     e.ID,
-		Name:   e.Name,
-		Email:  e.Email,
-		Memo:   e.Memo,
-		RoleID: strconv.FormatInt(e.RoleID, 10),
+		ID:        e.ID,
+		Name:      e.Name,
+		Email:     e.Email,
+		Memo:      e.Memo,
+		RoleID:    strconv.FormatInt(e.RoleID, 10),
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
 	}
 }
 
@@ -206,7 +257,13 @@ func UserFormsFromEntities(users []User) []UserForm {
 // --- Category ---
 
 func categoryFromEntityShallow(e Category) CategoryForm {
-	return CategoryForm{ID: e.ID, CategoryName: e.CategoryName}
+	return CategoryForm{
+		ID:           e.ID,
+		CategoryName: e.CategoryName,
+		CreatedAt:    timeToISO(e.CreatedAt),
+		UpdatedAt:    timeToISO(e.UpdatedAt),
+		DeletedAt:    deletedAtToISO(e.DeletedAt),
+	}
 }
 
 func CategoryFromEntity(e Category) CategoryForm {
@@ -218,7 +275,10 @@ func CategoryFromEntity(e Category) CategoryForm {
 }
 
 func CategoryToEntity(f CategoryForm) Category {
-	e := Category{ID: f.ID, CategoryName: f.CategoryName}
+	e := Category{
+		ID:           f.ID,
+		CategoryName: f.CategoryName,
+	}
 	for _, tf := range f.Tags {
 		e.Tags = append(e.Tags, TagToEntity(tf))
 	}
@@ -233,6 +293,9 @@ func tagFromEntityShallow(e Tag) TagForm {
 		Title:      e.Title,
 		Usage:      e.Usage,
 		CategoryID: strconv.FormatInt(e.CategoryID, 10),
+		CreatedAt:  timeToISO(e.CreatedAt),
+		UpdatedAt:  timeToISO(e.UpdatedAt),
+		DeletedAt:  deletedAtToISO(e.DeletedAt),
 	}
 	if e.Category.ID != 0 {
 		c := categoryFromEntityShallow(e.Category)
@@ -298,7 +361,14 @@ func TagToEntityNoRelations(f TagForm) Tag {
 // --- Refer ---
 
 func referFromEntityShallow(e Refer) ReferForm {
-	return ReferForm{ID: e.ID, Title: e.Title, URL: e.URL}
+	return ReferForm{
+		ID:        e.ID,
+		Title:     e.Title,
+		URL:       e.URL,
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
+	}
 }
 
 func ReferFromEntity(e Refer) ReferForm {
@@ -312,7 +382,11 @@ func ReferFromEntity(e Refer) ReferForm {
 }
 
 func ReferToEntity(f ReferForm) Refer {
-	e := Refer{ID: f.ID, Title: f.Title, URL: f.URL}
+	e := Refer{
+		ID:    f.ID,
+		Title: f.Title,
+		URL:   f.URL,
+	}
 	referID := f.ID
 	for _, af := range f.Answers {
 		rm := ReferManager{
@@ -335,6 +409,9 @@ func MemoFromEntity(e Memo) MemoForm {
 		QuestionID: strconv.FormatInt(e.QuestionID, 10),
 		UserID:     strconv.FormatInt(e.UserID, 10),
 		Content:    e.Content,
+		CreatedAt:  timeToISO(e.CreatedAt),
+		UpdatedAt:  timeToISO(e.UpdatedAt),
+		DeletedAt:  deletedAtToISO(e.DeletedAt),
 	}
 	if e.User.ID != 0 {
 		u := UserFromEntity(e.User)
@@ -365,6 +442,8 @@ func AnswerFromEntity(e Answer) AnswerForm {
 		Content:    e.Content,
 		AnsweredAt: timePtrToISO(e.AnsweredAt),
 		CreatedAt:  timeToISO(e.CreatedAt),
+		UpdatedAt:  timeToISO(e.UpdatedAt),
+		DeletedAt:  deletedAtToISO(e.DeletedAt),
 	}
 	if e.User.ID != 0 {
 		u := UserFromEntity(e.User)
@@ -415,6 +494,9 @@ func EscalationFromEntity(e Escalation) EscalationForm {
 		FromQuestionID: strconv.FormatInt(e.FromQuestionID, 10),
 		ToQuestionID:   strconv.FormatInt(e.ToQuestionID, 10),
 		EscalatedAt:    timeToISO(e.EscalatedAt),
+		CreatedAt:      timeToISO(e.CreatedAt),
+		UpdatedAt:      timeToISO(e.UpdatedAt),
+		DeletedAt:      deletedAtToISO(e.DeletedAt),
 	}
 }
 
@@ -435,7 +517,13 @@ func EscalationToEntity(f EscalationForm) Escalation {
 // --- NoticeType / Notice ---
 
 func noticeTypeFromEntityShallow(e NoticeType) NoticeTypeForm {
-	return NoticeTypeForm{ID: e.ID, Name: e.Name}
+	return NoticeTypeForm{
+		ID:        e.ID,
+		Name:      e.Name,
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
+	}
 }
 
 func NoticeTypeFromEntity(e NoticeType) NoticeTypeForm {
@@ -447,7 +535,10 @@ func NoticeTypeFromEntity(e NoticeType) NoticeTypeForm {
 }
 
 func NoticeTypeToEntity(f NoticeTypeForm) NoticeType {
-	e := NoticeType{ID: f.ID, Name: f.Name}
+	e := NoticeType{
+		ID:   f.ID,
+		Name: f.Name,
+	}
 	for _, nf := range f.Notices {
 		e.Notices = append(e.Notices, NoticeToEntity(nf))
 	}
@@ -466,6 +557,9 @@ func NoticeFromEntity(e Notice) NoticeForm {
 		QuestionID: questionID,
 		Content:    e.Content,
 		DisplayDue: timePtrToISO(e.DisplayDue),
+		CreatedAt:  timeToISO(e.CreatedAt),
+		UpdatedAt:  timeToISO(e.UpdatedAt),
+		DeletedAt:  deletedAtToISO(e.DeletedAt),
 	}
 	if e.NoticeType.ID != 0 {
 		nt := noticeTypeFromEntityShallow(e.NoticeType)
@@ -533,9 +627,10 @@ func QuestionFromEntity(e Question) QuestionForm {
 		SupportID:        e.SupportID,
 		Title:            e.Title,
 		Content:          e.Content,
-		Deleted:          e.Deleted,
 		Due:              timePtrToISO(e.Due),
 		CreatedAt:        timeToISO(e.CreatedAt),
+		UpdatedAt:        timeToISO(e.UpdatedAt),
+		DeletedAt:        deletedAtToISO(e.DeletedAt),
 	}
 	if e.Answer != nil && e.Answer.ID != 0 {
 		a := AnswerFromEntity(*e.Answer)
@@ -580,7 +675,6 @@ func QuestionToEntity(f QuestionForm) Question {
 		SupportID:        f.SupportID,
 		Title:            f.Title,
 		Content:          f.Content,
-		Deleted:          f.Deleted,
 		Due:              isoToTimePtr(f.Due),
 	}
 	if f.CreatedAt == nil || *f.CreatedAt == "" {
@@ -647,9 +741,10 @@ func questionFormShallowFromEntity(e Question) QuestionForm {
 		SupportID:        e.SupportID,
 		Title:            e.Title,
 		Content:          e.Content,
-		Deleted:          e.Deleted,
 		Due:              timePtrToISO(e.Due),
 		CreatedAt:        timeToISO(e.CreatedAt),
+		UpdatedAt:        timeToISO(e.UpdatedAt),
+		DeletedAt:        deletedAtToISO(e.DeletedAt),
 	}
 }
 
@@ -658,6 +753,9 @@ func RelatedQuestionFromEntity(r RelatedQuestion) RelatedQuestionForm {
 		ID:                r.ID,
 		QuestionID:        strconv.FormatInt(r.QuestionID, 10),
 		RelatedQuestionID: strconv.FormatInt(r.RelatedQuestionID, 10),
+		CreatedAt:         timeToISO(r.CreatedAt),
+		UpdatedAt:         timeToISO(r.UpdatedAt),
+		DeletedAt:         deletedAtToISO(r.DeletedAt),
 	}
 	if r.RelatedQuestion.ID != 0 {
 		q := questionFormShallowFromEntity(r.RelatedQuestion)
@@ -693,9 +791,12 @@ func RelatedQuestionToEntity(f RelatedQuestionForm, parentQuestionID int64) Rela
 
 func ReferManagerFromEntity(e ReferManager) ReferManagerForm {
 	f := ReferManagerForm{
-		ID:       e.ID,
-		AnswerID: strconv.FormatInt(e.AnswerID, 10),
-		ReferID:  strconv.FormatInt(e.ReferID, 10),
+		ID:        e.ID,
+		AnswerID:  strconv.FormatInt(e.AnswerID, 10),
+		ReferID:   strconv.FormatInt(e.ReferID, 10),
+		CreatedAt: timeToISO(e.CreatedAt),
+		UpdatedAt: timeToISO(e.UpdatedAt),
+		DeletedAt: deletedAtToISO(e.DeletedAt),
 	}
 	if e.Answer.ID != 0 {
 		a := AnswerFromEntity(e.Answer)
@@ -728,6 +829,9 @@ func TagManagerFromEntity(e TagManager) TagManagerForm {
 		ID:         e.ID,
 		TagID:      strconv.FormatInt(e.TagID, 10),
 		QuestionID: strconv.FormatInt(e.QuestionID, 10),
+		CreatedAt:  timeToISO(e.CreatedAt),
+		UpdatedAt:  timeToISO(e.UpdatedAt),
+		DeletedAt:  deletedAtToISO(e.DeletedAt),
 	}
 	if e.Tag.ID != 0 {
 		t := TagFromEntity(e.Tag)
