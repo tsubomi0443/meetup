@@ -160,15 +160,15 @@
                     </button>
 
                     <div x-show="isRelatedOpen" x-transition x-cloak
-                        class="absolute left-0 right-0 z-[50] card card-compact w-full p-2 shadow-xl bg-white border border-gray-200 mt-1">
-                        <div class="card-body p-2">
-                            <div class="relative mb-2">
+                        class="absolute bottom-full left-0 right-0 mb-1 z-[50] card card-compact w-full shadow-xl bg-white border border-gray-200 max-h-[min(18rem,50vh)] min-h-0 flex flex-col overflow-hidden p-2">
+                        <div class="card-body p-2 flex flex-col min-h-0 flex-1 gap-0">
+                            <div class="relative mb-2 shrink-0">
                                 <i data-lucide="search" class="w-3 h-3 absolute left-2 top-2.5 text-gray-400"></i>
                                 <input type="text" x-model="relatedSearchQuery" placeholder="検索..."
                                     class="input input-bordered input-sm w-full pl-7 text-xs focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800" />
                             </div>
 
-                            <div class="flex flex-col gap-1 max-h-48 overflow-y-auto no-scrollbar">
+                            <div class="flex flex-1 min-h-0 flex-col gap-1 overflow-y-auto no-scrollbar">
                                 <template x-for="rq in availableRelatedQuestions" :key="rq.id">
                                     <label
                                         class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group">
