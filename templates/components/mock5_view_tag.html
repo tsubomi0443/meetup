@@ -41,7 +41,7 @@
                                 x-text="tagUsageCountLabel(tag)"></span>
                         </td>
                         <td>
-                            <button class="text-gray-400 hover:text-slate-800"><i data-lucide="edit-2" @click="showEditTagModal = true; openEditTag(tag)" class="w-4 h-4"></i></button>
+                            <button type="button" class="text-gray-400 hover:text-slate-800" @click="showEditTagModal = true; openEditTag(tag)"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
                         </td>
                     </tr>
                 </template>

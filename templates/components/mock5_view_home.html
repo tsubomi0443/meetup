@@ -78,8 +78,10 @@
                     <span
                         class="badge bg-slate-100 border-slate-200 text-slate-800 font-bold gap-1 px-2 py-2 text-[10px] shadow-sm">
                         <span x-text="tag"></span>
-                        <i data-lucide="x" class="w-2.5 h-2.5 cursor-pointer hover:text-red-500"
-                            @click="toggleTag(tag); refreshIcons()"></i>
+                        <button type="button" class="inline-flex p-0 border-0 bg-transparent cursor-pointer"
+                            @click="toggleTag(tag); refreshIcons()">
+                            <i data-lucide="x" class="w-2.5 h-2.5 cursor-pointer hover:text-red-500"></i>
+                        </button>
                     </span>
                 </template>
             </div>

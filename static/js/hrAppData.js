@@ -305,7 +305,11 @@ document.addEventListener('alpine:init', () => {
 
             document.addEventListener(SSE.data.create.tag, (event) => {
                 const tag = event.detail;
-                const index = this.tags.findIndex((t) => t.id === tag.id);
+                const id = tag.id;
+                const index =
+                    id != null && id !== 0
+                        ? this.tags.findIndex((t) => t.id === id)
+                        : -1;
                 if (index === -1) {
                     this.tags.unshift(tag);
                     this.availableTags = this.tags.map((t) => Tag.fromJSON(t));

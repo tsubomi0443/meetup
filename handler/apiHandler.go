@@ -93,7 +93,15 @@ func (hm *HandlerManager) registerUser(api string, sendEvent func(string, string
 			return c.JSON(http.StatusInternalServerError, fmt.Errorf("Create user server error %w", err))
 		}
 
-		sendEvent(api, string(body))
+		created, err := infrastructure.GetUserByID(c.Request().Context(), hm.db, data.ID)
+		if err != nil {
+			return err
+		}
+		payload, err := json.Marshal(infrastructure.UserFromEntity(created))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		sendEvent(api, string(payload))
 		return c.JSON(http.StatusOK, nil)
 	}
 }
@@ -114,7 +122,15 @@ func (hm *HandlerManager) registerQuestion(api string, sendEvent func(string, st
 		if err := infrastructure.Register(c.Request().Context(), hm.db, &data); err != nil {
 			return c.JSON(http.StatusInternalServerError, fmt.Errorf("Create question server error %w", err))
 		}
-		sendEvent(api, string(body))
+		created, err := infrastructure.GetQuestion(c.Request().Context(), hm.db, data.ID)
+		if err != nil {
+			return err
+		}
+		payload, err := json.Marshal(infrastructure.QuestionFromEntity(created))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		sendEvent(api, string(payload))
 		return c.JSON(http.StatusOK, nil)
 	}
 }
@@ -136,7 +152,15 @@ func (hm *HandlerManager) registerTag(api string, sendEvent func(string, string)
 			return c.JSON(http.StatusInternalServerError, fmt.Errorf("Create new tag error %w\n", err))
 		}
 
-		sendEvent(api, string(body))
+		loaded, err := infrastructure.GetTagByID(c.Request().Context(), hm.db, model.ID)
+		if err != nil {
+			return err
+		}
+		payload, err := json.Marshal(infrastructure.TagFromEntity(loaded))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		sendEvent(api, string(payload))
 		return c.JSON(http.StatusOK, nil)
 	}
 }
