@@ -1,6 +1,6 @@
 {{define "mock5_view_home"}}
-<div x-show="currentView === 'home'" class="flex flex-col gap-6 h-[87vh]">
-    <div class="flex flex-wrap items-center justify-between gap-4">
+<div x-show="currentView === 'home'" class="flex flex-1 min-h-0 flex-col gap-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div class="flex items-center gap-2 flex-1 min-w-[300px]">
             <div class="relative flex-1">
                 <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
@@ -52,7 +52,7 @@
         </div>
     </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div class="flex flex-wrap items-center gap-2">
             <div
                 class="flex items-center gap-1 bg-gray-200 p-1 rounded-xl w-max shadow-inner overflow-x-auto no-scrollbar">

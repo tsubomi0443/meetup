@@ -1,5 +1,6 @@
 {{define "mock5_view_notice"}}
-<div x-show="currentView === 'notice'" class="max-w-3xl mx-auto space-y-4" style="display: none;">
+<div x-show="currentView === 'notice'" class="flex flex-1 min-h-0 flex-col max-w-3xl mx-auto w-full" style="display: none;">
+    <div class="flex flex-1 min-h-0 flex-col gap-4 overflow-y-auto no-scrollbar">
     <template x-for="n in notices" :key="n.id">
         <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm flex gap-4 items-start hover:bg-gray-50 transition-colors cursor-pointer"
             @click="openNoticeIfQuestion(n)">
@@ -36,5 +37,6 @@
             </div>
         </div>
     </template>
+    </div>
 </div>
 {{end}}

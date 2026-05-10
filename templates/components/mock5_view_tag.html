@@ -1,6 +1,6 @@
 {{define "mock5_view_tag"}}
-<div x-show="currentView === 'tags'" class="flex flex-col gap-6 h-[87vh]" style="display: none;">
-    <div class="flex justify-between items-center">
+<div x-show="currentView === 'tags'" class="flex flex-1 min-h-0 flex-col gap-6" style="display: none;">
+    <div class="flex justify-between items-center shrink-0">
         <div class="relative w-80">
             <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
             <input type="text" placeholder="タグ検索..."
@@ -9,7 +9,7 @@
         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showTagModal = true">+
             タグ追加</button>
     </div>
-    <div class="flex flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-96 overflow-y-auto min-h-0 no-scrollbar">
+    <div class="flex flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto no-scrollbar">
         <table class="table w-full table-pin-rows">
             <thead>
                 <tr class="bg-gray-50">

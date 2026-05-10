@@ -1,14 +1,14 @@
 {{define "mock5_view_detail"}}
-<div x-show="currentView === 'detail'" class="space-y-6" style="display: none;">
-    <div class="flex items-center justify-between">
+<div x-show="currentView === 'detail'" class="flex flex-col gap-6 flex-1 min-h-0" style="display: none;">
+    <div class="flex items-center justify-between shrink-0">
         <button class="btn btn-ghost btn-sm gap-2 font-bold text-gray-500 hover:text-gray-800" @click="setView('home')">
             <i data-lucide="arrow-left" class="w-4 h-4"></i> 一覧に戻る
         </button>
     </div>
-    <div class="flex flex-col lg:flex-row gap-6">
+    <div class="flex flex-1 min-h-0 flex-col lg:flex-row gap-6">
         <div
-            class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px]">
-            <div class="bg-gray-50 p-6 flex-1 space-y-6 overflow-y-auto">
+            class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px]">
+            <div class="bg-gray-50 p-6 flex-1 min-h-0 space-y-6 overflow-y-auto">
                 <div class="chat chat-start">
                     <div class="chat-image avatar">
                         <div class="w-10 rounded-full">
@@ -38,7 +38,7 @@
                     </div>
                 </template>
             </div>
-            <div class="p-4 border-t border-gray-100 bg-white">
+            <div class="p-4 border-t border-gray-100 bg-white shrink-0">
                 <textarea
                     class="textarea textarea-bordered w-full h-24 text-sm focus:border-slate-800 focus:outline-none"
                     x-model="detailComposerDraft"
