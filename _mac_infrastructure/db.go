@@ -211,7 +211,7 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 				}
 			}
 		}
-		// 2) Support: 新規作成 or 既存更新
+		// 2) Support: 新規作成 or 既存更新、またはフォームに無ければ既存の support を detach
 		if q.Support != nil {
 			s := *q.Support
 			if s.ID == 0 {
@@ -231,6 +231,11 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 					q.Support = &s
 				}
 			}
+		} else {
+			if err := DetachQuestionSupportTx(tx, q.ID); err != nil {
+				return err
+			}
+			q.SupportID = nil
 		}
 		// 3) 親の questions: スカラ列と FK のみ（CreatedAt は更新で変えない）
 		if _, err := gorm.G[Question](tx).
@@ -314,6 +319,31 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 		}
 		return nil
 	})
+}
+
+// DetachQuestionSupportTx は同一トランザクション内で、対象 question の support_id を NULL にし、
+// 直前まで紐づいていた supports 行を削除する。questions.support_id は UNIQUE であり、
+// 1 質問 1 サポートの 1:1 を前提とする。
+func DetachQuestionSupportTx(tx *gorm.DB, questionID int64) error {
+	var current Question
+	if err := tx.Select("id", "support_id").
+		Where("id = ?", questionID).
+		Take(&current).Error; err != nil {
+		return err
+	}
+	if err := tx.Model(&Question{}).
+		Where("id = ?", questionID).
+		Update("support_id", nil).Error; err != nil {
+		return err
+	}
+	if current.SupportID != nil && *current.SupportID != 0 {
+		if err := tx.Unscoped().
+			Where("id = ?", *current.SupportID).
+			Delete(&Support{}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func DeleteQuestionByID(ctx context.Context, db *gorm.DB, id int64) error {

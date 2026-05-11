@@ -42,6 +42,36 @@ function normalizeMemosForViewModel(question) {
     }));
 }
 
+/** PUT 用ペイロードから、未対応 (supportStatusId === 1) のとき support / supportId を除去する */
+function stripSupportForPutIfUnassigned(payload) {
+    if (!payload || typeof payload !== 'object') return;
+    const sid = payload.support?.supportStatusId;
+    if (Number(sid) !== 1) return;
+    delete payload.supportId;
+    delete payload.support;
+}
+
+/** PUT 用ペイロードで、対応中 (supportStatusId === 2) かつ担当者未設定なら loginUser を担当として埋める */
+function ensureSupportAssigneeForInProgressPut(payload, loginUser) {
+    if (!payload || typeof payload !== 'object') return;
+    const sid = payload.support?.supportStatusId;
+    if (Number(sid) !== 2) return;
+    const uid = loginUser?.id;
+    if (uid == null || uid === '') return;
+    const userName = String(loginUser?.name ?? '');
+    const existing = payload.support;
+    const existingUid = existing?.userId != null && existing.userId !== '' ? Number(existing.userId) : 0;
+    if (existingUid > 0) return;
+    payload.support = {
+        id: 0,
+        userId: String(uid),
+        supportStatusId: '2',
+        user: { id: uid, name: userName },
+        supportStatus: { id: 2, title: '対応中' },
+    };
+    delete payload.supportId;
+}
+
 /** Question API/SSE から answer を view 用に正規化 */
 function normalizeAnswerForViewModel(question) {
     const a = question.answer;
@@ -885,8 +915,7 @@ document.addEventListener('alpine:init', () => {
 
         /** @returns {Promise<boolean>} PUT が成功したか、または送信不要で問題ない場合 true */
         async updateQuestion() {
-            // TODO; Toggleで未対応になった場合、SupportIDとSupportを削除し送信。サーバ側でもSupportをNullのものへと書き換えて対応者なしとする。
-            // TODO; Question更新時、SSEで送信されてデータを置き換えたMemoの内部は初期（ブランク）となっているため、更新後にもMemoの内部は書き換え内容にしたい。でないとAvatarのデータがブランクのものとなってしまう。
+            // 未対応 (supportStatusId === 1) のとき stripSupportForPutIfUnassigned で payload から support を落とす（サーバ側で detach も実施）。
             // TODO; Answer送信後、ステータスを完了へと更新する？一撃で帰ってこなかった場合の処理を考えないと終わらなさそう。
             const question = this.questions.filter(q => q.id === this.activeQuestion.id)[0];
 
@@ -948,6 +977,8 @@ document.addEventListener('alpine:init', () => {
                     relatedQuestions: relatedQuestionsPayload,
                     memos: memosPayload,
                 };
+                stripSupportForPutIfUnassigned(payload);
+                ensureSupportAssigneeForInProgressPut(payload, this.loginUser);
                 const res = await fetch("/api/v1/question", {
                     method: "PUT",
                     headers: this.apiHeaders(),

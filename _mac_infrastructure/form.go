@@ -55,6 +55,39 @@ func (f SupportForm) SupportStatusIDInt64() int64 {
 	return -1
 }
 
+// NormalizeQuestionFormClearSupportWhenUnassigned は、Support の支援ステータスが
+// 未対応 (ID = 1) の場合に QuestionForm から Support / SupportID を削除する。
+// PUT 時にこれを呼ぶことで、サーバ側で「対応者なし」へ確実に detach できる。
+func NormalizeQuestionFormClearSupportWhenUnassigned(f *QuestionForm) {
+	if f == nil || f.Support == nil {
+		return
+	}
+	if f.Support.SupportStatusIDInt64() != 1 {
+		return
+	}
+	f.Support = nil
+	f.SupportID = nil
+}
+
+// NormalizeQuestionFormAssignSupportUserWhenInProgress は、対応中 (SupportStatusID = 2) の PUT で
+// Support の担当者 (UserID) が未設定なら、リクエスト元ユーザ (actorUserID) を担当として埋める。
+// 既に有効な UserID が入っている場合は何もしない（管理者による担当変更を尊重）。
+// Support が nil の場合は「未対応でクリア済み」または「Support を送らない PUT」なので何もしない。
+func NormalizeQuestionFormAssignSupportUserWhenInProgress(f *QuestionForm, actorUserID int64) {
+	if f == nil || actorUserID <= 0 || f.Support == nil {
+		return
+	}
+	if f.Support.SupportStatusIDInt64() != 2 {
+		return
+	}
+	if f.Support.UserIDInt64() > 0 {
+		return
+	}
+	f.Support.UserID = strconv.FormatInt(actorUserID, 10)
+	f.SupportID = nil
+	f.Support.ID = 0
+}
+
 // =====================
 // USER
 // =====================

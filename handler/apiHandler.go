@@ -261,6 +261,10 @@ func (hm *HandlerManager) updateQuestionByID(api string, sendEvent func(string, 
 		if err := json.Unmarshal(body, &form); err != nil {
 			return err
 		}
+		infrastructure.NormalizeQuestionFormClearSupportWhenUnassigned(&form)
+		if actorID, ok := actorUserIDFromToken(c); ok {
+			infrastructure.NormalizeQuestionFormAssignSupportUserWhenInProgress(&form, actorID)
+		}
 		updatedModel := infrastructure.QuestionToEntity(form)
 		if err := infrastructure.UpdateQuestionInTransaction(c.Request().Context(), hm.db, updatedModel); err != nil {
 			return err
@@ -356,6 +360,32 @@ func (hm *HandlerManager) updateUserByID(api string, sendEvent func(string, stri
 		sendEvent(api, string(body))
 		return c.JSON(http.StatusOK, nil)
 	}
+}
+
+// actorUserIDFromToken は JWT の sub クレームからリクエスト元ユーザの ID を取り出す。
+// ミドルウェアでトークンが入っていない場合や形式不正の場合は false を返す。
+func actorUserIDFromToken(c *echo.Context) (int64, bool) {
+	raw := c.Get("user")
+	if raw == nil {
+		return 0, false
+	}
+	token, ok := raw.(*jwt.Token)
+	if !ok || token == nil {
+		return 0, false
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return 0, false
+	}
+	subFloat, ok := claims["sub"].(float64)
+	if !ok {
+		return 0, false
+	}
+	id := int64(subFloat)
+	if id <= 0 {
+		return 0, false
+	}
+	return id, true
 }
 
 // TODO; Notice更新時にSSEでデータ送信を実施、クライアントサイドで結果を受け取りデータを更新
