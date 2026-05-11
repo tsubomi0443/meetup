@@ -55,6 +55,8 @@ func (hm *HandlerManager) checkQuesiton(ctx context.Context) error {
 	var ticker = time.NewTicker(30 * time.Minute)
 	var checkedQuestions = make(map[int64]any)
 
+	const noticeLineHour = 72 * time.Hour
+
 	for {
 		select {
 		case <-ticker.C:
@@ -71,37 +73,59 @@ func (hm *HandlerManager) checkQuesiton(ctx context.Context) error {
 					checkedQuestions[question.ID] = struct{}{}
 					continue
 				}
-				if question.Due.Add(-72 * time.Hour).Before(time.Now()) {
-					// question_id での検索で RecordNotFound が出る想定のため、ログ出力を抑えた関数を呼びだしています
-					if _, err := infrastructure.GetNoticeByQuestionSilent(context.Background(), hm.db, question); err != nil {
-						if errors.Is(err, gorm.ErrRecordNotFound) && question.Support.SupportStatusID != 1 {
-							infrastructure.RegisterNoticeByQuestionID(ctx, hm.db, question.ID)
-							checkedQuestions[question.ID] = struct{}{}
-							continue
-						}
-						fmt.Println(err.Error())
-					}
+				if isNearDueForNotice(question, noticeLineHour) {
+					overDueProc(ctx, hm.db, question)
 				}
 				checkedQuestions[question.ID] = struct{}{}
 			}
-		case q := <-hm.ne.ReceiveUpdateQuestion():
-			if q.Support.SupportStatusID == 3 {
-				if nid, err := infrastructure.DeleteNoticeByQuestion(ctx, hm.db, q); err != nil {
-					fmt.Println(err.Error())
-				} else if nid >= 0 {
-					hm.hub.sendDeleteEvent("notice", strconv.FormatInt(nid, 10))
+		case question := <-hm.ne.ReceiveUpdateQuestion():
+			if question.Support != nil && question.Support.SupportStatusID == 3 {
+				removeNoticeProcByQuestionID(ctx, hm.db, hm.hub, question.ID)
+				delete(checkedQuestions, question.ID)
+			} else {
+				if question.Due != nil && isNearDueForNotice(question, noticeLineHour) {
+					overDueProc(ctx, hm.db, question)
+					checkedQuestions[question.ID] = struct{}{}
+				} else {
+					removeNoticeProcByQuestionID(ctx, hm.db, hm.hub, question.ID)
+					delete(checkedQuestions, question.ID)
 				}
-				delete(checkedQuestions, q.ID)
 			}
 		case id := <-hm.ne.ReceiveDeleteQuestion():
-			if nid, err := infrastructure.DeleteNoticeByQuestionID(ctx, hm.db, id); err != nil {
-				fmt.Println(err.Error())
-			} else if nid >= 0 {
-				hm.hub.sendDeleteEvent("notice", strconv.FormatInt(nid, 10))
-			}
+			removeNoticeProcByQuestionID(ctx, hm.db, hm.hub, id)
 			delete(checkedQuestions, id)
 		case <-ctx.Done():
 			return nil
 		}
+	}
+}
+
+// isNearDueForNotice は「期限の lead 時間前から」を通知登録の対象とする（従来の Due.Add(-72h).Before(now) と同義）。
+func isNearDueForNotice(question infrastructure.Question, lead time.Duration) bool {
+	if question.Due == nil {
+		return false
+	}
+	return question.Due.Add(-lead).Before(time.Now())
+}
+
+func overDueProc(ctx context.Context, db *gorm.DB, question infrastructure.Question) {
+	if question.Support == nil {
+		return
+	}
+	// question_id での検索で RecordNotFound が出る想定のため、ログ出力を抑えた関数を呼びだしています
+	if _, err := infrastructure.GetNoticeByQuestionSilent(context.Background(), db, question); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) && question.Support.SupportStatusID != 1 {
+			infrastructure.RegisterNoticeByQuestionID(ctx, db, question.ID)
+			return
+		}
+		fmt.Println(err.Error())
+	}
+}
+
+func removeNoticeProcByQuestionID(ctx context.Context, db *gorm.DB, hub *Hub, id int64) {
+	if nid, err := infrastructure.DeleteNoticeByQuestionID(ctx, db, id); err != nil {
+		fmt.Println(err.Error())
+	} else if nid >= 0 {
+		hub.sendDeleteEvent("notice", strconv.FormatInt(nid, 10))
 	}
 }

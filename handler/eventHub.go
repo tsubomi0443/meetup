@@ -116,36 +116,36 @@ func (h *Hub) sendTimeTicker(data string) {
 
 func (h *Hub) sendError(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseError, api)
-	h.logger(context.Background(), slog.LevelError, event, crypto.EncryptSHA256(data))
+	h.logger(context.Background(), slog.LevelError, event, "data", crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendGetEvent(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseGet, api)
-	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
+	h.logger(context.Background(), slog.LevelInfo, event, "data", crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendCreateEvent(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseCreate, api)
-	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
+	h.logger(context.Background(), slog.LevelInfo, event, "data", crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendUpdateEvent(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseUpdate, api)
-	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
+	h.logger(context.Background(), slog.LevelInfo, event, "data", crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendDeleteEvent(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseDelete, api)
-	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
+	h.logger(context.Background(), slog.LevelInfo, event, "data", crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }
 
 func (h *Hub) sendNotice(api, data string) {
 	event := fmt.Sprintf("%s-%s", sseNotice, api)
-	h.logger(context.Background(), slog.LevelInfo, event, crypto.EncryptSHA256(data))
+	h.logger(context.Background(), slog.LevelInfo, event, "data", crypto.EncryptSHA256(data))
 	h.Send(data, event)
 }

@@ -313,12 +313,13 @@ INSERT INTO support_statuses (title) VALUES
 ('対応中'),
 ('完了');
 
+-- Demo password for all rows: "password" (EncryptPassword with JWK_KEY from .env.example)
 INSERT INTO users (name, password, email, role_id) VALUES
-('admin', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'admin', 1),
-('Taro Yamada', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'taro@example.com', 2),
-('Hanako Suzuki', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'hanako@example.com', 3),
-('Jiro Tanaka', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'jiro@example.com', 3),
-('Sato Hiromichi', 'd5da1192a439072e51eeebedc2be5832d9fc189a189a36d945335962d861e0b4', 'sato@example.com', 4);
+('admin', 'd6bdaa109847e20a6f3ff9dd823cdd9ba4d2bd4d8707f02b3b36105cbdbae11a', 'admin', 1),
+('Taro Yamada', 'd6bdaa109847e20a6f3ff9dd823cdd9ba4d2bd4d8707f02b3b36105cbdbae11a', 'taro@example.com', 2),
+('Hanako Suzuki', 'd6bdaa109847e20a6f3ff9dd823cdd9ba4d2bd4d8707f02b3b36105cbdbae11a', 'hanako@example.com', 3),
+('Jiro Tanaka', 'd6bdaa109847e20a6f3ff9dd823cdd9ba4d2bd4d8707f02b3b36105cbdbae11a', 'jiro@example.com', 3),
+('Sato Hiromichi', 'd6bdaa109847e20a6f3ff9dd823cdd9ba4d2bd4d8707f02b3b36105cbdbae11a', 'sato@example.com', 4);
 
 INSERT INTO supports (user_id, support_status_id) VALUES
 (1, 1),

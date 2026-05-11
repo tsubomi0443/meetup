@@ -116,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const model = fromJSON(JSON.parse(event.data));
-                    console.log(eventName, model);
                     let domEvent = normalizedEvent;
                     if (eventName.startsWith('get-') || eventName.startsWith('update-')) {
                         if (eventName.endsWith('-notice')) domEvent = SSE.data.update.notice;
@@ -132,8 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.dispatchEvent(new CustomEvent(domEvent, {
                         detail: model,
                     }));
-                } catch (fail) {
-                    console.log(fail);
+                } catch {
+                    /* ignore malformed SSE payloads */
                 }
             });
         });

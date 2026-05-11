@@ -86,7 +86,7 @@ func (hm *HandlerManager) registerUser(api string, sendEvent func(string, string
 			return err
 		}
 		if strings.TrimSpace(form.Password) != "" {
-			form.Password = crypto.EncryptSHA256(form.Password)
+			form.Password = crypto.EncryptPassword(form.Password)
 		}
 		data := infrastructure.UserToEntityNoRole(form)
 		if err := infrastructure.Register(c.Request().Context(), hm.db, &data); err != nil {
@@ -97,6 +97,7 @@ func (hm *HandlerManager) registerUser(api string, sendEvent func(string, string
 		if err != nil {
 			return err
 		}
+		created.Password = ""
 		payload, err := json.Marshal(infrastructure.UserFromEntity(created))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
@@ -346,7 +347,7 @@ func (hm *HandlerManager) updateUserByID(api string, sendEvent func(string, stri
 			return err
 		}
 		if strings.TrimSpace(form.Password) != "" {
-			form.Password = crypto.EncryptSHA256(form.Password)
+			form.Password = crypto.EncryptPassword(form.Password)
 		}
 		updatedModel := infrastructure.UserToEntityNoRole(form)
 		if _, err := infrastructure.UpdateByID(c.Request().Context(), hm.db, updatedModel.ID, updatedModel, "Role"); err != nil {
@@ -357,6 +358,7 @@ func (hm *HandlerManager) updateUserByID(api string, sendEvent func(string, stri
 	}
 }
 
+// TODO; Notice更新時にSSEでデータ送信を実施、クライアントサイドで結果を受け取りデータを更新
 func (hm *HandlerManager) getNotice() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		models, err := infrastructure.GetNotice(c.Request().Context(), hm.db)

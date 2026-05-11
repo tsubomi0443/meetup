@@ -13,7 +13,7 @@
                     <div class="chat-image avatar">
                         <div class="w-10 rounded-full">
                             <img
-                                :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(chatAvatarSeed(activeQuestion.sender))}&backgroundColor=eff6ff`"
+                                :src="`${chatAvatarURI(activeQuestion.sender)}`"
                                 class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
                                 alt="" />
                         </div>
@@ -29,7 +29,7 @@
                         <div class="chat-image avatar">
                             <div class="w-10 rounded-full">
                                 <img
-                                    :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(chatAvatarSeed(item.userName))}&backgroundColor=eff6ff`"
+                                    :src="`${chatAvatarURI(item.userName)}`"
                                     class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
                                     alt="" />
                             </div>
@@ -61,8 +61,12 @@
                 <div>
                     <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">質問者</h4>
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-sm shadow-inner shrink-0"
-                            x-text="senderInitialChar()"></div>
+                        <div class="w-10 rounded-full">
+                            <img
+                                :src="`${chatAvatarURI(activeQuestion.sender)}`"
+                                class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
+                                alt="" />
+                        </div>
                         <div class="min-w-0">
                             <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.sender"></div>
                             <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider"
@@ -76,8 +80,12 @@
                 <div class="mt-0">
                     <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">対応情報</h4>
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700 text-sm shadow-inner shrink-0"
-                            x-text="supportUserInitialChar()"></div>
+                        <div class="w-10 rounded-full">
+                            <img
+                                :src="`${chatAvatarURI(activeQuestion.support.user.name)}`"
+                                class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
+                                alt="" />
+                        </div>
                         <div class="min-w-0">
                             <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.support.user.name"></div>
                         </div>
@@ -98,7 +106,7 @@
                             @change="updateQuestion()" x-model="activeQuestion.support.supportStatusId">
                             <option value="1">未対応</option>
                             <option value="2">対応中</option>
-                            <option value="3">完了</option>
+                            <option value="3" :disabled="activeQuestion.answer == null" :title="activeQuestion.answer == null ? '「回答を送信」してから押下できるようになります。':''">完了</option>
                         </select>
                     </div>
 
@@ -141,7 +149,7 @@
                         </div>
                         <div class="col-span-full">
                             <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">期日</h4>
-                            <input type="date" x-model="activeQuestion.dueDate"
+                            <input type="date" x-model="activeQuestion.dueDate" @change="updateQuestion()"
                                 class="input input-bordered input-sm w-full text-xs font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner px-2" />
                         </div>
                     </div>

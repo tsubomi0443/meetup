@@ -87,6 +87,11 @@ document.addEventListener('alpine:init', () => {
         /** 詳細画面の回答・メモ入力下書き（mock5_view_detail） */
         detailComposerDraft: '',
 
+        alearts: [
+            { type: 'info', content: 'テストアラート１' },
+            { type: 'error', content: 'テストアラート２' },
+        ],
+
         titleMap: {
             home: '質問一覧',
             detail: '質問詳細',
@@ -171,7 +176,6 @@ document.addEventListener('alpine:init', () => {
             this.getQuestions();
             this.getUsers();
             this.getTags();
-            this.getNotices();
         },
 
         init() {
@@ -452,7 +456,15 @@ document.addEventListener('alpine:init', () => {
         },
 
         chatAvatarSeed(name) {
-            return String(name ?? 'User');
+            return encodeURIComponent(String(name ?? 'User'));
+        },
+
+        /**
+         * @param {string} text
+         * @returns {string}
+         */
+        chatAvatarURI(text) {
+            return `https://api.dicebear.com/7.x/notionists/svg?seed=${this.chatAvatarSeed(text)}&backgroundColor=eff6ff`;
         },
 
         chatTimelineItems() {
@@ -617,8 +629,16 @@ document.addEventListener('alpine:init', () => {
         },
 
         noticeDueTimeLabel(n) {
-            if (!n?.question?.due) return '';
-            return `残り時間: ${this.calcRemainingTimeAndString(n.question)}`;
+            if (!n?.question) return '';
+            const due = n.question.due;
+            if (due == null) return '';
+            const dueDate = due instanceof Date ? due : new Date(due);
+            if (Number.isNaN(dueDate.getTime())) return '';
+            const diffMs = dueDate - this.timeNow;
+            if (diffMs >= 0) {
+                return `残り時間: ${this.calcRemainingTimeAndString(n.question)}`;
+            }
+            return this.calcRemainingTimeAndString(n.question);
         },
 
         noticeQuestionTagsList(n) {
@@ -792,6 +812,7 @@ document.addEventListener('alpine:init', () => {
             } else {
                 this.activeQuestion.tags.push(tag);
             }
+            this.updateQuestion()
             this.refreshIcons();
         },
 
@@ -815,6 +836,7 @@ document.addEventListener('alpine:init', () => {
                     relatedQuestion: null,
                 });
             }
+            void this.updateQuestion();
             this.refreshIcons();
         },
 
@@ -863,6 +885,9 @@ document.addEventListener('alpine:init', () => {
 
         /** @returns {Promise<boolean>} PUT が成功したか、または送信不要で問題ない場合 true */
         async updateQuestion() {
+            // TODO; Toggleで未対応になった場合、SupportIDとSupportを削除し送信。サーバ側でもSupportをNullのものへと書き換えて対応者なしとする。
+            // TODO; Question更新時、SSEで送信されてデータを置き換えたMemoの内部は初期（ブランク）となっているため、更新後にもMemoの内部は書き換え内容にしたい。でないとAvatarのデータがブランクのものとなってしまう。
+            // TODO; Answer送信後、ステータスを完了へと更新する？一撃で帰ってこなかった場合の処理を考えないと終わらなさそう。
             const question = this.questions.filter(q => q.id === this.activeQuestion.id)[0];
 
             if (!_.isEqual(question, this.activeQuestion)) {
@@ -942,7 +967,6 @@ document.addEventListener('alpine:init', () => {
             const res = await fetch('/api/v1/question', { headers: this.apiHeaders(false) });
             const json = await res.json();
             const list = Array.isArray(json) ? json : [json];
-            console.log(list);
             this.questions = list.map((q) => this.toQuestionViewModel(q));
         },
 
@@ -950,13 +974,6 @@ document.addEventListener('alpine:init', () => {
             const res = await fetch('/api/v1/user/t', { headers: this.apiHeaders(false) });
             const json = await res.json();
             this.loginUser = User.fromJSON(json);
-        },
-
-        async getNotices() {
-            const res = await fetch('/api/v1/notice', { headers: this.apiHeaders(false) });
-            const json = await res.json();
-            const list = Array.isArray(json) ? json : [json];
-            this.notices = list.map((n) => Notice.fromJSON(n));
         },
 
         async getUsers() {
@@ -1053,8 +1070,23 @@ document.addEventListener('alpine:init', () => {
         },
 
         calcRemainingTimeAndString(question) {
-            const [hours, minutes] = this.calcRemainingTime(new Date(question.due), this.timeNow)
-            return `${hours}時間${minutes}分`;
+            const baseDate = new Date(question.due);
+            const d = this.timeNow;
+            const diff = baseDate - d;
+
+            if (diff >= 0) {
+                const [hours, minutes] = this.calcRemainingTime(baseDate, d);
+                return `${hours}時間${minutes}分`;
+            }
+
+            const overdueMs = Math.abs(diff);
+            const overdueHours = Math.floor(overdueMs / (1000 * 60 * 60));
+
+            if (overdueHours < 24) {
+                return `${overdueHours}時間超過中`;
+            }
+            const overdueDays = Math.floor(overdueHours / 24);
+            return `${overdueDays}日超過中`;
         },
 
         calcRemainingTime(baseDate, d = new Date()) {

@@ -18,34 +18,12 @@
     }
 </style>
 
-<script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('hrAppLogin', () => ({
-            login: {},
-            init() {
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-            },
-            async doLogin() {
-                console.log(this.login)
-                const res = await fetch('/login', {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: this.login.email, pass: this.login.pass })
-                })
-                if (!res.ok) {
-                    console.log("Login error.")
-                    return
-                }
-                const body = await res.json();
-                const redirect = body.redirect;
-                location.href = redirect;
-            }
-        }))
-    })
-</script>
+<!-- 4. Hash (shared util; login uses server-side EncryptPassword on plaintext pass) -->
+<script type="module" src="/static/js/hash.js"></script>
 
-<!-- 4. Alpine.js -->
+<!-- 5. Login Alpine component -->
+<script type="module" src="/static/js/login.js"></script>
+
+<!-- 6. Alpine.js -->
 <script defer src="/static/vendor/alpine.min.js"></script>
 {{end}}

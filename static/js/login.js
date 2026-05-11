@@ -1,0 +1,29 @@
+document.addEventListener('alpine:init', () => {
+  Alpine.data('hrAppLogin', () => ({
+    login: {},
+
+    init() {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    },
+
+    async doLogin() {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: this.login.email,
+          pass: this.login.pass,
+        }),
+      });
+      if (!res.ok) {
+        console.log('Login error.');
+        return;
+      }
+      const body = await res.json();
+      const redirect = body.redirect;
+      location.href = redirect;
+    },
+  }));
+});
