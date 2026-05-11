@@ -267,16 +267,16 @@ func (hm *HandlerManager) updateQuestionByID(api string, sendEvent func(string, 
 		}
 		hm.ne.UpdateQuestion(updatedModel)
 
-		sendData := body
-		for idx, memo := range form.Memos {
-			if memo.ID == 0 {
-				form.Memos[idx].ID = infrastructure.GetMaxByColumn[infrastructure.Memo](c.Request().Context(), hm.db, "id") + 1
-			}
+		// SSE には Memos.User / Answer.User までネストした完整形を載せたいので、DB から再読込して送る。
+		loaded, err := infrastructure.GetQuestion(c.Request().Context(), hm.db, updatedModel.ID)
+		if err != nil {
+			return err
 		}
-		if sendData, err = json.Marshal(form); err != nil {
+		payload, err := json.Marshal(infrastructure.QuestionFromEntity(loaded))
+		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
-		sendEvent(api, string(sendData))
+		sendEvent(api, string(payload))
 		return c.JSON(http.StatusOK, nil)
 	}
 }
