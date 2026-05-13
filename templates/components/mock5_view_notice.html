@@ -27,7 +27,7 @@
                             <template x-for="tag in noticeQuestionTagsList(n)" :key="tag.id">
                                 <span
                                     class="text-[10px] font-bold bg-gray-100 border px-1.5 py-0.5 rounded text-gray-500 uppercase"
-                                    x-text="tag.title"></span>
+                                    x-text="tagDisplayName(tag)"></span>
                             </template>
                         </div>
                     </div>

@@ -9,6 +9,7 @@ import (
 	"meetup/env"
 	"meetup/handler"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
@@ -18,7 +19,12 @@ import (
 )
 
 func init() {
-	godotenv.Load(".env")
+	if err := godotenv.Load(".env"); err != nil {
+		log.Fatalf(".envファイルの読み込みでエラーが発生しました。詳細: %v", err)
+	}
+
+	// アプリ上の時刻をJSTへと設定（UTC+9:00）
+	time.Local = time.FixedZone("JST", 9*60*60)
 }
 
 func main() {
@@ -63,7 +69,18 @@ func setupEcho() *echo.Echo {
 }
 
 func setupDB() (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(env.GetDSN()))
+	jst, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := gorm.Open(postgres.Open(env.GetDSN()), &gorm.Config{
+		// GORMがレコード作成・更新時に使う時刻をJSTに固定
+		NowFunc: func() time.Time {
+			return time.Now().In(jst)
+		},
+	})
+
 	if err != nil {
 		return nil, err
 	}

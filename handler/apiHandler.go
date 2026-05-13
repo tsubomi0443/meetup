@@ -271,7 +271,7 @@ func (hm *HandlerManager) updateQuestionByID(api string, sendEvent func(string, 
 		}
 		hm.ne.UpdateQuestion(updatedModel)
 
-		// SSE には Memos.User / Answer.User までネストした完整形を載せたいので、DB から再読込して送る。
+		// SSE には Memos.User / Answers.User までネストした完整形を載せたいので、DB から再読込して送る。
 		loaded, err := infrastructure.GetQuestion(c.Request().Context(), hm.db, updatedModel.ID)
 		if err != nil {
 			return err
@@ -335,6 +335,7 @@ func (hm *HandlerManager) getUserFromToken() echo.HandlerFunc {
 		}
 
 		return c.JSON(http.StatusOK, infrastructure.UserFromEntity(user))
+
 	}
 }
 

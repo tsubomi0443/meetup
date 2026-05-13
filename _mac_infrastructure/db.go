@@ -75,7 +75,7 @@ func UpdateInTransaction[T any](ctx context.Context, db *gorm.DB, model T, omit 
 // postgresTableCoalesceMaxID returns COALESCE(MAX(id), 0) for a whitelisted table name.
 func postgresTableCoalesceMaxID(tx *gorm.DB, table string) (int64, error) {
 	switch table {
-	case "memos", "tag_managers", "related_questions":
+	case "memos", "tag_managers", "related_questions", "answers", "refer_managers":
 	default:
 		return 0, fmt.Errorf("postgresTableCoalesceMaxID: unsupported table %q", table)
 	}
@@ -87,24 +87,24 @@ func postgresTableCoalesceMaxID(tx *gorm.DB, table string) (int64, error) {
 	return max, nil
 }
 
-// assignPostgreSQLBulkInsertZeros assigns sequential explicit primary keys to rows with ID==0 before
+// assignBulkInsertZeros assigns sequential explicit primary keys to rows with ID==0 before
 // GORM emits a multi-row INSERT. Otherwise one statement can mix RETURNING/Default nextval rows with rows
-// that reuse client ids already present in MAX(id)...nextval bracket, producing memos_pkey duplicate key.
-func assignMemoBulkInsertZeros(tx *gorm.DB, rows []Memo) error {
+// that reuse client ids already present in MAX(id)...nextval bracket, producing *_pkey duplicate key errors.
+func assignBulkInsertZeros[T any](tx *gorm.DB, rows []T, table string, id func(*T) *int64) error {
 	hasZero := false
 	batchMax := int64(0)
 	for i := range rows {
-		id := rows[i].ID
-		if id == 0 {
+		v := *id(&rows[i])
+		if v == 0 {
 			hasZero = true
-		} else if id > batchMax {
-			batchMax = id
+		} else if v > batchMax {
+			batchMax = v
 		}
 	}
 	if !hasZero {
 		return nil
 	}
-	dbMax, err := postgresTableCoalesceMaxID(tx, "memos")
+	dbMax, err := postgresTableCoalesceMaxID(tx, table)
 	if err != nil {
 		return err
 	}
@@ -113,105 +113,105 @@ func assignMemoBulkInsertZeros(tx *gorm.DB, rows []Memo) error {
 		next = dbMax
 	}
 	for i := range rows {
-		if rows[i].ID == 0 {
+		if *id(&rows[i]) == 0 {
 			next++
-			rows[i].ID = next
+			*id(&rows[i]) = next
 		}
 	}
 	return nil
 }
 
-func assignTagManagerBulkInsertZeros(tx *gorm.DB, rows []TagManager) error {
-	hasZero := false
-	batchMax := int64(0)
-	for i := range rows {
-		id := rows[i].ID
-		if id == 0 {
-			hasZero = true
-		} else if id > batchMax {
-			batchMax = id
+// syncChildrenByKey は親 FK（parentColumn = parentID）配下の子行を、キーで突き合わせて
+// INSERT / UPDATE /（論理または物理）DELETE する。want は in-place で主キーが埋め戻される。
+// softDelete=true のとき削除は GORM の Delete（deleted_at）、false のとき Unscoped 物理削除。
+func syncChildrenByKey[T any, K comparable](
+	tx *gorm.DB,
+	table string,
+	parentColumn string,
+	parentID int64,
+	want []T,
+	keyFn func(*T) K,
+	pkFn func(*T) *int64,
+	applyUpdate func(tx *gorm.DB, prev T, next *T) error,
+	softDelete bool,
+) (deletedIDs []int64, err error) {
+	var existing []T
+	if err := tx.Where(parentColumn+" = ?", parentID).Find(&existing).Error; err != nil {
+		return nil, err
+	}
+
+	var zeroK K
+	byKey := make(map[K]T, len(existing))
+	for _, row := range existing {
+		byKey[keyFn(&row)] = row
+	}
+
+	var insertIdx []int
+	for i := range want {
+		k := keyFn(&want[i])
+		if k == zeroK {
+			insertIdx = append(insertIdx, i)
+			continue
 		}
-	}
-	if !hasZero {
-		return nil
-	}
-	dbMax, err := postgresTableCoalesceMaxID(tx, "tag_managers")
-	if err != nil {
-		return err
-	}
-	next := batchMax
-	if dbMax > next {
-		next = dbMax
-	}
-	for i := range rows {
-		if rows[i].ID == 0 {
-			next++
-			rows[i].ID = next
+		prev, ok := byKey[k]
+		if !ok {
+			insertIdx = append(insertIdx, i)
+			continue
 		}
+		*pkFn(&want[i]) = *pkFn(&prev)
+		if applyUpdate != nil {
+			if err := applyUpdate(tx, prev, &want[i]); err != nil {
+				return nil, err
+			}
+		}
+		delete(byKey, k)
 	}
-	return nil
+
+	var toDelete []int64
+	for _, row := range byKey {
+		toDelete = append(toDelete, *pkFn(&row))
+	}
+	if len(toDelete) > 0 {
+		var model T
+		if softDelete {
+			if err := tx.Where("id IN ?", toDelete).Delete(&model).Error; err != nil {
+				return nil, err
+			}
+		} else {
+			if err := tx.Unscoped().Where("id IN ?", toDelete).Delete(&model).Error; err != nil {
+				return nil, err
+			}
+		}
+		deletedIDs = append(deletedIDs, toDelete...)
+	}
+
+	if len(insertIdx) == 0 {
+		return deletedIDs, nil
+	}
+
+	toInsert := make([]T, len(insertIdx))
+	for j, i := range insertIdx {
+		toInsert[j] = want[i]
+	}
+	if err := assignBulkInsertZeros(tx, toInsert, table, pkFn); err != nil {
+		return deletedIDs, err
+	}
+	if err := tx.Create(&toInsert).Error; err != nil {
+		return deletedIDs, err
+	}
+	for j, i := range insertIdx {
+		*pkFn(&want[i]) = *pkFn(&toInsert[j])
+	}
+	return deletedIDs, nil
 }
 
-func assignRelatedQuestionBulkInsertZeros(tx *gorm.DB, rows []RelatedQuestion) error {
-	hasZero := false
-	batchMax := int64(0)
-	for i := range rows {
-		id := rows[i].ID
-		if id == 0 {
-			hasZero = true
-		} else if id > batchMax {
-			batchMax = id
-		}
-	}
-	if !hasZero {
-		return nil
-	}
-	dbMax, err := postgresTableCoalesceMaxID(tx, "related_questions")
-	if err != nil {
-		return err
-	}
-	next := batchMax
-	if dbMax > next {
-		next = dbMax
-	}
-	for i := range rows {
-		if rows[i].ID == 0 {
-			next++
-			rows[i].ID = next
-		}
-	}
-	return nil
-}
-
-// updateQuestionInTransaction は Question の1行更新と、QuestionToEntity で組み立てた
-// 1対多の関連（Answer, Support, TagManagers, Memos, RelatedQuestions）の同期を1トランザクションで行う。
+// UpdateQuestionInTransaction は Question の1行更新と、QuestionToEntity で組み立てた
+// 1対多の関連（Answer, Support, TagManagers, Memos, RelatedQuestions）を、差分同期（INSERT/UPDATE/DELETE）
+// で1トランザクションにまとめる。子の削除は原則論理削除（related_questions のみ物理削除。理由は該当コメント参照）。
 // フォーム上の下位の質問（SubQuestions）やエスカレーション等は本関数では永続化しない。
 func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) error {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 1) Answer: 新規作成 or 既存更新し、親の answer_id を整合させる
-		if q.Answer != nil {
-			a := *q.Answer
-			if a.ID == 0 {
-				if err := tx.Create(&a).Error; err != nil {
-					return err
-				}
-				aid := a.ID
-				q.AnswerID = &aid
-				q.Answer = &a
-			} else {
-				if _, err := gorm.G[Answer](tx).
-					Omit("User", "ReferManagers").
-					Where("id = ?", a.ID).
-					Updates(ctx, a); err != nil {
-					return err
-				}
-				if q.AnswerID == nil {
-					aid := a.ID
-					q.AnswerID = &aid
-				}
-			}
-		}
-		// 2) Support: 新規作成 or 既存更新、またはフォームに無ければ既存の support を detach
+		// 1) Support: 新規作成 or 既存更新、またはフォームに無ければ既存の support を detach
 		if q.Support != nil {
 			s := *q.Support
 			if s.ID == 0 {
@@ -237,15 +237,14 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 			}
 			q.SupportID = nil
 		}
-		// 3) 親の questions: スカラ列と FK のみ（CreatedAt は更新で変えない）
+		// 2) 親の questions: スカラ列と FK のみ（CreatedAt は更新で変えない）
 		if _, err := gorm.G[Question](tx).
-			Omit("Answer", "Memos", "Notices", "TagManagers", "Support", "RelatedQuestions", "CreatedAt").
+			Omit("Answer", "Memos", "Notices", "TagManagers", "Support", "RelatedQuestions", "SenderTalks", "TalkroomID", "CreatedAt").
 			Where("id = ?", q.ID).
 			Updates(ctx, q); err != nil {
 			return err
 		}
-		// 4) タグ紐づけ（tag_managers）— has_many Replace は子の FK を NULL 更新するため
-		// NOT NULL 制約（question_id）と相性が悪い。DELETE + INSERT で置き換える。
+		// 3) タグ紐づけ（tag_managers）— 自然キー tag_id で差分同期、削除は論理削除
 		var tagRows []TagManager
 		for _, tm := range q.TagManagers {
 			if tm.TagID == 0 {
@@ -257,44 +256,102 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 				QuestionID: q.ID,
 			})
 		}
-		if err := tx.Unscoped().Where("question_id = ?", q.ID).Delete(&TagManager{}).Error; err != nil {
+		if _, err := syncChildrenByKey(tx, "tag_managers", "question_id", q.ID, tagRows,
+			func(t *TagManager) int64 { return t.TagID },
+			func(t *TagManager) *int64 { return &t.ID },
+			nil,
+			true,
+		); err != nil {
 			return err
 		}
-		if len(tagRows) > 0 {
-			if err := assignTagManagerBulkInsertZeros(tx, tagRows); err != nil {
-				return err
+		// 4) 回答（answers）— ID で差分同期、削除は論理削除。refer_managers は各回答で refer_id 自然キーで差分・論理削除。
+		var answerRows []Answer
+		var referRowsPerAnswer [][]ReferManager
+		for _, a := range q.Answer {
+			content := strings.TrimSpace(a.Content)
+			if a.UserID == 0 || content == "" {
+				continue
 			}
-			if err := tx.Create(&tagRows).Error; err != nil {
+			answerRows = append(answerRows, Answer{
+				ID:         a.ID,
+				UserID:     a.UserID,
+				Content:    content,
+				IsFinal:    a.IsFinal,
+				QuestionID: q.ID,
+			})
+			var refs []ReferManager
+			for _, rm := range a.ReferManagers {
+				if rm.ReferID == 0 {
+					continue
+				}
+				refs = append(refs, ReferManager{ReferID: rm.ReferID})
+			}
+			referRowsPerAnswer = append(referRowsPerAnswer, refs)
+		}
+		deletedAnswerIDs, err := syncChildrenByKey(tx, "answers", "question_id", q.ID, answerRows,
+			func(a *Answer) int64 { return a.ID },
+			func(a *Answer) *int64 { return &a.ID },
+			func(tx *gorm.DB, prev Answer, next *Answer) error {
+				return tx.Model(&Answer{}).Where("id = ?", prev.ID).
+					Updates(map[string]any{
+						"content":  next.Content,
+						"is_final": next.IsFinal,
+						"user_id":  next.UserID,
+					}).Error
+			},
+			true,
+		)
+		if err != nil {
+			return err
+		}
+		if len(deletedAnswerIDs) > 0 {
+			if err := tx.Where("answer_id IN ?", deletedAnswerIDs).Delete(&ReferManager{}).Error; err != nil {
 				return err
 			}
 		}
-		// 5) メモ（memos）— 同じ理由で Association.Replace ではなく DELETE + INSERT
+		for i := range answerRows {
+			refs := referRowsPerAnswer[i]
+			for j := range refs {
+				refs[j].AnswerID = answerRows[i].ID
+			}
+			if _, err := syncChildrenByKey(tx, "refer_managers", "answer_id", answerRows[i].ID, refs,
+				func(r *ReferManager) int64 { return r.ReferID },
+				func(r *ReferManager) *int64 { return &r.ID },
+				nil,
+				true,
+			); err != nil {
+				return err
+			}
+		}
+		// 5) メモ（memos）— ID で差分同期、削除は論理削除
 		var memoRows []Memo
 		for _, m := range q.Memos {
 			content := strings.TrimSpace(m.Content)
 			if m.UserID == 0 || content == "" {
 				continue
 			}
-			memo := Memo{
+			memoRows = append(memoRows, Memo{
 				ID:         m.ID,
 				UserID:     m.UserID,
 				Content:    content,
 				QuestionID: q.ID,
-			}
-			memoRows = append(memoRows, memo)
+			})
 		}
-		if err := tx.Unscoped().Where("question_id = ?", q.ID).Delete(&Memo{}).Error; err != nil {
+		if _, err := syncChildrenByKey(tx, "memos", "question_id", q.ID, memoRows,
+			func(m *Memo) int64 { return m.ID },
+			func(m *Memo) *int64 { return &m.ID },
+			func(tx *gorm.DB, prev Memo, next *Memo) error {
+				return tx.Model(&Memo{}).Where("id = ?", prev.ID).
+					Updates(map[string]any{"content": next.Content, "user_id": next.UserID}).Error
+			},
+			true,
+		); err != nil {
 			return err
 		}
-		if len(memoRows) > 0 {
-			if err := assignMemoBulkInsertZeros(tx, memoRows); err != nil {
-				return err
-			}
-			if err := tx.Create(&memoRows).Error; err != nil {
-				return err
-			}
-		}
-		// 6) 関連質問（related_questions）— tag_managers / memos と同様に DELETE + INSERT
+		// 6) 関連質問（related_questions）— 自然キー related_question_id で差分同期。
+		// doc/db/INIT.sql の uq_related_questions UNIQUE(question_id, related_question_id) により、
+		// 論理削除（deleted_at をセット）してもユニーク制約が deleted_at を区別しないため、
+		// 同じ自然キーで再追加すると衝突する。そのためここだけ物理削除（Unscoped）で同期する。
 		var relatedRows []RelatedQuestion
 		for _, rq := range q.RelatedQuestions {
 			if rq.RelatedQuestionID == 0 || rq.RelatedQuestionID == q.ID {
@@ -306,16 +363,13 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q Question) e
 				RelatedQuestionID: rq.RelatedQuestionID,
 			})
 		}
-		if err := tx.Unscoped().Where("question_id = ?", q.ID).Delete(&RelatedQuestion{}).Error; err != nil {
+		if _, err := syncChildrenByKey(tx, "related_questions", "question_id", q.ID, relatedRows,
+			func(r *RelatedQuestion) int64 { return r.RelatedQuestionID },
+			func(r *RelatedQuestion) *int64 { return &r.ID },
+			nil,
+			false,
+		); err != nil {
 			return err
-		}
-		if len(relatedRows) > 0 {
-			if err := assignRelatedQuestionBulkInsertZeros(tx, relatedRows); err != nil {
-				return err
-			}
-			if err := tx.Create(&relatedRows).Error; err != nil {
-				return err
-			}
 		}
 		return nil
 	})
@@ -402,12 +456,12 @@ func GetQuestion(ctx context.Context, db *gorm.DB, id int64) (model Question, er
 		Preload("TagManagers.Tag.Category", commonPreloadBuilder()).
 		Preload("RelatedQuestions", commonPreloadBuilder()).
 		Preload("RelatedQuestions.RelatedQuestion", commonPreloadBuilder()).
+		Preload("SenderTalks", commonPreloadBuilder()).
+		Preload("SenderTalks.Sender", commonPreloadBuilder()).
 		Preload("Support", commonPreloadBuilder()).
 		Preload("Support.User", userPreloadBuilder(false)).
 		Preload("Support.User.Role", commonPreloadBuilder()).
 		Preload("Support.SupportStatus", commonPreloadBuilder()).
-		Preload("RelatedQuestions", commonPreloadBuilder()).
-		Preload("RelatedQuestions.RelatedQuestion", commonPreloadBuilder()).
 		Where("id = ?", id).
 		First(ctx)
 	return
@@ -428,12 +482,12 @@ func GetQuestions(ctx context.Context, db *gorm.DB) (models []Question, err erro
 		Preload("TagManagers.Tag.Category", commonPreloadBuilder()).
 		Preload("RelatedQuestions", commonPreloadBuilder()).
 		Preload("RelatedQuestions.RelatedQuestion", commonPreloadBuilder()).
+		Preload("SenderTalks", commonPreloadBuilder()).
+		Preload("SenderTalks.Sender", commonPreloadBuilder()).
 		Preload("Support", commonPreloadBuilder()).
 		Preload("Support.User", userPreloadBuilder(false)).
 		Preload("Support.User.Role", commonPreloadBuilder()).
 		Preload("Support.SupportStatus", commonPreloadBuilder()).
-		Preload("RelatedQuestions", commonPreloadBuilder()).
-		Preload("RelatedQuestions.RelatedQuestion", commonPreloadBuilder()).
 		Order("id").
 		Find(ctx)
 	return
@@ -497,9 +551,9 @@ func GetNoticeByQuestionSilent(ctx context.Context, db *gorm.DB, question Questi
 func RegisterNoticeByQuestionID(ctx context.Context, db *gorm.DB, questionID int64) error {
 	var content = "質問の回答期日が近づいています。"
 	notice := Notice{
-		TypeID:       3,
-		QuestionID:   &questionID,
-		Content:      &content,
+		TypeID:     3,
+		QuestionID: &questionID,
+		Content:    &content,
 	}
 	return gorm.G[Notice](db).Create(ctx, &notice)
 }

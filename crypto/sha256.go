@@ -8,6 +8,8 @@ import (
 	"meetup/env"
 )
 
+const REQUIRE_MIN_LOOP = 3
+
 func EncryptSHA256(target string) string {
 	newTarget := fmt.Sprintf("%s-%s", target, env.GetJWTKey())
 	hash := sha256.Sum256([]byte(newTarget))
@@ -17,7 +19,7 @@ func EncryptSHA256(target string) string {
 // EncryptPassword applies EncryptSHA256 iteratively for stored credentials.
 func EncryptPassword(pass string) string {
 	password := pass
-	for cnt := len(pass)/2 + 3; cnt > 0; cnt-- {
+	for cnt := len(pass)/2 + REQUIRE_MIN_LOOP; cnt > 0; cnt-- {
 		password = EncryptSHA256(password)
 	}
 	return password

@@ -9,7 +9,7 @@
         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showTagModal = true">+
             タグ追加</button>
     </div>
-    <div class="flex flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto no-scrollbar">
+    <div class="flex flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto no-scrollbar" x-ref="scrollBox-tag">
         <table class="table w-full table-pin-rows">
             <thead>
                 <tr class="bg-gray-50">
@@ -28,7 +28,7 @@
                                     class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center font-bold text-slate-600 text-xs">
                                     <i data-lucide="tag" class="w-4 h-4"></i>
                                 </div>
-                                <div class="font-bold text-sm" x-text="tag.title"></div>
+                                <div class="font-bold text-sm" x-text="tagDisplayName(tag)"></div>
                             </div>
                         </td>
                         <td>

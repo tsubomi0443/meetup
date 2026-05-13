@@ -10,48 +10,43 @@ erDiagram
         datetime updated_at
         datetime deleted_at
     }
-    USER ||--|| ROLE: "ユーザーは一つの権限を持つ (Admin>Manager>Staff>Emproyee)"
 
     ROLE {
         number id PK
-        string role_name
+        string name
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
 
+    ROLE ||--o{ USER : "ユーザーは一つの権限を持つ"
+
     QUESTION {
         number id PK
-        number origin_question_id FK "元の質問ID (エスカレーション元の場合)"
-        number answer_id FK "紐づく回答 (最大1件)"
+        number origin_question_id FK
         number support_id FK
+        string talkroom_id "LINEWORKSのトークルームID"
         string title
-        string content
+        text content
         datetime due
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
-    QUESTION ||--o| ANSWER: "質問は一つの回答を持つ (0または1)"
-    QUESTION ||--o| SUPPORT: "質問は一つのサポート情報に紐づく"
-    QUESTION ||--o{ ESCALATION : "エスカレーション元 (from_question_id)"
-    QUESTION ||--o{ ESCALATION : "エスカレーション先 (to_question_id)"
-    QUESTION ||--o{ TAG_MANAGER: "質問は複数のタグを持つことができる"
-    QUESTION ||--o{ MEMO: "質問には複数のメモが関連付けられる"
-    QUESTION ||--o{ RELATED_QUESTION: "１つの質問に対して、複数の関連する質問を持つ（question_id 側）"
-    QUESTION ||--o{ RELATED_QUESTION: "１つの質問に対して、複数の関連する質問を持つ（related_question_id 側）"
 
     ANSWER {
         number id PK
         number user_id FK
-        string content
-        datetime answered_at
+        number question_id FK
+        text content
+        boolean is_final
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
-    ANSWER ||--|| USER: "回答は一つのユーザーによって作成される"
-    ANSWER ||--o{ REFER_MANAGER: "回答は複数の参照情報を持つことができる"
+
+    QUESTION ||--o{ ANSWER : "質問は複数の回答を持つ"
+    USER ||--o{ ANSWER : "回答は一つのユーザーによって作成される"
 
     SUPPORT {
         number id PK
@@ -61,52 +56,35 @@ erDiagram
         datetime updated_at
         datetime deleted_at
     }
-    SUPPORT ||--|| USER: "サポートは一つのユーザーに紐づく"
-    SUPPORT ||--|| SUPPORT_STATUS: "サポートは一つのステータスを持つ"
 
     SUPPORT_STATUS {
         number id PK
-        string title
+        string name
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
+
+    USER ||--o{ SUPPORT : "サポートは一つのユーザーに紐づく"
+    SUPPORT_STATUS ||--o{ SUPPORT : "サポートは一つのステータスを持つ"
+    QUESTION ||--o| SUPPORT : "質問は一つのサポートに紐づく（任意）"
 
     MEMO {
         number id PK
         number question_id FK
         number user_id FK
-        string content
-        datetime created_at
-        datetime updated_at
-        datetime deleted_at
-    }
-    MEMO ||--|| USER: "メモは一つのユーザーによって作成される"
-
-    REFER {
-        number id PK
-        string title
-        string url
-        datetime created_at
-        datetime updated_at
-        datetime deleted_at
-    }
-    REFER ||--o{ REFER_MANAGER: "参照は複数の参照管理情報に紐づく"
-
-    ESCALATION {
-        number id PK
-        number from_question_id FK "エスカレーション元の質問ID"
-        number to_question_id FK "エスカレーション先の質問ID"
-        datetime escalated_at
+        text content
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
 
-    REFER_MANAGER {
+    USER ||--o{ MEMO : "メモは一つのユーザーによって作成される"
+    QUESTION ||--o{ MEMO : "質問には複数のメモが関連付けられる"
+
+    CATEGORY {
         number id PK
-        number answer_id FK
-        number refer_id FK
+        string name
         datetime created_at
         datetime updated_at
         datetime deleted_at
@@ -121,8 +99,8 @@ erDiagram
         datetime updated_at
         datetime deleted_at
     }
-    TAG ||--|| CATEGORY: "タグは一つのカテゴリに属する"
-    TAG ||--o{ TAG_MANAGER: "タグは複数のタグ管理情報に紐づく"
+
+    CATEGORY ||--o{ TAG : "タグは一つのカテゴリに属する"
 
     TAG_MANAGER {
         number id PK
@@ -133,7 +111,44 @@ erDiagram
         datetime deleted_at
     }
 
-    CATEGORY {
+    TAG ||--o{ TAG_MANAGER : "タグは複数のタグ管理に紐づく"
+    QUESTION ||--o{ TAG_MANAGER : "質問は複数のタグを持つことができる"
+
+    REFER {
+        number id PK
+        string title
+        string url
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+
+    REFER_MANAGER {
+        number id PK
+        number answer_id FK
+        number refer_id FK
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+
+    ANSWER ||--o{ REFER_MANAGER : "回答は複数の参照情報を持つことができる"
+    REFER ||--o{ REFER_MANAGER : "参照は複数の参照管理に紐づく"
+
+    ESCALATION {
+        number id PK
+        number from_question_id FK
+        number to_question_id FK
+        datetime escalated_at
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+
+    QUESTION ||--o{ ESCALATION : "エスカレーション元"
+    QUESTION ||--o{ ESCALATION : "エスカレーション先"
+
+    NOTICE_TYPE {
         number id PK
         string name
         datetime created_at
@@ -146,21 +161,14 @@ erDiagram
         number type_id FK
         number question_id FK
         string content
-        datetime displayDue
+        datetime display_due
         datetime created_at
         datetime updated_at
         datetime deleted_at
     }
-    NOTICE ||--|| NOTICE_TYPE: "通知は必ず１つの通知タイプを持つ"
-    NOTICE ||--o| QUESTION: "質問期限通知の場合は質問を持っている場合もある"
 
-    NOTICE_TYPE {
-        number id PK
-        string name "SYSTEM|ALERT|QUESTION"
-        datetime created_at
-        datetime updated_at
-        datetime deleted_at
-    }
+    NOTICE_TYPE ||--o{ NOTICE : "通知は一つの通知タイプを持つ"
+    QUESTION ||--o{ NOTICE : "期限通知などで質問に紐づく場合がある"
 
     RELATED_QUESTION {
         number id PK
@@ -170,3 +178,27 @@ erDiagram
         datetime updated_at
         datetime deleted_at
     }
+
+    QUESTION ||--o{ RELATED_QUESTION : "関連質問（question_id 側）"
+    QUESTION ||--o{ RELATED_QUESTION : "関連質問（related_question_id 側）"
+
+    SENDER {
+        number id PK
+        string uid "LINEWORKSのユーザID（一意）"
+        string name
+        string department_name
+    }
+
+    SENDER_TALK {
+        number id PK
+        number sender_id FK
+        number question_id FK
+        string talkroom_id "LINEWORKSのトークルームID"
+        text content
+        datetime created_at
+        datetime updated_at
+        datetime deleted_at
+    }
+
+    SENDER ||--o{ SENDER_TALK : "送信者のトーク履歴"
+    QUESTION ||--o{ SENDER_TALK : "質問に紐づく外部チャット"

@@ -9,7 +9,7 @@
         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showAddUserModal = true">+
             ユーザー追加</button>
     </div>
-    <div class="flex flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto no-scrollbar">
+    <div class="flex flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 overflow-y-auto no-scrollbar" x-ref="scrollBox-user">
         <table class="table w-full table-pin-rows">
             <thead>
                 <tr class="bg-gray-50">
@@ -24,7 +24,7 @@
                         <td>
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center font-bold text-slate-600 text-xs"
-                                    x-text="userInitialChar(u)"></div>
+                                    x-html="`${makeAvatar(u.name)}`"></div>
                                 <div>
                                     <div class="font-bold text-sm" x-text="userDisplayName(u)"></div>
                                     <div class="text-[10px] text-gray-400" x-text="userDisplayEmail(u)"></div>

@@ -50,8 +50,8 @@ func (hm *HandlerManager) loginHandler() echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
-		info.P = crypto.EncryptPassword(info.P)
-		user, err := infrastructure.GetUserInfo(c.Request().Context(), hm.db, info.E, info.P)
+		encryptedPass := crypto.EncryptPassword(info.P)
+		user, err := infrastructure.GetUserInfo(c.Request().Context(), hm.db, info.E, encryptedPass)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
 		}

@@ -114,11 +114,6 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('hrAppData', () => ({
         timeNow: new Date(),
         isSidebarOpen: true,
-        scrollBoxFuncName: {
-            question: 'question',
-            user: 'user',
-            tag: 'tag',
-        },
         currentView: 'home',
         viewMode: 'card',
         isManager: true,
@@ -186,7 +181,7 @@ document.addEventListener('alpine:init', () => {
 
         get filteredQuestions() {
             let result = this.questions.filter(q => {
-                const matchesTag = this.selectedTags.length === 0 || q.tags.some(tag => this.selectedTags.includes(this.tagDisplayName(tag)));
+                const matchesTag = this.selectedTags.length === 0 || q.tags.some(tag => this.selectedTags.includes(tag.title));
                 const matchesSearch = q.title.includes(this.searchQuery) || q.content.includes(this.searchQuery) || q.sender.includes(this.searchQuery);
                 const st = q.support?.supportStatus?.title ?? '';
                 let matchesStatus = true;
@@ -414,11 +409,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         questionStatusTitle(q) {
-            if (!q?.support?.supportStatus?.title && !q?.support?.supportStatus?.name) return '';
+            if (!q?.support?.supportStatus?.title) return '';
             const id = Number(q?.support?.supportStatusId);
             const title = this.statusTitleMap[id];
 
-            this.activeQuestion.support.supportStatus = {id: id, name: title, title: title}
+            this.activeQuestion.support.supportStatus = {id: id, title: title}
             return title;
         },
 
@@ -462,7 +457,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         userRoleDisplayName(u) {
-            if (u?.role?.name) return String(u.role.name);
+            if (u?.role && u.role.roleName) return String(u.role.roleName);
             return '';
         },
 
@@ -498,8 +493,8 @@ document.addEventListener('alpine:init', () => {
             return String(memo?.content ?? '');
         },
 
-        chatAnswerContent(answer) {
-            return String(answer?.content ?? '');
+        chatAnswerContent() {
+            return String(this.activeQuestion?.answer?.content ?? '');
         },
 
         isSelfMemo(memo) {
@@ -507,34 +502,10 @@ document.addEventListener('alpine:init', () => {
             return Number(memo.userId) === Number(this.loginUser.id);
         },
 
-        isSelfAnswer(answer) {
-            if (this.loginUser?.id == null || answer?.userId == null) return false;
-            return Number(answer.userId) === Number(this.loginUser.id);
-        },
-
-        makeAvatar(text) {
-            return createAvatarBy(text, AVATAR_SIZE.ZERO);
-        },
-
-        chatBubbleColorByKind(kind) {
-            switch (kind) {
-                case 'memo':
-                    return 'chat-bubble-accent';
-                case 'answer':
-                    return '';
-                case 'talk':
-                    return 'chat-bubble-secondary';
-                default:
-                    return '';
-            }
-        },
-
-        hasActiveQuestionAnswers() {
-            return Array.isArray(this.activeQuestion?.answers) && this.activeQuestion.answers.length > 0;
-        },
-
-        tagDisplayName(tag) {
-            return String(tag?.name ?? tag?.title ?? '');
+        isSelfAnswer() {
+            const a = this.activeQuestion?.answer;
+            if (this.loginUser?.id == null || a?.userId == null) return false;
+            return Number(a.userId) === Number(this.loginUser.id);
         },
 
         chatAvatarSeed(name) {
@@ -555,38 +526,22 @@ document.addEventListener('alpine:init', () => {
                 userId: memo.userId,
                 userName: memo.user?.name ?? '',
                 content: this.chatMemoContent(memo),
-                createdAt: memo.createdAt ? new Date(memo.createdAt) : null,
-                createdAtStr: memo.createdAt ? this.timeFormattMMDDHHMM(memo.createdAt) : '',
                 _origIdx: i,
                 memo: memo,
             }));
 
-            const answers = (this.activeQuestion?.answers ?? []).map((answer, i) => ({
-                kind: 'answer',
-                userId: answer.userId,
-                userName: answer.user?.name ?? '',
-                content: this.chatAnswerContent(answer),
-                createdAt: answer.createdAt ? new Date(answer.createdAt) : null,
-                createdAtStr: answer.createdAt ? this.timeFormattMMDDHHMM(answer.createdAt) : '',
-                _origIdx: memos.length + i,
-                answer: answer,
-            }));
-
-            const senderTalks = (this.activeQuestion?.senderTalks ?? []).map((talk, i) => {
-                const sender = talk.sender;
-                return ({
-                    kind: 'talk',
-                    userId: sender.id,
-                    userName: sender.name,
-                    content: talk.content,
-                    createdAt: talk.createdAt ? new Date(talk.createdAt) : null,
-                    createdAtStr: talk.createdAt ? this.timeFormattMMDDHHMM(talk.createdAt) : '',
-                    _origIdx: memos.length + answers.length + i,
-                    talk: talk,
+            const answer = this.activeQuestion?.answer;
+            const items = [...memos];
+            if (answer) {
+                items.push({
+                    kind: 'answer',
+                    userId: answer.userId,
+                    userName: answer.user?.name ?? '',
+                    content: this.chatAnswerContent(),
+                    _origIdx: memos.length,
+                    answer: answer,
                 });
-            });
-
-            const items = [...memos, ...answers, ...senderTalks];
+            }
             items.sort((x, y) => {
                 const timeKey = (it) => {
                     if (!it.createdAt) return Number.POSITIVE_INFINITY;
@@ -603,20 +558,20 @@ document.addEventListener('alpine:init', () => {
 
         isSelfChatItem(item) {
             if (item?.kind === 'memo') return this.isSelfMemo(item.memo);
-            if (item?.kind === 'answer') return this.isSelfAnswer(item.answer);
+            if (item?.kind === 'answer') return this.isSelfAnswer();
             return false;
         },
 
         activeQuestionTagButtonLabel() {
             const tags = this.activeQuestion?.tags;
             if (!Array.isArray(tags) || tags.length === 0) return 'タグを選択';
-            return tags.map((t) => this.tagDisplayName(t)).filter(Boolean).join(', ');
+            return tags.map((t) => t.title).join(', ');
         },
 
         isActiveQuestionTagSelected(tag) {
             const tags = this.activeQuestion?.tags;
             if (!Array.isArray(tags) || !tag) return false;
-            return tags.filter((t) => t.id === tag.id || this.tagDisplayName(t) === this.tagDisplayName(tag)).length === 1;
+            return tags.filter((t) => t.title === tag.title).length === 1;
         },
 
         activeQuestionDateOrPlaceholder() {
@@ -752,12 +707,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         countQuestionsUsingTagTitle(tag) {
-            const title = tag?.name != null ? String(tag.name) : String(tag?.title ?? '');
+            const title = tag?.title != null ? String(tag.title) : '';
             if (!title) return 0;
             return this.questions.filter((q) => {
                 const tags = q?.tags;
                 if (!Array.isArray(tags)) return false;
-                return tags.some((t) => t && (t.name === title || t.title === title));
+                return tags.some((t) => t && t.title === title);
             }).length;
         },
 
@@ -766,30 +721,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         tagCategoryDisplayName(tag) {
-            if (tag?.category && (tag.category.name || tag.category.categoryName)) {
-                return String(tag.category.name ?? tag.category.categoryName);
+            if (tag?.category && tag.category.categoryName) {
+                return String(tag.category.categoryName);
             }
             return '';
         },
 
-        /**
-         * 
-         * @param {Date|String} dt 
-         * @param {String[]} requireUnit 
-         * @returns {String} MM/DD hh:mm
-         */
-        timeFormattMMDDHHMM(dt) {
-            const formatter = new Intl.DateTimeFormat('ja-JP', {
-                month: '2-digit',  // "01月" （2桁固定）
-                day: '2-digit',    // "02日" （2桁固定）
-                hour: '2-digit',   // "15時"
-                minute: '2-digit', // "04分"
-                hour12: false      // 24時間表記
-            });
-            return formatter.format(dt instanceof Date ? dt : new Date(dt));
-        },
-
-        currentTimeFormattedHHMMSS(dt = new Date()) {
+        currentTimeFormatted(dt = new Date()) {
             return new Intl.DateTimeFormat('ja-JP', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -812,9 +750,9 @@ document.addEventListener('alpine:init', () => {
                 : 0;
             return {
                 id: question.id,
-                userId: firstSenderTalk(question)?.sender?.id ?? question.support?.user?.id ?? null,
-                sender: senderNameFromQuestion(question),
-                department: senderDepartmentFromQuestion(question),
+                userId: question.support?.user?.id ?? null,
+                sender: question.support?.user?.name ?? '不明',
+                department: 'ここに部署名',
                 title: question.title ?? '',
                 content: question.content ?? '',
                 support: ensureSupportForView(question.support),
@@ -826,8 +764,7 @@ document.addEventListener('alpine:init', () => {
                 due: dueValid ? due : null,
                 relatedQuestions: this.normalizeRelatedQuestionsForViewModel(question),
                 memos: normalizeMemosForViewModel(question),
-                senderTalks: question.senderTalks ?? [],
-                answers: normalizeAnswersForViewModel(question),
+                answer: normalizeAnswerForViewModel(question),
             };
         },
 
@@ -911,12 +848,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         toggleTag(tag) {
-            const name = this.tagDisplayName(tag);
-            if (!name) return;
-            if (this.selectedTags.includes(name)) {
-                this.selectedTags = this.selectedTags.filter(t => t !== name);
+            if (this.selectedTags.includes(tag.title)) {
+                this.selectedTags = this.selectedTags.filter(t => t !== tag.title);
             } else {
-                this.selectedTags.push(name);
+                this.selectedTags.push(tag.title);
             }
             this.refreshIcons();
         },
@@ -1001,50 +936,6 @@ document.addEventListener('alpine:init', () => {
             this.refreshIcons();
         },
 
-        /** 詳細画面から回答を送信し、PUT で永続化する */
-        async submitAnswer() {
-            const text = String(this.detailComposerDraft ?? '').trim();
-            if (!text) return;
-
-            const uid = this.loginUser?.id;
-            if (uid == null || uid === '') {
-                window.alert('ログイン情報がありません');
-                return;
-            }
-
-            const qid = this.activeQuestion?.id;
-            if (!qid) return;
-
-            if (!Array.isArray(this.activeQuestion.memos)) {
-                this.activeQuestion.memos = [];
-            }
-            if (!Array.isArray(this.activeQuestion.answers)) {
-                this.activeQuestion.answers = [];
-            }
-
-            const newAnswer = {
-                id: 0,
-                questionId: String(qid),
-                userId: String(uid),
-                content: text,
-                user: {
-                    id: uid,
-                    name: String(this.loginUser?.name ?? ''),
-                },
-                createdAt: new Date(),
-            };
-            this.activeQuestion.answers.push(newAnswer);
-
-            const ok = await this.updateQuestion();
-            if (ok) {
-                this.detailComposerDraft = '';
-            } else {
-                this.activeQuestion.answers.pop();
-                window.alert('回答の送信に失敗しました');
-            }
-            this.refreshIcons();
-        },
-
         /** @returns {Promise<boolean>} PUT が成功したか、または送信不要で問題ない場合 true */
         async updateQuestion() {
             // 未対応 (supportStatusId === 1) のとき stripSupportForPutIfUnassigned で payload から support を落とす（サーバ側で detach も実施）。
@@ -1102,28 +993,12 @@ document.addEventListener('alpine:init', () => {
                     }))
                     : [];
 
-                const answersPayload = Array.isArray(aq.answers)
-                    ? aq.answers.map((a) => ({
-                        id: a?.id != null ? Number(a.id) || 0 : 0,
-                        userId:
-                            a?.userId != null && a.userId !== ''
-                                ? String(a.userId)
-                                : '',
-                        content:
-                            a?.content != null ? String(a.content) : '',
-                        isFinal: Boolean(a?.isFinal),
-                        createdAt: a?.createdAt ?? null,
-                        updatedAt: a?.updatedAt ?? null,
-                    }))
-                    : [];
-
                 const payload = {
                     ...aq,
                     createdAt: createdAtISO,
                     due: dueISO,
                     relatedQuestions: relatedQuestionsPayload,
                     memos: memosPayload,
-                    answers: answersPayload,
                 };
                 stripSupportForPutIfUnassigned(payload);
                 ensureSupportAssigneeForInProgressPut(payload, this.loginUser);
@@ -1177,7 +1052,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async updateUser(role, roleName) {
-            this.activeUser.role = { id: Number(role), name: roleName };
+            this.activeUser.role = { id: Number(role), roleName: roleName };
             const data = JSON.stringify(User.toModel(this.activeUser));
             await fetch("/api/v1/user", {
                 method: "PUT",
@@ -1187,9 +1062,6 @@ document.addEventListener('alpine:init', () => {
         },
 
         async updateLoginUser() {
-            if (this.loginUser.pass != null && this.loginUser.pass !== '') {
-                this.loginUser.pass = await hashString(this.loginUser.pass);
-            }
             const data = JSON.stringify(User.toModel(this.loginUser));
             await fetch("/api/v1/user", {
                 method: "PUT",
@@ -1207,7 +1079,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async registerTag(name, categoryId, categoryText) {
-            const data = Tag.toModel({ name: name, categoryId: categoryId, usage: 0, category: { id: Number(categoryId), name: categoryText } });
+            const data = Tag.toModel({ title: name, categoryId: categoryId, usage: 0, category: { id: Number(categoryId), categoryName: categoryText } });
             const res = await fetch('/api/v1/tag', {
                 method: "POST",
                 headers: this.apiHeaders(),
@@ -1237,7 +1109,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async updateTag(categoryId, categoryName) {
-            this.activeTag.category = { id: Number(categoryId), name: categoryName };
+            this.activeTag.category = { id: Number(categoryId), categoryName: categoryName };
             const tag = Tag.toModel(this.activeTag);
             const data = JSON.stringify(tag);
             await fetch('/api/v1/tag', {
@@ -1280,24 +1152,12 @@ document.addEventListener('alpine:init', () => {
         },
 
         async registerUser(email, name, pass, role, roleName) {
-            const data = User.toModel({ email: email, name: name, pass: await hashString(pass), roleId: role, role: { id: Number(role), name: roleName } });
+            const data = User.toModel({ email: email, name: name, pass: pass, roleId: role, role: { id: Number(role), roleName: roleName } });
             await fetch("/api/v1/user", {
                 method: "POST",
                 body: JSON.stringify(data),
                 headers: this.apiHeaders(),
             }).catch({});
-        },
-
-        /**
-         * @param {string} funcName
-         */
-        scrollBottom(funcName) {
-            this.$nextTick(() => {
-                const el = this.$refs[`scrollBox-${funcName}`];
-                if (el) {
-                    el.scrollTop = el.scrollHeight;
-                }
-            });
         },
 
         refreshIcons() {

@@ -7,38 +7,34 @@
     </div>
     <div class="flex flex-1 min-h-0 flex-col lg:flex-row gap-6">
         <div
-            class="flex-1 min-h-0 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px]">
-            <div class="bg-gray-50 p-6 flex-1 min-h-0 space-y-6 overflow-y-auto">
+            class="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-0">
+            <div class="bg-gray-50 p-6 flex-1 min-h-0 space-y-6 overflow-y-auto flex-col-reverse" x-ref="scrollBox-question">
                 <div class="chat chat-start">
                     <div class="chat-image avatar">
-                        <div class="w-10 rounded-full">
-                            <img
-                                :src="`${chatAvatarURI(activeQuestion.sender)}`"
-                                class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
-                                alt="" />
-                        </div>
+                        <div class="w-10 rounded-full" x-html="`${makeAvatar(activeQuestion.sender)}`"></div>
                     </div>
                     <div class="chat-header">
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"
                             x-text="activeQuestionHeaderLine()"></span>
                     </div>
-                    <div class="chat-bubble text-sm leading-relaxed" x-text="chatQuestionContent()"></div>
+                    <div class="chat-bubble text-sm leading-relaxed whitespace-pre-wrap" x-text="chatQuestionContent()"></div>
                 </div>
                 <template x-for="(item, idx) in chatTimelineItems()" :key="(item._origIdx || 'x') + '-' + String(item.memo?.id ?? item.answer?.id ?? '')">
                     <div class="chat" :class="isSelfChatItem(item) ? 'chat-end' : 'chat-start'">
                         <div class="chat-image avatar">
-                            <div class="w-10 rounded-full">
-                                <img
-                                    :src="`${chatAvatarURI(item.userName)}`"
-                                    class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
-                                    alt="" />
-                            </div>
+                            <div class="w-10 rounded-full" x-html="`${makeAvatar(item.userName)}`"></div>
                         </div>
-                        <div class="chat-bubble text-sm leading-relaxed" x-text="item.content"></div>
+                        <div class="chat-header">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest"
+                                x-text="item.userName"></span>
+                            <time class="text-xs opacity-50" x-text="item.createdAtStr">10:00</time>
+                        </div>
+                        <div class="chat-bubble text-sm leading-relaxed whitespace-pre-wrap" :class="chatBubbleColorByKind(item.kind)" x-text="item.content"></div>
                     </div>
                 </template>
             </div>
-            <div class="p-4 border-t border-gray-100 bg-white shrink-0">
+            <div class="p-4 border-t border-gray-100 bg-white shrink-0"
+                x-data="{ isSubmitable: false }" x-init="$watch('detailComposerDraft', (draft) => { isSubmitable = draft !== '';})">
                 <textarea
                     class="textarea textarea-bordered w-full h-24 text-sm focus:border-slate-800 focus:outline-none"
                     x-model="detailComposerDraft"
@@ -46,11 +42,11 @@
                 <div class="flex gap-1 flex-row-reverse">
                     <div class="mt-3 mr-5 flex justify-end">
                         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold px-6 shadow-md"
-                            @click="submitMemo()">メモ登録</button>
+                            @click="submitMemo()" :class="isSubmitable ? '':'btn-disabled'" :disabled="!isSubmitable">メモ登録</button>
                     </div>
                     <div class="mt-3 flex justify-end">
                         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold px-6 shadow-md"
-                            @click="alert('送信しました'); setView('home')">回答送信</button>
+                            @click="submitAnswer()" :class="isSubmitable ? '':'btn-disabled'" :disabled="!isSubmitable">回答送信</button>
                     </div>
                 </div>
             </div>
@@ -61,12 +57,7 @@
                 <div>
                     <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">質問者</h4>
                     <div class="flex items-center gap-3">
-                        <div class="w-10 rounded-full">
-                            <img
-                                :src="`${chatAvatarURI(activeQuestion.sender)}`"
-                                class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
-                                alt="" />
-                        </div>
+                        <div class="w-10 rounded-full" x-html="`${makeAvatar(activeQuestion.sender)}`"></div>
                         <div class="min-w-0">
                             <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.sender"></div>
                             <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider"
@@ -80,12 +71,7 @@
                 <div class="mt-0">
                     <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">対応情報</h4>
                     <div class="flex items-center gap-3">
-                        <div class="w-10 rounded-full">
-                            <img
-                                :src="`${chatAvatarURI(activeQuestion.support.user.name)}`"
-                                class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"
-                                alt="" />
-                        </div>
+                        <div class="w-10 rounded-full" x-html="`${makeAvatar(activeQuestion.support.user.name)}`"></div>
                         <div class="min-w-0">
                             <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.support.user.name"></div>
                         </div>
@@ -106,7 +92,7 @@
                             @change="updateQuestion()" x-model="activeQuestion.support.supportStatusId">
                             <option value="1">未対応</option>
                             <option value="2">対応中</option>
-                            <option value="3" :disabled="activeQuestion.answer == null" :title="activeQuestion.answer == null ? '「回答を送信」してから押下できるようになります。':''">完了</option>
+                            <option value="3" :disabled="!hasActiveQuestionAnswers()" :title="!hasActiveQuestionAnswers() ? '「回答を送信」してから押下できるようになります。':''">完了</option>
                         </select>
                     </div>
 
@@ -132,7 +118,7 @@
                                                     @change="toggleQuestionTag(tag)"
                                                     class="checkbox checkbox-sm checkbox-primary border-gray-300 rounded" />
                                                 <span class="text-sm font-bold text-gray-700 group-hover:text-slate-900"
-                                                    x-text="tag.title"></span>
+                                                    x-text="tagDisplayName(tag)"></span>
                                             </label>
                                         </template>
                                     </div>

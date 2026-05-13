@@ -1,3 +1,5 @@
+import { hashString } from './hash.js';
+
 document.addEventListener('alpine:init', () => {
   Alpine.data('hrAppLogin', () => ({
     login: {},
@@ -14,7 +16,7 @@ document.addEventListener('alpine:init', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: this.login.email,
-          pass: this.login.pass,
+          pass: await hashString(this.login.pass),
         }),
       });
       if (!res.ok) {

@@ -1,3 +1,5 @@
+//go:build ignore
+
 package infrastructure
 
 import (
@@ -11,7 +13,7 @@ import (
 // =====================
 type Role struct {
 	ID        int64          `gorm:"column:id;primaryKey"`
-	Name      string         `gorm:"column:name"`
+	RoleName  string         `gorm:"column:role_name"`
 	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index"`
@@ -48,11 +50,11 @@ func (User) TableName() string {
 // CATEGORY
 // =====================
 type Category struct {
-	ID        int64          `gorm:"column:id;primaryKey"`
-	Name      string         `gorm:"column:name"`
-	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
-	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index"`
+	ID           int64          `gorm:"column:id;primaryKey"`
+	CategoryName string         `gorm:"column:category_name"`
+	CreatedAt    time.Time      `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt    time.Time      `gorm:"column:updated_at;autoUpdateTime"`
+	DeletedAt    gorm.DeletedAt `gorm:"column:deleted_at;index"`
 
 	Tags []Tag `gorm:"foreignKey:CategoryID;references:ID"`
 }
@@ -66,7 +68,7 @@ func (Category) TableName() string {
 // =====================
 type Tag struct {
 	ID         int64          `gorm:"column:id;primaryKey"`
-	Name       string         `gorm:"column:name"`
+	Title      string         `gorm:"column:title"`
 	Usage      int            `gorm:"column:usage"`
 	CategoryID int64          `gorm:"column:category_id"`
 	CreatedAt  time.Time      `gorm:"column:created_at;autoCreateTime"`
@@ -88,7 +90,6 @@ type Question struct {
 	ID               int64          `gorm:"column:id;primaryKey"`
 	OriginQuestionID *int64         `gorm:"column:origin_question_id"`
 	SupportID        *int64         `gorm:"column:support_id"`
-	TalkroomID       string         `gorm:"column:talkroom_id"`
 	Title            string         `gorm:"column:title"`
 	Content          string         `gorm:"column:content"`
 	Due              *time.Time     `gorm:"column:due"`
@@ -100,7 +101,6 @@ type Question struct {
 	Memos            []Memo            `gorm:"foreignKey:QuestionID;references:ID"`
 	TagManagers      []TagManager      `gorm:"foreignKey:QuestionID;references:ID"`
 	RelatedQuestions []RelatedQuestion `gorm:"foreignKey:QuestionID;references:ID"`
-	SenderTalks      []SenderTalk      `gorm:"foreignKey:QuestionID;references:ID"`
 	Support          *Support          `gorm:"foreignKey:SupportID;references:ID"`
 }
 
@@ -116,7 +116,7 @@ type Answer struct {
 	UserID     int64          `gorm:"column:user_id"`
 	QuestionID int64          `gorm:"column:question_id"`
 	Content    string         `gorm:"column:content"`
-	IsFinal    bool           `gorm:"column:is_final"`
+	AnsweredAt *time.Time     `gorm:"column:answered_at"`
 	CreatedAt  time.Time      `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt  time.Time      `gorm:"column:updated_at;autoUpdateTime"`
 	DeletedAt  gorm.DeletedAt `gorm:"column:deleted_at;index"`
@@ -231,7 +231,7 @@ func (Escalation) TableName() string {
 // =====================
 type SupportStatus struct {
 	ID        int64          `gorm:"column:id;primaryKey"`
-	Name      string         `gorm:"column:name"`
+	Title     string         `gorm:"column:title"`
 	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index"`
@@ -317,41 +317,4 @@ type RelatedQuestion struct {
 
 func (RelatedQuestion) TableName() string {
 	return "related_questions"
-}
-
-// =====================
-// SENDER
-// =====================
-type Sender struct {
-	ID             int64  `gorm:"column:id;primaryKey"`
-	UID            string `gorm:"column:uid;uniqueIndex"`
-	Name           string `gorm:"column:name"`
-	DepartmentName string `gorm:"column:department_name"`
-
-	SenderTalks []SenderTalk `gorm:"foreignKey:SenderID;references:ID"`
-}
-
-func (Sender) TableName() string {
-	return "senders"
-}
-
-// =====================
-// SENDER_TALK
-// =====================
-type SenderTalk struct {
-	ID         int64          `gorm:"column:id;primaryKey"`
-	Content    string         `gorm:"column:content"`
-	SenderID   int64          `gorm:"column:sender_id"`
-	QuestionID int64          `gorm:"column:question_id"`
-	TalkroomID string         `gorm:"column:talkroom_id"`
-	CreatedAt  time.Time      `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt  time.Time      `gorm:"column:updated_at;autoUpdateTime"`
-	DeletedAt  gorm.DeletedAt `gorm:"column:deleted_at;index"`
-
-	Sender   Sender   `gorm:"foreignKey:SenderID;references:ID"`
-	Question Question `gorm:"foreignKey:QuestionID;references:ID"`
-}
-
-func (SenderTalk) TableName() string {
-	return "sender_talks"
 }
