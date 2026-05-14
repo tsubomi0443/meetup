@@ -16,7 +16,7 @@ document.addEventListener('alpine:init', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: this.login.email,
-          pass: await hashString(this.login.pass),
+          pass: this.login.pass,
         }),
       });
       if (!res.ok) {

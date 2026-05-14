@@ -9,6 +9,7 @@ import (
 
 const (
 	jwtkey   = "JWK_KEY"
+	pepper   = "PEPPER"
 	modeIs   = "MODE"
 	host     = "PSQL_HOST"
 	port     = "PSQL_PORT"
@@ -62,4 +63,13 @@ func IsProduct() bool {
 	default:
 		return false
 	}
+}
+
+// GetPepper returns the application pepper used with password hashing (Argon2 / SHA helpers).
+func GetPepper() string {
+	_pepper := os.Getenv(pepper)
+	if _pepper == "" {
+		log.Fatalln(fmt.Errorf("configure to %s", pepper))
+	}
+	return _pepper
 }

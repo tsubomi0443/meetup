@@ -54,7 +54,19 @@ docker compose up --build
 bun run --cwd frontend build
 ```
 
-その後、Go バイナリを `./tmp/main` にビルドして起動します。
+その後、`go build -o ./tmp/main ./cmd/app` でビルドし、`./tmp/main` を起動します（エントリは [cmd/app/main.go](../cmd/app/main.go)）。
+
+ローカルで Air を使わずに直接起動する例:
+
+```bash
+go run ./cmd/app
+```
+
+パスワードハッシュの生成:
+
+```bash
+go run ./cmd/genpw <plaintext>...
+```
 
 ## フロントエンドビルド
 
@@ -84,7 +96,7 @@ bun run --cwd frontend build
 - テンプレート: [templates/](../templates/)
 - 静的ファイル: [static/](../static/)
 
-[main.go](../main.go) で `templates/**/*.html` をまとめて読み込みます。静的ファイルは [handler/pageHandler.go](../handler/pageHandler.go) で `/static` にマウントされています。
+[cmd/app/main.go](../cmd/app/main.go) で `templates/**/*.html` をまとめて読み込みます。静的ファイルは [handler/pageHandler.go](../handler/pageHandler.go) で `/static` にマウントされています。
 
 ## DB
 

@@ -1,6 +1,5 @@
 import { Question, User, Tag, Notice } from '/static/js/model.js';
 import { SSE } from './sse.js';
-import { hashString } from './hash.js';
 import { createAvatarBy, AVATAR_SIZE } from './createAvatar.js';
 
 /** API / モックで support はあるが user が無い場合がある。テンプレは activeQuestion.support.user.name を前提にする */
@@ -1187,9 +1186,6 @@ document.addEventListener('alpine:init', () => {
         },
 
         async updateLoginUser() {
-            if (this.loginUser.pass != null && this.loginUser.pass !== '') {
-                this.loginUser.pass = await hashString(this.loginUser.pass);
-            }
             const data = JSON.stringify(User.toModel(this.loginUser));
             await fetch("/api/v1/user", {
                 method: "PUT",
@@ -1280,7 +1276,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async registerUser(email, name, pass, role, roleName) {
-            const data = User.toModel({ email: email, name: name, pass: await hashString(pass), roleId: role, role: { id: Number(role), name: roleName } });
+            const data = User.toModel({ email: email, name: name, pass: pass, roleId: role, role: { id: Number(role), name: roleName } });
             await fetch("/api/v1/user", {
                 method: "POST",
                 body: JSON.stringify(data),
@@ -1297,6 +1293,33 @@ document.addEventListener('alpine:init', () => {
                 if (el) {
                     el.scrollTop = el.scrollHeight;
                 }
+            });
+        },
+
+        checkEmailFormat(text) {
+            return /^\S+@\S+\.\S+$/.test(String(text ?? ''));
+        },
+
+        passwordCleansing(password) {
+            return password.replace(/[^a-zA-Z0-9!@#$%^&*()_+\-=[\]{};':",.<>/?\\|~`]/g, '');
+        },
+
+        generatePassword(length) {
+            let passLength = typeof length === 'string' ? parseInt(length, 10) : Number(length);
+            if (!Number.isFinite(passLength) || passLength < 10) {
+                passLength = 10;
+            } else if (passLength > 64) {
+                passLength = 64;
+            }
+            const ALLOWED_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{};\':"./<>?\\|~`';
+            return Array.from(new Array(passLength), () => _.sample(ALLOWED_CHARS)).join('');
+        },
+
+        refreshIconsByElement(el, query) {
+            this.$nextTick(() => {
+                if (typeof lucide === 'undefined' || !el) return;
+                const sel = query === '' || query === undefined ? '[data-lucide]' : `${query} [data-lucide]`;
+                lucide.createIcons({ nodes: el.querySelectorAll(sel) });
             });
         },
 

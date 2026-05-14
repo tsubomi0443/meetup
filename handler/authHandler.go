@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	infrastructure "meetup/_mac_infrastructure"
 	"meetup/crypto"
@@ -12,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v5"
 	"github.com/labstack/echo/v5"
+	"gorm.io/gorm"
 )
 
 const (
@@ -50,8 +52,23 @@ func (hm *HandlerManager) loginHandler() echo.HandlerFunc {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		}
 
-		encryptedPass := crypto.EncryptPassword(info.P)
-		user, err := infrastructure.GetUserInfo(c.Request().Context(), hm.db, info.E, encryptedPass)
+		stored, err := infrastructure.GetUserPasswordByEmail(c.Request().Context(), hm.db, info.E)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "ログインに失敗しました。"})
+			}
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+
+		ok, err := crypto.VerifyPassword(stored, info.P)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		}
+		if !ok {
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "ログインに失敗しました。"})
+		}
+
+		user, err := infrastructure.GetUserInfo(c.Request().Context(), hm.db, info.E, stored)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
 		}

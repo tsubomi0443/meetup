@@ -17,6 +17,14 @@ func GetUserByID(ctx context.Context, db *gorm.DB, id int64) (model User, err er
 	return
 }
 
+func GetUserPasswordByEmail(ctx context.Context, db *gorm.DB, email string) (password string, err error) {
+	u, err := gorm.G[User](db).Where("email = ?", email).Select("id, password").First(ctx)
+	if err != nil {
+		return "", err
+	}
+	return u.Password, nil
+}
+
 func GetUserInfo(ctx context.Context, db *gorm.DB, emailOrName, pass string) (user User, err error) {
 	user, err = gorm.G[User](db).Where("(email = ? OR name = ?) AND password = ?", emailOrName, emailOrName, pass).First(ctx)
 	return

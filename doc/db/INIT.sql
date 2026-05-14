@@ -60,7 +60,7 @@ CREATE TABLE questions (
     origin_question_id BIGINT,
     support_id BIGINT,
     talkroom_id VARCHAR(255),
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(255),
     content TEXT NOT NULL,
     due TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -345,11 +345,11 @@ INSERT INTO support_statuses (name) VALUES
 -- USERのINSERT
 -- Admin以外の初期パスワードは「password」、Adminは「admin」
 INSERT INTO users (name, password, email, role_id) VALUES
-('admin', '8d52e45b42babab443e7be6a211a4111172eb7efd6e8b9abb6f67039c1297415', 'admin', 1),
-('Taro Yamada', '101dd96cf87d902a2c73d60979fa7627e693d34651dea00019649eb289a1d6b5', 'taro@example.com', 2),
-('Hanako Suzuki', '101dd96cf87d902a2c73d60979fa7627e693d34651dea00019649eb289a1d6b5', 'hanako@example.com', 3),
-('Jiro Tanaka', '101dd96cf87d902a2c73d60979fa7627e693d34651dea00019649eb289a1d6b5', 'jiro@example.com', 3),
-('Sato Hiromichi', '101dd96cf87d902a2c73d60979fa7627e693d34651dea00019649eb289a1d6b5', 'sato@example.com', 4);
+('admin', '$argon2id$v=19$t=3,m=131072,p=4$amutRAAn04PNmrfL0+jRGw==$1KMEIjfCDrl4uX0NR6AklxVOuMsFoJqenrmiaog2OKM=', 'admin', 1),
+('Taro Yamada', '$argon2id$v=19$t=3,m=131072,p=4$gpxhwRRwF6X0N/u3GDwuwA==$IOMsVp2RrQzy8wexdjgi3Q2j9m79ebQTCb3KLxOQZ6w=', 'taro@example.com', 2),
+('Hanako Suzuki', '$argon2id$v=19$t=3,m=131072,p=4$gpxhwRRwF6X0N/u3GDwuwA==$IOMsVp2RrQzy8wexdjgi3Q2j9m79ebQTCb3KLxOQZ6w=', 'hanako@example.com', 3),
+('Jiro Tanaka', '$argon2id$v=19$t=3,m=131072,p=4$gpxhwRRwF6X0N/u3GDwuwA==$IOMsVp2RrQzy8wexdjgi3Q2j9m79ebQTCb3KLxOQZ6w=', 'jiro@example.com', 3),
+('Sato Hiromichi', '$argon2id$v=19$t=3,m=131072,p=4$gpxhwRRwF6X0N/u3GDwuwA==$IOMsVp2RrQzy8wexdjgi3Q2j9m79ebQTCb3KLxOQZ6w=', 'sato@example.com', 4);
 
 -- SUPPORTのINSERT
 INSERT INTO supports (user_id, support_status_id) VALUES

@@ -13,15 +13,15 @@
 
 ## 技術スタック
 
-- バックエンド: Go, [Echo v5](../main.go), [GORM](../_mac_infrastructure/db.go), PostgreSQL
+- バックエンド: Go, [Echo v5](../cmd/app/main.go), [GORM](../_mac_infrastructure/db.go), PostgreSQL
 - 認証: JWT Cookie ベースの簡易認証（[handler/authHandler.go](../handler/authHandler.go)）
 - フロントエンド: Bun, Tailwind CSS, `htmx`, `Alpine.js`, `htmx-ext-sse`（[frontend/package.json](../frontend/package.json)）
-- テンプレート: `html/template`（[main.go](../main.go)）
+- テンプレート: `html/template`（[cmd/app/main.go](../cmd/app/main.go)）
 - 開発起動: `air` + Docker Compose（[.air.toml](../.air.toml), [docker-compose.yml](../docker-compose.yml)）
 
 ## ディレクトリ入口
 
-- [main.go](../main.go): アプリ起動、DB 接続、Echo 初期化、ハンドラ登録
+- [cmd/app/main.go](../cmd/app/main.go): アプリ起動、DB 接続、Echo 初期化、ハンドラ登録
 - [handler/](../handler/): 認証、ページ、SSE、API、通知ポーリング
 - [_mac_infrastructure/](../_mac_infrastructure/): Entity、Form、Converter、DB アクセス
 - [templates/](../templates/): サーバレンダリング用テンプレート

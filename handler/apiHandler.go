@@ -86,7 +86,11 @@ func (hm *HandlerManager) registerUser(api string, sendEvent func(string, string
 			return err
 		}
 		if strings.TrimSpace(form.Password) != "" {
-			form.Password = crypto.EncryptPassword(form.Password)
+			enc, err := crypto.EncryptPasswordByArgon2Encode(form.Password)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, err.Error())
+			}
+			form.Password = enc
 		}
 		data := infrastructure.UserToEntityNoRole(form)
 		if err := infrastructure.Register(c.Request().Context(), hm.db, &data); err != nil {
@@ -352,7 +356,11 @@ func (hm *HandlerManager) updateUserByID(api string, sendEvent func(string, stri
 			return err
 		}
 		if strings.TrimSpace(form.Password) != "" {
-			form.Password = crypto.EncryptPassword(form.Password)
+			enc, err := crypto.EncryptPasswordByArgon2Encode(form.Password)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, err.Error())
+			}
+			form.Password = enc
 		}
 		updatedModel := infrastructure.UserToEntityNoRole(form)
 		if _, err := infrastructure.UpdateByID(c.Request().Context(), hm.db, updatedModel.ID, updatedModel, "Role"); err != nil {

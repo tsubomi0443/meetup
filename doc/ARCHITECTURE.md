@@ -4,7 +4,7 @@
 
 このアプリは厳密な層分離よりも、`handler` と `_mac_infrastructure` を中心にしたシンプルな構成です。
 
-- [main.go](../main.go): Echo と DB の初期化、`HandlerManager` の生成、SSE と通知ポーリングの起動
+- [cmd/app/main.go](../cmd/app/main.go): Echo と DB の初期化、`HandlerManager` の生成、SSE と通知ポーリングの起動
 - [handler/handlerManager.go](../handler/handlerManager.go): ルート登録の集約点
 - [handler/](../handler/): HTTP ハンドラ、SSE ハンドラ、通知の定期処理
 - [_mac_infrastructure/form.go](../_mac_infrastructure/form.go): UI と API の JSON 形
@@ -57,7 +57,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Main[main.go]
+    Main["cmd/app/main.go"]
     HandlerManager[HandlerManager]
     Hub[Hub]
     SseRoute["GET /sse"]
