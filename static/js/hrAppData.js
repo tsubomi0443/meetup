@@ -144,11 +144,6 @@ document.addEventListener('alpine:init', () => {
         /** 詳細画面の回答・メモ入力下書き（mock5_view_detail） */
         detailComposerDraft: '',
 
-        alearts: [
-            { type: 'info', content: 'テストアラート１' },
-            { type: 'error', content: 'テストアラート２' },
-        ],
-
         titleMap: {
             home: '質問一覧',
             detail: '質問詳細',
@@ -901,7 +896,7 @@ document.addEventListener('alpine:init', () => {
 
         openDetailByID(id = 0) {
             if (id === 0) {
-                window.alert(`invalid support id is ${id}.`)
+                window.notice.show({ message: `invalid support id is ${id}.`, type: 'error' });
             }
             const index = this.questions.findIndex(q => q.id == id)
             if (index !== -1) {
@@ -967,7 +962,7 @@ document.addEventListener('alpine:init', () => {
 
             const uid = this.loginUser?.id;
             if (uid == null || uid === '') {
-                window.alert('ログイン情報がありません');
+                window.notice.show({ message: 'ログイン情報がありません', type: 'warning' });
                 return;
             }
 
@@ -995,7 +990,7 @@ document.addEventListener('alpine:init', () => {
                 this.detailComposerDraft = '';
             } else {
                 this.activeQuestion.memos.pop();
-                window.alert('メモの送信に失敗しました');
+                window.notice.show({ message: 'メモの送信に失敗しました', type: 'error' });
             }
             this.refreshIcons();
         },
@@ -1007,7 +1002,7 @@ document.addEventListener('alpine:init', () => {
 
             const uid = this.loginUser?.id;
             if (uid == null || uid === '') {
-                window.alert('ログイン情報がありません');
+                window.notice.show({ message: 'ログイン情報がありません', type: 'warning' });
                 return;
             }
 
@@ -1039,7 +1034,7 @@ document.addEventListener('alpine:init', () => {
                 this.detailComposerDraft = '';
             } else {
                 this.activeQuestion.answers.pop();
-                window.alert('回答の送信に失敗しました');
+                window.notice.show({ message: '回答の送信に失敗しました', type: 'error' });
             }
             this.refreshIcons();
         },

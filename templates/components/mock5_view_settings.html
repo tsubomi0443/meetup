@@ -8,7 +8,7 @@
             <div class="flex justify-end gap-3">
                 <button class="btn btn-ghost font-bold text-gray-500" @click="setView('home')">キャンセル</button>
                 <button class="btn bg-slate-800 text-white border-none font-bold px-10 shadow-md"
-                    @click="updateLoginUser(); window.alert('ユーザ情報を更新しました。'); isEdited = false"
+                    @click="updateLoginUser(); window.notice.show({ message: 'ユーザ情報を更新しました。', type: 'success' }); isEdited = false"
                     :class="!(isEdited && isValid) ? 'btn-disabled' : ''"
                     :disabled="!(isEdited && isValid)">保存する</button>
             </div>

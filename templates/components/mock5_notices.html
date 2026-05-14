@@ -1,0 +1,22 @@
+{{define "mock5_notices"}}
+<div x-show="$store.appNotice.items.length > 0" x-transition.opacity.duration.200ms
+    class="fixed top-0 inset-x-0 z-[9999] pointer-events-none px-4 pt-2 pb-2 border-b border-gray-200/80 bg-base-100/95 backdrop-blur-sm shadow-md"
+    role="region" aria-label="通知">
+    <div
+        class="max-w-7xl mx-auto w-full flex flex-col gap-2 items-center pointer-events-auto max-h-[min(50vh,24rem)] overflow-y-auto no-scrollbar">
+        <template x-for="n in $store.appNotice.items" :key="n.id">
+            <div role="alert" class="items-start" :class="[$store.appNotice.alertClass(n), n.widthClass || 'w-full']">
+                <span class="shrink-0 pt-0.5" aria-hidden="true">
+                    <i :data-lucide="n.icon" class="w-5 h-5"></i>
+                </span>
+                <span class="flex-1 min-w-0 text-sm font-medium leading-snug break-words" x-text="n.message"></span>
+                <button type="button" class="btn btn-ghost btn-xs btn-square shrink-0 -mr-1"
+                    x-show="n.dismissible !== false"
+                    @click.stop="$store.appNotice.dismiss(n.id)" aria-label="閉じる">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </template>
+    </div>
+</div>
+{{end}}

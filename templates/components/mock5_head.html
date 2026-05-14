@@ -18,7 +18,8 @@
 <!-- 5. estoolkit -->
 <script src="/static/vendor/es-toolkit-global.js"></script>
 
-<!-- 6. App scripts -->
+<!-- 6. App scripts (notice store must register on alpine:init before hrAppData) -->
+<script type="module" src="/static/js/notice.js"></script>
 <script type="module" src="/static/js/hrAppData.js"></script>
 <script type="module" src="/static/js/sse.js"></script>
 <script type="module" src="/static/js/createAvatar.js"></script>
