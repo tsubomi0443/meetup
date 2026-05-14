@@ -109,6 +109,20 @@ function senderDepartmentFromQuestion(question) {
         ?? '';
 }
 
+/** 同一タブ内の画面復元用（sessionStorage）。Alpine.store はリロードで消えるため併用しない */
+const HR_NAV_VIEW_KEY = 'meetup.hr.currentView';
+const HR_NAV_DETAIL_Q_KEY = 'meetup.hr.detailQuestionId';
+const HR_NAV_VIEWS = ['home', 'detail', 'notice', 'users', 'tags', 'settings'];
+
+function clearHrNavSession() {
+    try {
+        sessionStorage.removeItem(HR_NAV_VIEW_KEY);
+        sessionStorage.removeItem(HR_NAV_DETAIL_Q_KEY);
+    } catch (_) {
+        /* ignore */
+    }
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('hrAppData', () => ({
         timeNow: new Date(),
@@ -223,18 +237,26 @@ document.addEventListener('alpine:init', () => {
             return h;
         },
 
-        initData() {
-            this.getLoginUser();
-            this.getQuestions();
-            this.getUsers();
-            this.getTags();
+        async initData() {
+            try {
+                await Promise.all([
+                    this.getLoginUser(),
+                    this.getQuestions(),
+                    this.getUsers(),
+                    this.getTags(),
+                ]);
+                this.applyPersistedNavigation();
+            } catch (e) {
+                console.error('initData', e);
+            }
+            this.refreshIcons();
         },
 
         init() {
 
             document.addEventListener('connect', (event) => {
                 this.isConnect = event.detail;
-                this.initData();
+                void this.initData();
                 this.refreshIcons();
             });
             document.addEventListener('disconnect', (event) => {
@@ -876,11 +898,65 @@ document.addEventListener('alpine:init', () => {
         },
 
         logout() {
+            clearHrNavSession();
             location.href = "/login";
+        },
+
+        persistNavToSession() {
+            try {
+                const v = this.currentView;
+                if (!HR_NAV_VIEWS.includes(v)) return;
+                sessionStorage.setItem(HR_NAV_VIEW_KEY, v);
+                if (
+                    v === 'detail'
+                    && this.activeQuestion?.id != null
+                    && String(this.activeQuestion.id) !== ''
+                    && Number(this.activeQuestion.id) > 0
+                ) {
+                    sessionStorage.setItem(HR_NAV_DETAIL_Q_KEY, String(this.activeQuestion.id));
+                } else {
+                    sessionStorage.removeItem(HR_NAV_DETAIL_Q_KEY);
+                }
+            } catch (_) {
+                /* ignore */
+            }
+        },
+
+        applyPersistedNavigation() {
+            let view;
+            let qidRaw;
+            try {
+                view = sessionStorage.getItem(HR_NAV_VIEW_KEY);
+                qidRaw = sessionStorage.getItem(HR_NAV_DETAIL_Q_KEY);
+            } catch (_) {
+                return;
+            }
+            if (!view || !HR_NAV_VIEWS.includes(view)) {
+                if (view) clearHrNavSession();
+                return;
+            }
+            if (view === 'detail') {
+                const qid = qidRaw != null && qidRaw !== '' ? Number(qidRaw) : NaN;
+                if (!Number.isFinite(qid) || qid <= 0) {
+                    clearHrNavSession();
+                    this.currentView = 'home';
+                    return;
+                }
+                const index = this.questions.findIndex((q) => q.id == qid);
+                if (index === -1) {
+                    clearHrNavSession();
+                    this.currentView = 'home';
+                    return;
+                }
+                this.openDetail(this.questions[index]);
+                return;
+            }
+            this.setView(view);
         },
 
         setView(view) {
             this.currentView = view;
+            this.persistNavToSession();
             this.refreshIcons();
         },
 
