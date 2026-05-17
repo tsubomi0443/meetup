@@ -325,17 +325,25 @@ func (hm *HandlerManager) deleteUserByID(api string, sendEvent func(string, stri
 func (hm *HandlerManager) getUserFromToken() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		token := c.Get("user").(*jwt.Token)
-		claims := token.Claims.(jwt.MapClaims)
-		subFloat, ok := claims["sub"].(float64)
-		if !ok {
+		claims, ok := token.Claims.(*CustomClaims)
+		if !ok || claims == nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid claims")
+		}
+		id := claims.UserID
+		if id <= 0 && claims.Subject != "" {
+			if parsed, err := strconv.ParseInt(claims.Subject, 10, 64); err == nil {
+				id = parsed
+			}
+		}
+		if id <= 0 {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid ID format")
 		}
-		id := int64(subFloat)
 
 		user, err := infrastructure.GetUserByID(c.Request().Context(), hm.db, id)
 		if err != nil {
-			fmt.Println(err)
-			return c.JSON(http.StatusInternalServerError, err.Error())
+			clearAccessTokenCookie(c)
+			SetErrorFlashCookie(c, "ログイン情報が見つかりません。\nログインからやり直してください。")
+			return c.Redirect(http.StatusSeeOther, "/login")
 		}
 
 		return c.JSON(http.StatusOK, infrastructure.UserFromEntity(user))
@@ -382,15 +390,16 @@ func actorUserIDFromToken(c *echo.Context) (int64, bool) {
 	if !ok || token == nil {
 		return 0, false
 	}
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
+	claims, ok := token.Claims.(*CustomClaims)
+	if !ok || claims == nil {
 		return 0, false
 	}
-	subFloat, ok := claims["sub"].(float64)
-	if !ok {
-		return 0, false
+	id := claims.UserID
+	if id <= 0 && claims.Subject != "" {
+		if parsed, err := strconv.ParseInt(claims.Subject, 10, 64); err == nil {
+			id = parsed
+		}
 	}
-	id := int64(subFloat)
 	if id <= 0 {
 		return 0, false
 	}

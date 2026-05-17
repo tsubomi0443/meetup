@@ -25,8 +25,12 @@ func GetUserPasswordByEmail(ctx context.Context, db *gorm.DB, email string) (pas
 	return u.Password, nil
 }
 
-func GetUserInfo(ctx context.Context, db *gorm.DB, emailOrName, pass string) (user User, err error) {
-	user, err = gorm.G[User](db).Where("(email = ? OR name = ?) AND password = ?", emailOrName, emailOrName, pass).First(ctx)
+func GetUserInfo(ctx context.Context, db *gorm.DB, email, pass string, preloads ...string) (model User, err error) {
+	chain := gorm.G[User](db).Where("email = ? AND password = ?", email, pass)
+	for _, preload := range preloads {
+		chain = chain.Preload(preload, commonPreloadBuilder())
+	}
+	model, err = chain.First(ctx)
 	return
 }
 

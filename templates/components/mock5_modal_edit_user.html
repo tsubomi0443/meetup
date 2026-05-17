@@ -1,5 +1,5 @@
 {{define "mock5_modal_edit_user"}}
-<div class="modal" :class="{'modal-open': showEditUserModal}" x-data="{ roleName: 'Staff', selectOption(event) {
+<div class="modal backdrop-blur-sm" :class="{'modal-open': showEditUserModal}" x-data="{ roleName: 'Staff', selectOption(event) {
     this.roleName = event.target.options[event.target.selectedIndex].text;
 }}">
     <div class="modal-box bg-white rounded-2xl shadow-2xl">
@@ -18,5 +18,5 @@
         </div>
     </div>
 </div>
-<div class="modal-backdrop bg-gray-400 bg-opacity-50" @click="showEditUserModal = false"></div>
+<div class="modal-backdrop bg-opacity-100" @click="showEditUserModal = false"></div>
 {{end}}

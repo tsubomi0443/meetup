@@ -10,11 +10,11 @@ import (
 // ROLE
 // =====================
 type Role struct {
-	ID        int64          `gorm:"column:id;primaryKey"`
-	Name      string         `gorm:"column:name"`
-	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
-	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index"`
+	ID        int64          `gorm:"column:id;primaryKey" json:"id"`
+	Name      string         `gorm:"column:name" json:"name"`
+	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index" json:"deleted_at"`
 
 	Users []User `gorm:"foreignKey:RoleID;references:ID"`
 }
@@ -27,17 +27,17 @@ func (Role) TableName() string {
 // USER
 // =====================
 type User struct {
-	ID        int64          `gorm:"column:id;primaryKey"`
-	Name      string         `gorm:"column:name"`
-	Password  string         `gorm:"column:password"`
-	Email     string         `gorm:"column:email"`
-	Memo      string         `gorm:"column:memo"`
-	RoleID    int64          `gorm:"column:role_id"`
-	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime"`
-	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index"`
+	ID        int64          `gorm:"column:id;primaryKey" json:"id"`
+	Name      string         `gorm:"column:name" json:"name"`
+	Password  string         `gorm:"column:password" json:"-"`
+	Email     string         `gorm:"column:email" json:"email"`
+	Memo      string         `gorm:"column:memo" json:"memo"`
+	RoleID    int64          `gorm:"column:role_id" json:"role_id"`
+	CreatedAt time.Time      `gorm:"column:created_at;autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index" json:"deleted_at"`
 
-	Role Role `gorm:"foreignKey:RoleID;references:ID"`
+	Role Role `gorm:"foreignKey:RoleID;references:ID" json:"role"`
 }
 
 func (User) TableName() string {

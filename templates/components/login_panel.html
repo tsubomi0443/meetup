@@ -9,6 +9,9 @@
             <p class="text-sm text-gray-500 mt-2 font-medium">総務人事FAQ管理システム</p>
         </div>
         <div class="p-8 space-y-6">
+            {{if .FlashError}}
+            <div role="alert" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 whitespace-pre-wrap">{{.FlashError}}</div>
+            {{end}}
             <button type="button"
                 disabled="disabled"
                 class="w-full flex items-center justify-center gap-3 bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-sm">
@@ -23,11 +26,11 @@
             <div class="divider text-xs text-gray-400 font-bold uppercase">または</div>
             <form method="post" class="space-y-4" @submit.prevent>
                 <input type="email" placeholder="ユーザー名またはメールアドレス"
-                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" x-model="login.email"/>
+                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" x-model="login.email" @input="login.email = emailCleansing(login.email)" />
                 <input type="password" placeholder="パスワード"
-                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" x-model="login.pass"/>
+                    class="input input-bordered w-full bg-gray-50 focus:bg-white text-sm border-gray-300 shadow-inner" x-model="login.pass" @input="login.pass = passwordCleansing(login.pass)"/>
                 <button type="button"
-                    class="btn btn-primary w-full bg-slate-800 border-none hover:bg-slate-900 font-bold shadow-lg transition-transform active:scale-95" @click="doLogin()">ログイン</button>
+                    class="btn btn-primary w-full bg-slate-800 border-none hover:bg-slate-900 font-bold shadow-lg transition-transform active:scale-95" @click="doLogin()" :class="(checkEmailFmt(login.email) && login.pass) ? '':'btn-disabled'">ログイン</button>
             </form>
         </div>
     </div>

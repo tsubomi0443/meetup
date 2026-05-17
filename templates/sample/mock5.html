@@ -16,16 +16,20 @@
             <main class="flex flex-col flex-1 min-h-0 overflow-y-auto p-6 w-full max-w-7xl mx-auto no-scrollbar">
                 {{template "mock5_view_home" .}}
                 {{template "mock5_view_detail" .}}
-                {{template "mock5_view_notice" .}}
                 {{template "mock5_view_tag" .}}
-                {{template "mock5_view_users" .}}
+                {{template "mock5_view_notice" .}}
+                {{if or .isAdmin .isManager}}
+                    {{template "mock5_view_users" .}}
+                {{end}}
                 {{template "mock5_view_settings" .}}
             </main>
         </div>
     </div>
 
-    {{template "mock5_modal_invite_user" .}}
-    {{template "mock5_modal_edit_user" .}}
+    {{if or .isAdmin .isManager}}
+        {{template "mock5_modal_invite_user" .}}
+        {{template "mock5_modal_edit_user" .}}
+    {{end}}
     {{template "mock5_modal_tag" .}}
     {{template "mock5_modal_edit_tag" .}}
 </body>

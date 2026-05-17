@@ -1,4 +1,4 @@
-import { hashString } from './hash.js';
+import { checkEmailFormat, cleansingEmail, cleansingPassword } from './formCheck.js';
 
 document.addEventListener('alpine:init', () => {
   Alpine.data('hrAppLogin', () => ({
@@ -8,6 +8,22 @@ document.addEventListener('alpine:init', () => {
       if (typeof lucide !== 'undefined') {
         lucide.createIcons();
       }
+    },
+
+    checkEmailFmt(text) {
+      return checkEmailFormat(text);
+    },
+
+    checkEmail(text) {
+      return checkEmailFormat(text);
+    },
+
+    passwordCleansing(text) {
+      return cleansingPassword(text);
+    },
+
+    emailCleansing(text) {
+      return cleansingEmail(text);
     },
 
     async doLogin() {

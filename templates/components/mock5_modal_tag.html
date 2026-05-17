@@ -1,5 +1,5 @@
 {{define "mock5_modal_tag"}}
-<div class="modal" :class="{'modal-open': showTagModal}"
+<div class="modal backdrop-blur-sm" :class="{'modal-open': showTagModal}"
     x-data="{ title: '', categoryId: '0', categoryText: '', selectOptionTitle(event) {
         this.categoryText = event.target.options[event.target.selectedIndex].text;
     }}">
@@ -22,5 +22,5 @@
         </div>
     </div>
 </div>
-<div class="modal-backdrop bg-gray-400 bg-opacity-50" @click="showTagModal = false"></div>
+<div class="modal-backdrop bg-opacity-100" @click="showTagModal = false"></div>
 {{end}}

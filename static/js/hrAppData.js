@@ -1,6 +1,7 @@
 import { Question, User, Tag, Notice } from '/static/js/model.js';
 import { SSE } from './sse.js';
 import { createAvatarBy, AVATAR_SIZE } from './createAvatar.js';
+import { cleansingPassword, cleansingEmail, checkEmailFormat } from './formCheck.js';
 
 /** API / モックで support はあるが user が無い場合がある。テンプレは activeQuestion.support.user.name を前提にする */
 function ensureSupportForView(support) {
@@ -134,7 +135,6 @@ document.addEventListener('alpine:init', () => {
         },
         currentView: 'home',
         viewMode: 'card',
-        isManager: true,
         showAddUserModal: false,
         showEditUserModal: false,
         showTagModal: false,
@@ -1346,6 +1346,18 @@ document.addEventListener('alpine:init', () => {
             return [hours, minutes];
         },
 
+        checkEmailFmt(text) {
+            return checkEmailFormat(text);
+        },
+
+        passwordCleansing(text) {
+            return cleansingPassword(text);
+        },
+
+        emailCleansing(text) {
+            return cleansingEmail(text);
+        },
+
         async registerUser(email, name, pass, role, roleName) {
             const data = User.toModel({ email: email, name: name, pass: pass, roleId: role, role: { id: Number(role), name: roleName } });
             await fetch("/api/v1/user", {
@@ -1365,14 +1377,6 @@ document.addEventListener('alpine:init', () => {
                     el.scrollTop = el.scrollHeight;
                 }
             });
-        },
-
-        checkEmailFormat(text) {
-            return /^\S+@\S+\.\S+$/.test(String(text ?? ''));
-        },
-
-        passwordCleansing(password) {
-            return password.replace(/[^a-zA-Z0-9!@#$%^&*()_+\-=[\]{};':",.<>/?\\|~`]/g, '');
         },
 
         generatePassword(length) {

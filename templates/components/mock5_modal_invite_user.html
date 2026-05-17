@@ -1,5 +1,5 @@
 {{define "mock5_modal_invite_user"}}
-<div class="modal" :class="{'modal-open': showAddUserModal}"
+<div class="modal backdrop-blur-sm" :class="{'modal-open': showAddUserModal}"
     x-data="{ email: '', name: '', pass: '', role: '3', roleName: 'Staff', isValid: false, selectOptionTitle(event) {
         this.roleName = event.target.options[event.target.selectedIndex].text;
     }}">
@@ -18,7 +18,7 @@
                 </div>
                 <div class="flex flex-col w-full">
                     <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">メールアドレス</label>
-                    <input name="email" type="email" placeholder="メールアドレス" class="input input-bordered w-full text-sm shadow-inner" x-model="email" @input="isValid = checkEmailFormat(email)" />
+                    <input name="email" type="email" placeholder="メールアドレス" class="input input-bordered w-full text-sm shadow-inner" x-model="email" @input="email = emailCleansing(email); isValid = checkEmailFmt(email)" />
                 </div>
                 <div x-data="{ show: false }" class="flex flex-col w-full">
                     <div class="flex flex-row justify-between" x-data="{ length: 32 }">
@@ -67,6 +67,6 @@
                 @click="showAddUserModal = false; registerUser(email, name, pass, role, roleName); email= ''; name= ''; pass= ''; role= '3'; roleName= 'Staff'; window.notice.show({ message: 'ユーザーを登録しました', type: 'success' })">登録</button>
         </div>
     </div>
-    <div class="modal-backdrop bg-gray-400 bg-opacity-50" @click="showAddUserModal = false"></div>
+    <div class="modal-backdrop bg-opacity-100" @click="showAddUserModal = false"></div>
 </div>
 {{end}}

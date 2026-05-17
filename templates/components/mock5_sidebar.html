@@ -16,6 +16,12 @@
             <i data-lucide="home" class="w-5 h-5 shrink-0"></i>
             <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">質問一覧</span>
         </button>
+        <button @click="setView('tags')"
+            class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors"
+            :class="[currentView === 'tags' ? 'bg-slate-100 text-slate-800' : 'text-gray-600 hover:bg-gray-50', isSidebarOpen ? 'px-3' : 'justify-center']">
+            <i data-lucide="tags" class="w-5 h-5 shrink-0"></i>
+            <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">タグ一覧</span>
+        </button>
         <button @click="setView('notice')"
             class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors text-gray-600 hover:bg-gray-50"
             :class="[currentView === 'notice' ? 'bg-slate-100 text-slate-800' : '', isSidebarOpen ? 'px-3' : 'justify-center']">
@@ -27,30 +33,24 @@
                 x-text="unreadNotices"></span>
         </button>
 
-        <div class="my-4 border-t border-gray-100" x-show="isManager"></div>
-
-        <button @click="setView('tags')" x-show="isManager"
-            class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors"
-            :class="[currentView === 'tags' ? 'bg-slate-100 text-slate-800' : 'text-gray-600 hover:bg-gray-50', isSidebarOpen ? 'px-3' : 'justify-center']">
-            <i data-lucide="tags" class="w-5 h-5 shrink-0"></i>
-            <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">タグ管理</span>
-        </button>
-
-        <button @click="setView('users')" x-show="isManager"
+        {{if or .isAdmin .isManager}}
+        <div class="my-4 border-t border-gray-100"></div>
+        <button @click="setView('users')"
             class="w-full flex items-center gap-3 py-3 rounded-lg text-sm font-bold transition-colors"
             :class="[currentView === 'users' ? 'bg-slate-100 text-slate-800' : 'text-gray-600 hover:bg-gray-50', isSidebarOpen ? 'px-3' : 'justify-center']">
             <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
             <span class="whitespace-nowrap transition-opacity duration-200" x-show="isSidebarOpen">ユーザー管理</span>
         </button>
+        {{end}}
     </nav>
 
     <div class="p-4 border-t border-gray-200 flex items-center gap-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
         :class="isSidebarOpen ? 'px-4' : 'justify-center'" @click="setView('settings')">
         <div class="w-10 h-10 rounded-full border border-gray-200 bg-white object-cover shadow-sm shrink-0"  x-html="`${makeAvatar(loginUser.name)}`"></div>
         <div class="min-w-0" x-show="isSidebarOpen">
-            <div class="text-sm font-bold text-gray-800 truncate" x-text="loginUser?.name || '自分'">自分</div>
+            <div class="text-sm font-bold text-gray-800 truncate" x-text="loginUser?.name || ''">ユーザ名</div>
             <div class="text-xs text-gray-500 truncate font-medium uppercase tracking-wider"
-                x-text="loginUser?.role?.roleName || (isManager ? 'Manager' : 'Creator')"></div>
+                x-text="loginUser?.role?.roleName"></div>
         </div>
     </div>
 </aside>

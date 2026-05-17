@@ -1,8 +1,8 @@
 BEGIN;
 
-
+-- ============================================
 -- DROP
-
+-- ============================================
 
 DROP SCHEMA public CASCADE;
 CREATE SCHEMA public;
@@ -319,9 +319,10 @@ CREATE INDEX idx_sender_talk_question ON sender_talks(question_id);
 CREATE INDEX idx_sender_talk_sender ON sender_talks(sender_id);
 
 
+-- ============================================
 -- INSERT
 -- 外部キー依存順
-
+-- ============================================
 
 -- ROLEのINSERT
 INSERT INTO roles (name) VALUES
