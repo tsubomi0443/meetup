@@ -147,6 +147,13 @@ document.addEventListener('alpine:init', () => {
         activeTag: {},
         isConnect: false,
 
+        /** 初回SSE接続〜初回 initData 成功まで true（リロード時も再度 true から始まる） */
+        isInitialLoadingVisible: true,
+        hasInitialLoadCompleted: false,
+        initialLoadTotal: 4,
+        initialLoadCompleted: 0,
+        initialLoadLabel: '',
+
         selectedTags: [],
         availableTags: [],
         searchQuery: '',
@@ -237,17 +244,51 @@ document.addEventListener('alpine:init', () => {
             return h;
         },
 
-        async initData() {
+        /**
+         * @param {{ blocking?: boolean }} [options]
+         * blocking: 初回のみ。全画面ローディング＋逐次進捗。再接続時は false で並列取得のみ。
+         */
+        async initData(options = {}) {
+            const blocking = Boolean(options.blocking);
+            if (blocking) {
+                this.isInitialLoadingVisible = true;
+                this.initialLoadCompleted = 0;
+                this.initialLoadTotal = 4;
+                this.initialLoadLabel = 'サーバーに接続しています…';
+            }
+            const steps = [
+                { label: 'ログインユーザーを読み込んでいます', fn: () => this.getLoginUser() },
+                { label: '質問一覧を読み込んでいます', fn: () => this.getQuestions() },
+                { label: 'ユーザーを読み込んでいます', fn: () => this.getUsers() },
+                { label: 'タグを読み込んでいます', fn: () => this.getTags() },
+            ];
             try {
-                await Promise.all([
-                    this.getLoginUser(),
-                    this.getQuestions(),
-                    this.getUsers(),
-                    this.getTags(),
-                ]);
+                if (blocking) {
+                    for (const step of steps) {
+                        this.initialLoadLabel = step.label;
+                        await step.fn();
+                        this.initialLoadCompleted += 1;
+                    }
+                } else {
+                    await Promise.all(steps.map((s) => s.fn()));
+                }
                 this.applyPersistedNavigation();
+                if (blocking) {
+                    this.hasInitialLoadCompleted = true;
+                    this.isInitialLoadingVisible = false;
+                }
             } catch (e) {
                 console.error('initData', e);
+                if (blocking) {
+                    this.isInitialLoadingVisible = false;
+                    if (typeof window !== 'undefined' && window.notice?.show) {
+                        window.notice.show({
+                            message: 'データの読み込みに失敗しました。接続が回復すると自動で再試行されます。',
+                            type: 'error',
+                            duration: 6000,
+                        });
+                    }
+                }
             }
             this.refreshIcons();
         },
@@ -256,7 +297,7 @@ document.addEventListener('alpine:init', () => {
 
             document.addEventListener('connect', (event) => {
                 this.isConnect = event.detail;
-                void this.initData();
+                void this.initData({ blocking: !this.hasInitialLoadCompleted });
                 this.refreshIcons();
             });
             document.addEventListener('disconnect', (event) => {
@@ -417,7 +458,7 @@ document.addEventListener('alpine:init', () => {
                 this.availableTags = newTags.map((t) => Tag.fromJSON(t));
             });
 
-            this.refreshIcons();
+            this.$nextTick(() => this.refreshIcons());
         },
 
         getIcon(name) {

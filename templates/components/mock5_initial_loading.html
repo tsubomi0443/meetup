@@ -1,0 +1,33 @@
+{{define "mock5_initial_loading"}}
+<!-- 初回データ同期中のみ表示。z-[1000] で通知トーストより手前に全面ブロック -->
+<div x-show="isInitialLoadingVisible" x-transition.opacity.duration.200ms
+    class="fixed inset-0 z-[1000] flex items-center justify-center bg-base-100/75 backdrop-blur-md"
+    role="alertdialog"
+    aria-live="polite"
+    aria-busy="true"
+    :aria-hidden="!isInitialLoadingVisible">
+    <div
+        class="relative w-[min(100%,28rem)] mx-4 rounded-2xl border border-base-300/60 bg-base-100/95 p-8 shadow-2xl ring-1 ring-base-content/5">
+        <div class="flex flex-col items-center text-center gap-6">
+            <div class="relative flex h-20 w-20 items-center justify-center">
+                <span class="loading loading-ring loading-lg text-primary absolute" aria-hidden="true"></span>
+                <i data-lucide="cloud-download" class="relative h-9 w-9 text-primary/90" aria-hidden="true"></i>
+            </div>
+            <div class="space-y-1">
+                <h2 class="text-lg font-semibold tracking-tight text-base-content">データを準備しています</h2>
+                <p class="text-sm text-base-content/70 min-h-[1.25rem]" x-text="initialLoadLabel"></p>
+            </div>
+            <div class="w-full space-y-2">
+                <progress class="progress progress-primary h-3 w-full" max="100"
+                    :value="initialLoadTotal ? (initialLoadCompleted / initialLoadTotal) * 100 : 0"></progress>
+                <div class="flex justify-between text-xs text-base-content/60">
+                    <span
+                        x-text="`${initialLoadCompleted} / ${initialLoadTotal} ステップ`"></span>
+                    <span
+                        x-text="initialLoadTotal ? `${Math.round((initialLoadCompleted / initialLoadTotal) * 100)}%` : '0%'"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
