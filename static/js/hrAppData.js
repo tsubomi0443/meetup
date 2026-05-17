@@ -162,6 +162,14 @@ document.addEventListener('alpine:init', () => {
 
         relatedSearchQuery: '',
 
+        /** タグ管理画面（mock5_view_tag）専用。質問一覧の searchQuery とは独立 */
+        tagSearchQuery: '',
+        tagCategoryFilter: 'all',
+
+        /** ユーザー管理画面（mock5_view_users）専用 */
+        userSearchQuery: '',
+        userRoleFilter: 'all',
+
         /** 詳細画面の回答・メモ入力下書き（mock5_view_detail） */
         detailComposerDraft: '',
 
@@ -236,6 +244,38 @@ document.addEventListener('alpine:init', () => {
                 qs = qs.filter(q => q.title.toLowerCase().includes(query) || q.id.toString().includes(query));
             }
             return qs;
+        },
+
+        get filteredTags() {
+            const q = String(this.tagSearchQuery ?? '').trim().toLowerCase();
+            const cat = this.tagCategoryFilter;
+            return this.tags.filter((tag) => {
+                if (cat && cat !== 'all') {
+                    const cid =
+                        tag.categoryId != null && tag.categoryId !== ''
+                            ? Number(tag.categoryId)
+                            : Number(tag.category?.id ?? NaN);
+                    if (Number(cat) !== cid) return false;
+                }
+                if (!q) return true;
+                const name = this.tagDisplayName(tag).toLowerCase();
+                const cname = this.tagCategoryDisplayName(tag).toLowerCase();
+                return name.includes(q) || cname.includes(q);
+            });
+        },
+
+        get filteredUsers() {
+            const q = String(this.userSearchQuery ?? '').trim().toLowerCase();
+            const role = this.userRoleFilter;
+            return this.users.filter((u) => {
+                if (role && role !== 'all') {
+                    if (Number(u.roleId) !== Number(role)) return false;
+                }
+                if (!q) return true;
+                const name = this.userDisplayName(u).toLowerCase();
+                const email = this.userDisplayEmail(u).toLowerCase();
+                return name.includes(q) || email.includes(q);
+            });
         },
 
         apiHeaders(withJSON = true) {

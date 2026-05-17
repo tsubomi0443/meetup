@@ -1,10 +1,20 @@
 {{define "mock5_view_tag"}}
 <div x-show="currentView === 'tags'" class="flex flex-1 min-h-0 flex-col gap-6" style="display: none;">
-    <div class="flex justify-between items-center shrink-0">
-        <div class="relative w-80">
-            <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
-            <input type="text" placeholder="タグ検索..."
-                class="input input-bordered w-full pl-10 h-10 text-sm focus:border-slate-800 shadow-sm" />
+    <div class="flex flex-wrap justify-between items-center gap-3 shrink-0">
+        <div class="flex flex-wrap items-center gap-3 min-w-0 flex-1">
+            <div class="relative w-full max-w-xs sm:w-80 shrink-0">
+                <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
+                <input type="text" placeholder="タグ検索..."
+                    x-model="tagSearchQuery"
+                    class="input input-bordered w-full pl-10 h-10 text-sm focus:border-slate-800 shadow-sm" />
+            </div>
+            <select x-model="tagCategoryFilter"
+                class="select select-bordered h-10 min-w-[10rem] text-sm focus:border-slate-800 shadow-sm shrink-0">
+                <option value="all">すべてのカテゴリ</option>
+                <option value="1">総務</option>
+                <option value="2">人事</option>
+                <option value="3">その他</option>
+            </select>
         </div>
         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showTagModal = true">+
             タグ追加</button>
@@ -20,7 +30,7 @@
                 </tr>
             </thead>
             <tbody>
-                <template x-for="tag in tags" :key="tag.id">
+                <template x-for="tag in filteredTags" :key="tag.id">
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td>
                             <div class="flex items-center gap-3">
