@@ -1,18 +1,26 @@
+// Package mapper はドメインエンティティと dto フォーム DTO の相互変換を提供する。
 package mapper
 
 import (
 	"meetup/internal/domains/entity"
 	"meetup/internal/usecases/dto"
-
-	
 	"strconv"
 	"time"
 
 	"gorm.io/gorm"
 )
 
-// --- time helpers (ISO8601 / RFC3339) ---
+// =====================
+// 日時ヘルパー（ISO8601 / RFC3339）
+// =====================
 
+// timePtrToISO は *time.Time を RFC3339Nano 形式の ISO 8601 文字列ポインタに変換する。
+//
+// args:
+//   - t *time.Time: 変換元の日時（nil またはゼロ値の場合は nil を返す）
+//
+// return:
+//   - *string: ISO 8601 文字列（変換不可時は nil）
 func timePtrToISO(t *time.Time) *string {
 	if t == nil || t.IsZero() {
 		return nil
@@ -21,6 +29,13 @@ func timePtrToISO(t *time.Time) *string {
 	return &s
 }
 
+// timeToISO は time.Time を RFC3339Nano 形式の ISO 8601 文字列ポインタに変換する。
+//
+// args:
+//   - t time.Time: 変換元の日時（ゼロ値の場合は nil を返す）
+//
+// return:
+//   - *string: ISO 8601 文字列（変換不可時は nil）
 func timeToISO(t time.Time) *string {
 	if t.IsZero() {
 		return nil
@@ -29,6 +44,13 @@ func timeToISO(t time.Time) *string {
 	return &s
 }
 
+// isoToTimePtr は ISO 8601 文字列を *time.Time に変換する。RFC3339Nano および RFC3339 に対応する。
+//
+// args:
+//   - s *string: ISO 8601 文字列（nil または空文字の場合は nil を返す）
+//
+// return:
+//   - *time.Time: 変換後の日時（パース失敗時は nil）
 func isoToTimePtr(s *string) *time.Time {
 	if s == nil || *s == "" {
 		return nil
@@ -43,6 +65,13 @@ func isoToTimePtr(s *string) *time.Time {
 	return &t
 }
 
+// isoToTime は ISO 8601 文字列を time.Time に変換する。未設定・パース失敗時はゼロ値を返す。
+//
+// args:
+//   - s *string: ISO 8601 文字列
+//
+// return:
+//   - time.Time: 変換後の日時（未設定・失敗時はゼロ値）
 func isoToTime(s *string) time.Time {
 	if s == nil || *s == "" {
 		return time.Time{}
@@ -54,9 +83,15 @@ func isoToTime(s *string) time.Time {
 	return t
 }
 
-// gorm.DeletedAtを渡すことで論理削除をチェックできるようになっている。
+// deletedAtToISO は gorm.DeletedAt を論理削除日時の ISO 8601 文字列に変換する。
+//
+// args:
+//   - d gorm.DeletedAt: GORM の論理削除日時
+//
+// return:
+//   - *string: 削除日時の ISO 8601 文字列（未削除・無効時は nil）
 func deletedAtToISO(d gorm.DeletedAt) *string {
-	// 論理削除されていないかつ、値がない場合はNilを返却する。
+	// 論理削除されていない、または値がない場合は nil を返す。
 	if !d.Valid || d.Time.IsZero() {
 		return nil
 	}
@@ -64,8 +99,17 @@ func deletedAtToISO(d gorm.DeletedAt) *string {
 	return &s
 }
 
-// --- entity.Role ---
+// =====================
+// ロール（entity.Role）
+// =====================
 
+// RoleFromEntity は entity.Role を dto.RoleForm に変換する。Users があればネストして変換する。
+//
+// args:
+//   - e entity.Role: 変換元エンティティ
+//
+// return:
+//   - dto.RoleForm: ロールフォーム DTO
 func RoleFromEntity(e entity.Role) dto.RoleForm {
 	f := dto.RoleForm{
 		ID:        e.ID,
@@ -83,6 +127,13 @@ func RoleFromEntity(e entity.Role) dto.RoleForm {
 	return f
 }
 
+// roleFromEntityShallow は entity.Role を関連 Users なしの dto.RoleForm に変換する（循環参照回避用）。
+//
+// args:
+//   - e entity.Role: 変換元エンティティ
+//
+// return:
+//   - dto.RoleForm: ロールフォーム DTO（Users なし）
 func roleFromEntityShallow(e entity.Role) dto.RoleForm {
 	return dto.RoleForm{
 		ID:        e.ID,
@@ -93,6 +144,13 @@ func roleFromEntityShallow(e entity.Role) dto.RoleForm {
 	}
 }
 
+// RoleToEntity は dto.RoleForm を entity.Role に変換する。
+//
+// args:
+//   - f dto.RoleForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Role: ロールエンティティ
 func RoleToEntity(f dto.RoleForm) entity.Role {
 	e := entity.Role{
 		ID:   f.ID,
@@ -104,8 +162,17 @@ func RoleToEntity(f dto.RoleForm) entity.Role {
 	return e
 }
 
-// --- entity.SupportStatus ---
+// =====================
+// サポートステータス（entity.SupportStatus）
+// =====================
 
+// SupportStatusFromEntity は entity.SupportStatus を dto.SupportStatusForm に変換する。
+//
+// args:
+//   - e entity.SupportStatus: 変換元エンティティ
+//
+// return:
+//   - dto.SupportStatusForm: サポートステータスフォーム DTO
 func SupportStatusFromEntity(e entity.SupportStatus) dto.SupportStatusForm {
 	f := dto.SupportStatusForm{
 		ID:        e.ID,
@@ -120,6 +187,13 @@ func SupportStatusFromEntity(e entity.SupportStatus) dto.SupportStatusForm {
 	return f
 }
 
+// SupportStatusToEntity は dto.SupportStatusForm を entity.SupportStatus に変換する。
+//
+// args:
+//   - f dto.SupportStatusForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.SupportStatus: サポートステータスエンティティ
 func SupportStatusToEntity(f dto.SupportStatusForm) entity.SupportStatus {
 	e := entity.SupportStatus{
 		ID:   f.ID,
@@ -131,8 +205,17 @@ func SupportStatusToEntity(f dto.SupportStatusForm) entity.SupportStatus {
 	return e
 }
 
-// --- entity.Support ---
+// =====================
+// サポート（entity.Support）
+// =====================
 
+// SupportFromEntity は entity.Support を dto.SupportForm に変換する。
+//
+// args:
+//   - e entity.Support: 変換元エンティティ
+//
+// return:
+//   - dto.SupportForm: サポートフォーム DTO
 func SupportFromEntity(e entity.Support) dto.SupportForm {
 	f := dto.SupportForm{
 		ID:              e.ID,
@@ -153,6 +236,13 @@ func SupportFromEntity(e entity.Support) dto.SupportForm {
 	return f
 }
 
+// supportStatusFromEntityShallow は entity.SupportStatus を Supports なしの dto.SupportStatusForm に変換する。
+//
+// args:
+//   - e entity.SupportStatus: 変換元エンティティ
+//
+// return:
+//   - dto.SupportStatusForm: サポートステータスフォーム DTO（Supports なし）
 func supportStatusFromEntityShallow(e entity.SupportStatus) dto.SupportStatusForm {
 	return dto.SupportStatusForm{
 		ID:        e.ID,
@@ -163,6 +253,13 @@ func supportStatusFromEntityShallow(e entity.SupportStatus) dto.SupportStatusFor
 	}
 }
 
+// SupportToEntity は dto.SupportForm を entity.Support に変換する。
+//
+// args:
+//   - f dto.SupportForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Support: サポートエンティティ
 func SupportToEntity(f dto.SupportForm) entity.Support {
 	e := entity.Support{
 		ID:              f.ID,
@@ -178,8 +275,17 @@ func SupportToEntity(f dto.SupportForm) entity.Support {
 	return e
 }
 
-// --- entity.User ---
+// =====================
+// ユーザー（entity.User）
+// =====================
 
+// UserFromEntity は entity.User を dto.UserForm に変換する。Role があればネストして変換する。
+//
+// args:
+//   - e entity.User: 変換元エンティティ
+//
+// return:
+//   - dto.UserForm: ユーザーフォーム DTO
 func UserFromEntity(e entity.User) dto.UserForm {
 	f := dto.UserForm{
 		ID:        e.ID,
@@ -198,7 +304,13 @@ func UserFromEntity(e entity.User) dto.UserForm {
 	return f
 }
 
-// UserFromEntityNoRole avoids entity.Role when embedding entity.User under entity.Role.Users.
+// UserFromEntityNoRole は entity.User を dto.UserForm に変換する。entity.Role.Users 埋め込み時の循環参照を避けるため Role は含めない。
+//
+// args:
+//   - e entity.User: 変換元エンティティ
+//
+// return:
+//   - dto.UserForm: ユーザーフォーム DTO（Role ネストなし）
 func UserFromEntityNoRole(e entity.User) dto.UserForm {
 	return dto.UserForm{
 		ID:        e.ID,
@@ -212,6 +324,13 @@ func UserFromEntityNoRole(e entity.User) dto.UserForm {
 	}
 }
 
+// UserToEntityNoRole は dto.UserForm を entity.User に変換する。Role の関連グラフは展開しない。
+//
+// args:
+//   - f dto.UserForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.User: ユーザーエンティティ（Role は空構造体）
 func UserToEntityNoRole(f dto.UserForm) entity.User {
 	e := entity.User{
 		ID:     f.ID,
@@ -230,6 +349,13 @@ func UserToEntityNoRole(f dto.UserForm) entity.User {
 	return e
 }
 
+// UserToEntity は dto.UserForm を entity.User に変換する。Role があればネストして変換する。
+//
+// args:
+//   - f dto.UserForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.User: ユーザーエンティティ
 func UserToEntity(f dto.UserForm) entity.User {
 	e := entity.User{
 		ID:     f.ID,
@@ -250,6 +376,13 @@ func UserToEntity(f dto.UserForm) entity.User {
 	return e
 }
 
+// UserFormsFromEntities は entity.User のスライスを dto.UserForm のスライスに一括変換する。
+//
+// args:
+//   - users []entity.User: 変換元エンティティ一覧
+//
+// return:
+//   - []dto.UserForm: ユーザーフォーム DTO の一覧
 func UserFormsFromEntities(users []entity.User) []dto.UserForm {
 	out := make([]dto.UserForm, len(users))
 	for i := range users {
@@ -258,8 +391,17 @@ func UserFormsFromEntities(users []entity.User) []dto.UserForm {
 	return out
 }
 
-// --- entity.Category ---
+// =====================
+// カテゴリ（entity.Category）
+// =====================
 
+// categoryFromEntityShallow は entity.Category を Tags なしの dto.CategoryForm に変換する。
+//
+// args:
+//   - e entity.Category: 変換元エンティティ
+//
+// return:
+//   - dto.CategoryForm: カテゴリフォーム DTO（Tags なし）
 func categoryFromEntityShallow(e entity.Category) dto.CategoryForm {
 	return dto.CategoryForm{
 		ID:        e.ID,
@@ -270,6 +412,13 @@ func categoryFromEntityShallow(e entity.Category) dto.CategoryForm {
 	}
 }
 
+// CategoryFromEntity は entity.Category を dto.CategoryForm に変換する。
+//
+// args:
+//   - e entity.Category: 変換元エンティティ
+//
+// return:
+//   - dto.CategoryForm: カテゴリフォーム DTO
 func CategoryFromEntity(e entity.Category) dto.CategoryForm {
 	f := categoryFromEntityShallow(e)
 	for _, t := range e.Tags {
@@ -278,6 +427,13 @@ func CategoryFromEntity(e entity.Category) dto.CategoryForm {
 	return f
 }
 
+// CategoryToEntity は dto.CategoryForm を entity.Category に変換する。
+//
+// args:
+//   - f dto.CategoryForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Category: カテゴリエンティティ
 func CategoryToEntity(f dto.CategoryForm) entity.Category {
 	e := entity.Category{
 		ID:   f.ID,
@@ -289,8 +445,17 @@ func CategoryToEntity(f dto.CategoryForm) entity.Category {
 	return e
 }
 
-// --- entity.Tag ---
+// =====================
+// タグ（entity.Tag）
+// =====================
 
+// tagFromEntityShallow は entity.Tag を Questions なしの dto.TagForm に変換する。Category は浅い変換のみ。
+//
+// args:
+//   - e entity.Tag: 変換元エンティティ
+//
+// return:
+//   - dto.TagForm: タグフォーム DTO
 func tagFromEntityShallow(e entity.Tag) dto.TagForm {
 	f := dto.TagForm{
 		ID:         e.ID,
@@ -308,6 +473,13 @@ func tagFromEntityShallow(e entity.Tag) dto.TagForm {
 	return f
 }
 
+// TagFromEntities は entity.Tag のスライスを dto.TagForm のスライスに一括変換する。
+//
+// args:
+//   - e []entity.Tag: 変換元エンティティ一覧
+//
+// return:
+//   - []dto.TagForm: タグフォーム DTO の一覧
 func TagFromEntities(e []entity.Tag) []dto.TagForm {
 	forms := []dto.TagForm{}
 	for _, tag := range e {
@@ -316,6 +488,13 @@ func TagFromEntities(e []entity.Tag) []dto.TagForm {
 	return forms
 }
 
+// TagFromEntity は entity.Tag を dto.TagForm に変換する。TagManagers 経由で関連質問も含める。
+//
+// args:
+//   - e entity.Tag: 変換元エンティティ
+//
+// return:
+//   - dto.TagForm: タグフォーム DTO
 func TagFromEntity(e entity.Tag) dto.TagForm {
 	f := tagFromEntityShallow(e)
 	for _, tm := range e.TagManagers {
@@ -326,6 +505,13 @@ func TagFromEntity(e entity.Tag) dto.TagForm {
 	return f
 }
 
+// TagToEntity は dto.TagForm を entity.Tag に変換する。Category の明示的関連はセットしない。
+//
+// args:
+//   - f dto.TagForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Tag: タグエンティティ
 func TagToEntity(f dto.TagForm) entity.Tag {
 	e := entity.Tag{
 		ID:         f.ID,
@@ -333,7 +519,7 @@ func TagToEntity(f dto.TagForm) entity.Tag {
 		Usage:      f.Usage,
 		CategoryID: f.CategoryIDInt64(),
 	}
-	// DB に追加の category が入らないよう、明示的関連はセットしない。
+	// DB に余分な category が入らないよう、明示的関連はセットしない。
 	// if f.Category != nil {
 	// 	e.Category = CategoryToEntity(*f.Category)
 	// }
@@ -350,6 +536,13 @@ func TagToEntity(f dto.TagForm) entity.Tag {
 	return e
 }
 
+// TagToEntityNoRelations は dto.TagForm を関連なしの entity.Tag に変換する。
+//
+// args:
+//   - f dto.TagForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Tag: タグエンティティ（Category は空構造体）
 func TagToEntityNoRelations(f dto.TagForm) entity.Tag {
 	e := entity.Tag{
 		ID:         f.ID,
@@ -362,8 +555,17 @@ func TagToEntityNoRelations(f dto.TagForm) entity.Tag {
 	return e
 }
 
-// --- entity.Refer ---
+// =====================
+// 参照リンク（entity.Refer）
+// =====================
 
+// referFromEntityShallow は entity.Refer を Answers なしの dto.ReferForm に変換する。
+//
+// args:
+//   - e entity.Refer: 変換元エンティティ
+//
+// return:
+//   - dto.ReferForm: 参照リンクフォーム DTO
 func referFromEntityShallow(e entity.Refer) dto.ReferForm {
 	return dto.ReferForm{
 		ID:        e.ID,
@@ -375,6 +577,13 @@ func referFromEntityShallow(e entity.Refer) dto.ReferForm {
 	}
 }
 
+// ReferFromEntity は entity.Refer を dto.ReferForm に変換する。
+//
+// args:
+//   - e entity.Refer: 変換元エンティティ
+//
+// return:
+//   - dto.ReferForm: 参照リンクフォーム DTO
 func ReferFromEntity(e entity.Refer) dto.ReferForm {
 	f := referFromEntityShallow(e)
 	for _, rm := range e.ReferManagers {
@@ -385,6 +594,13 @@ func ReferFromEntity(e entity.Refer) dto.ReferForm {
 	return f
 }
 
+// ReferToEntity は dto.ReferForm を entity.Refer に変換する。
+//
+// args:
+//   - f dto.ReferForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Refer: 参照リンクエンティティ
 func ReferToEntity(f dto.ReferForm) entity.Refer {
 	e := entity.Refer{
 		ID:    f.ID,
@@ -405,8 +621,17 @@ func ReferToEntity(f dto.ReferForm) entity.Refer {
 	return e
 }
 
-// --- entity.Memo ---
+// =====================
+// メモ（entity.Memo）
+// =====================
 
+// MemoFromEntity は entity.Memo を dto.MemoForm に変換する。
+//
+// args:
+//   - e entity.Memo: 変換元エンティティ
+//
+// return:
+//   - dto.MemoForm: メモフォーム DTO
 func MemoFromEntity(e entity.Memo) dto.MemoForm {
 	f := dto.MemoForm{
 		ID:         e.ID,
@@ -424,6 +649,13 @@ func MemoFromEntity(e entity.Memo) dto.MemoForm {
 	return f
 }
 
+// MemoToEntity は dto.MemoForm を entity.Memo に変換する。
+//
+// args:
+//   - f dto.MemoForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Memo: メモエンティティ
 func MemoToEntity(f dto.MemoForm) entity.Memo {
 	e := entity.Memo{
 		ID:         f.ID,
@@ -437,8 +669,17 @@ func MemoToEntity(f dto.MemoForm) entity.Memo {
 	return e
 }
 
-// --- entity.Answer ---
+// =====================
+// 回答（entity.Answer）
+// =====================
 
+// AnswerFromEntity は entity.Answer を dto.AnswerForm に変換する。
+//
+// args:
+//   - e entity.Answer: 変換元エンティティ
+//
+// return:
+//   - dto.AnswerForm: 回答フォーム DTO
 func AnswerFromEntity(e entity.Answer) dto.AnswerForm {
 	f := dto.AnswerForm{
 		ID:        e.ID,
@@ -461,6 +702,13 @@ func AnswerFromEntity(e entity.Answer) dto.AnswerForm {
 	return f
 }
 
+// AnswerToEntity は dto.AnswerForm を entity.Answer に変換する。CreatedAt 未指定時は現在時刻を設定する。
+//
+// args:
+//   - f dto.AnswerForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Answer: 回答エンティティ
 func AnswerToEntity(f dto.AnswerForm) entity.Answer {
 	e := entity.Answer{
 		ID:      f.ID,
@@ -490,8 +738,17 @@ func AnswerToEntity(f dto.AnswerForm) entity.Answer {
 	return e
 }
 
-// --- entity.Escalation ---
+// =====================
+// エスカレーション（entity.Escalation）
+// =====================
 
+// EscalationFromEntity は entity.Escalation を dto.EscalationForm に変換する。
+//
+// args:
+//   - e entity.Escalation: 変換元エンティティ
+//
+// return:
+//   - dto.EscalationForm: エスカレーションフォーム DTO
 func EscalationFromEntity(e entity.Escalation) dto.EscalationForm {
 	return dto.EscalationForm{
 		ID:             e.ID,
@@ -504,6 +761,13 @@ func EscalationFromEntity(e entity.Escalation) dto.EscalationForm {
 	}
 }
 
+// EscalationToEntity は dto.EscalationForm を entity.Escalation に変換する。EscalatedAt 未指定時は現在時刻を設定する。
+//
+// args:
+//   - f dto.EscalationForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Escalation: エスカレーションエンティティ
 func EscalationToEntity(f dto.EscalationForm) entity.Escalation {
 	e := entity.Escalation{
 		ID:             f.ID,
@@ -518,8 +782,17 @@ func EscalationToEntity(f dto.EscalationForm) entity.Escalation {
 	return e
 }
 
-// --- entity.NoticeType / entity.Notice ---
+// =====================
+// 通知種別・通知（entity.NoticeType / entity.Notice）
+// =====================
 
+// noticeTypeFromEntityShallow は entity.NoticeType を Notices なしの dto.NoticeTypeForm に変換する。
+//
+// args:
+//   - e entity.NoticeType: 変換元エンティティ
+//
+// return:
+//   - dto.NoticeTypeForm: 通知種別フォーム DTO
 func noticeTypeFromEntityShallow(e entity.NoticeType) dto.NoticeTypeForm {
 	return dto.NoticeTypeForm{
 		ID:        e.ID,
@@ -530,6 +803,13 @@ func noticeTypeFromEntityShallow(e entity.NoticeType) dto.NoticeTypeForm {
 	}
 }
 
+// NoticeTypeFromEntity は entity.NoticeType を dto.NoticeTypeForm に変換する。
+//
+// args:
+//   - e entity.NoticeType: 変換元エンティティ
+//
+// return:
+//   - dto.NoticeTypeForm: 通知種別フォーム DTO
 func NoticeTypeFromEntity(e entity.NoticeType) dto.NoticeTypeForm {
 	f := noticeTypeFromEntityShallow(e)
 	for _, n := range e.Notices {
@@ -538,6 +818,13 @@ func NoticeTypeFromEntity(e entity.NoticeType) dto.NoticeTypeForm {
 	return f
 }
 
+// NoticeTypeToEntity は dto.NoticeTypeForm を entity.NoticeType に変換する。
+//
+// args:
+//   - f dto.NoticeTypeForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.NoticeType: 通知種別エンティティ
 func NoticeTypeToEntity(f dto.NoticeTypeForm) entity.NoticeType {
 	e := entity.NoticeType{
 		ID:   f.ID,
@@ -549,6 +836,13 @@ func NoticeTypeToEntity(f dto.NoticeTypeForm) entity.NoticeType {
 	return e
 }
 
+// NoticeFromEntity は entity.Notice を dto.NoticeForm に変換する。
+//
+// args:
+//   - e entity.Notice: 変換元エンティティ
+//
+// return:
+//   - dto.NoticeForm: 通知フォーム DTO
 func NoticeFromEntity(e entity.Notice) dto.NoticeForm {
 	var questionID *string
 	if e.QuestionID != nil {
@@ -579,6 +873,13 @@ func NoticeFromEntity(e entity.Notice) dto.NoticeForm {
 	return f
 }
 
+// NoticeFromEntities は entity.Notice のスライスを dto.NoticeForm のスライスに一括変換する。
+//
+// args:
+//   - ns []entity.Notice: 変換元エンティティ一覧
+//
+// return:
+//   - []dto.NoticeForm: 通知フォーム DTO の一覧
 func NoticeFromEntities(ns []entity.Notice) (forms []dto.NoticeForm) {
 	for _, n := range ns {
 		forms = append(forms, NoticeFromEntity(n))
@@ -586,6 +887,13 @@ func NoticeFromEntities(ns []entity.Notice) (forms []dto.NoticeForm) {
 	return forms
 }
 
+// NoticeToEntity は dto.NoticeForm を entity.Notice に変換する。
+//
+// args:
+//   - f dto.NoticeForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Notice: 通知エンティティ
 func NoticeToEntity(f dto.NoticeForm) entity.Notice {
 	var questionID *int64
 	if v := f.QuestionIDInt64(); v >= 0 {
@@ -608,6 +916,13 @@ func NoticeToEntity(f dto.NoticeForm) entity.Notice {
 	return e
 }
 
+// QuestionFromEntities は entity.Question のスライスを dto.QuestionForm のスライスに一括変換する。
+//
+// args:
+//   - e []entity.Question: 変換元エンティティ一覧
+//
+// return:
+//   - []dto.QuestionForm: 質問フォーム DTO の一覧
 func QuestionFromEntities(e []entity.Question) []dto.QuestionForm {
 	forms := []dto.QuestionForm{}
 	for _, q := range e {
@@ -616,8 +931,17 @@ func QuestionFromEntities(e []entity.Question) []dto.QuestionForm {
 	return forms
 }
 
-// --- entity.Question ---
+// =====================
+// 質問（entity.Question）
+// =====================
 
+// QuestionFromEntity は entity.Question を dto.QuestionForm に変換する。回答・メモ・タグ・関連質問などをネストする。
+//
+// args:
+//   - e entity.Question: 変換元エンティティ
+//
+// return:
+//   - dto.QuestionForm: 質問フォーム DTO
 func QuestionFromEntity(e entity.Question) dto.QuestionForm {
 	var originQuestionID *string
 	if e.OriginQuestionID != nil {
@@ -671,6 +995,13 @@ func QuestionFromEntity(e entity.Question) dto.QuestionForm {
 	return f
 }
 
+// QuestionToEntity は dto.QuestionForm を entity.Question に変換する。CreatedAt 未指定時は現在時刻を設定する。
+//
+// args:
+//   - f dto.QuestionForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Question: 質問エンティティ
 func QuestionToEntity(f dto.QuestionForm) entity.Question {
 	var originQuestionID *int64
 	if v := f.OriginQuestionIDInt64(); v >= 0 {
@@ -741,6 +1072,13 @@ func QuestionToEntity(f dto.QuestionForm) entity.Question {
 	return e
 }
 
+// questionFormShallowFromEntity は entity.Question を関連グラフなしの dto.QuestionForm に変換する。
+//
+// args:
+//   - e entity.Question: 変換元エンティティ
+//
+// return:
+//   - dto.QuestionForm: 質問フォーム DTO（ネスト関連なし）
 func questionFormShallowFromEntity(e entity.Question) dto.QuestionForm {
 	var originQuestionID *string
 	if e.OriginQuestionID != nil {
@@ -760,6 +1098,13 @@ func questionFormShallowFromEntity(e entity.Question) dto.QuestionForm {
 	}
 }
 
+// RelatedQuestionFromEntity は entity.RelatedQuestion を dto.RelatedQuestionForm に変換する。
+//
+// args:
+//   - r entity.RelatedQuestion: 変換元エンティティ
+//
+// return:
+//   - dto.RelatedQuestionForm: 関連質問フォーム DTO
 func RelatedQuestionFromEntity(r entity.RelatedQuestion) dto.RelatedQuestionForm {
 	f := dto.RelatedQuestionForm{
 		ID:                r.ID,
@@ -776,6 +1121,14 @@ func RelatedQuestionFromEntity(r entity.RelatedQuestion) dto.RelatedQuestionForm
 	return f
 }
 
+// RelatedQuestionToEntity は dto.RelatedQuestionForm を entity.RelatedQuestion に変換する。
+//
+// args:
+//   - f dto.RelatedQuestionForm: 変換元フォーム DTO
+//   - parentQuestionID int64: 親質問 ID（フォームの QuestionID が無効な場合に使用）
+//
+// return:
+//   - entity.RelatedQuestion: 関連質問エンティティ
 func RelatedQuestionToEntity(f dto.RelatedQuestionForm, parentQuestionID int64) entity.RelatedQuestion {
 	qid := f.QuestionIDInt64()
 	if qid < 0 || qid == 0 {
@@ -799,8 +1152,17 @@ func RelatedQuestionToEntity(f dto.RelatedQuestionForm, parentQuestionID int64) 
 	return e
 }
 
-// --- entity.ReferManager / entity.TagManager (optional full graph) ---
+// =====================
+// 参照リンク管理・タグ管理（entity.ReferManager / entity.TagManager）
+// =====================
 
+// ReferManagerFromEntity は entity.ReferManager を dto.ReferManagerForm に変換する。
+//
+// args:
+//   - e entity.ReferManager: 変換元エンティティ
+//
+// return:
+//   - dto.ReferManagerForm: 参照リンク管理フォーム DTO
 func ReferManagerFromEntity(e entity.ReferManager) dto.ReferManagerForm {
 	f := dto.ReferManagerForm{
 		ID:        e.ID,
@@ -821,6 +1183,13 @@ func ReferManagerFromEntity(e entity.ReferManager) dto.ReferManagerForm {
 	return f
 }
 
+// ReferManagerToEntity は dto.ReferManagerForm を entity.ReferManager に変換する。
+//
+// args:
+//   - f dto.ReferManagerForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.ReferManager: 参照リンク管理エンティティ
 func ReferManagerToEntity(f dto.ReferManagerForm) entity.ReferManager {
 	e := entity.ReferManager{
 		ID:       f.ID,
@@ -836,6 +1205,13 @@ func ReferManagerToEntity(f dto.ReferManagerForm) entity.ReferManager {
 	return e
 }
 
+// TagManagerFromEntity は entity.TagManager を dto.TagManagerForm に変換する。
+//
+// args:
+//   - e entity.TagManager: 変換元エンティティ
+//
+// return:
+//   - dto.TagManagerForm: タグ管理フォーム DTO
 func TagManagerFromEntity(e entity.TagManager) dto.TagManagerForm {
 	f := dto.TagManagerForm{
 		ID:         e.ID,
@@ -856,6 +1232,13 @@ func TagManagerFromEntity(e entity.TagManager) dto.TagManagerForm {
 	return f
 }
 
+// TagManagerToEntity は dto.TagManagerForm を entity.TagManager に変換する。
+//
+// args:
+//   - f dto.TagManagerForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.TagManager: タグ管理エンティティ
 func TagManagerToEntity(f dto.TagManagerForm) entity.TagManager {
 	e := entity.TagManager{
 		ID:         f.ID,
@@ -871,8 +1254,17 @@ func TagManagerToEntity(f dto.TagManagerForm) entity.TagManager {
 	return e
 }
 
-// --- entity.Sender / entity.SenderTalk ---
+// =====================
+// 送信者・送信者トーク（entity.Sender / entity.SenderTalk）
+// =====================
 
+// SenderFromEntity は entity.Sender を dto.SenderForm に変換する。
+//
+// args:
+//   - e entity.Sender: 変換元エンティティ
+//
+// return:
+//   - dto.SenderForm: 送信者フォーム DTO
 func SenderFromEntity(e entity.Sender) dto.SenderForm {
 	f := dto.SenderForm{
 		ID:             e.ID,
@@ -885,6 +1277,13 @@ func SenderFromEntity(e entity.Sender) dto.SenderForm {
 	return f
 }
 
+// senderFromEntityShallow は entity.Sender を SenderTalks なしの dto.SenderForm に変換する。
+//
+// args:
+//   - e entity.Sender: 変換元エンティティ
+//
+// return:
+//   - dto.SenderForm: 送信者フォーム DTO（SenderTalks なし）
 func senderFromEntityShallow(e entity.Sender) dto.SenderForm {
 	return dto.SenderForm{
 		ID:             e.ID,
@@ -893,6 +1292,13 @@ func senderFromEntityShallow(e entity.Sender) dto.SenderForm {
 	}
 }
 
+// SenderToEntity は dto.SenderForm を entity.Sender に変換する。
+//
+// args:
+//   - f dto.SenderForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.Sender: 送信者エンティティ
 func SenderToEntity(f dto.SenderForm) entity.Sender {
 	e := entity.Sender{
 		ID:             f.ID,
@@ -905,6 +1311,13 @@ func SenderToEntity(f dto.SenderForm) entity.Sender {
 	return e
 }
 
+// SenderTalkFromEntity は entity.SenderTalk を dto.SenderTalkForm に変換する。Sender があればネストする。
+//
+// args:
+//   - e entity.SenderTalk: 変換元エンティティ
+//
+// return:
+//   - dto.SenderTalkForm: 送信者トークフォーム DTO
 func SenderTalkFromEntity(e entity.SenderTalk) dto.SenderTalkForm {
 	f := SenderTalkFromEntityNoSender(e)
 	if e.Sender.ID != 0 {
@@ -914,6 +1327,13 @@ func SenderTalkFromEntity(e entity.SenderTalk) dto.SenderTalkForm {
 	return f
 }
 
+// SenderTalkFromEntityNoSender は entity.SenderTalk を Sender なしの dto.SenderTalkForm に変換する。
+//
+// args:
+//   - e entity.SenderTalk: 変換元エンティティ
+//
+// return:
+//   - dto.SenderTalkForm: 送信者トークフォーム DTO（Sender なし）
 func SenderTalkFromEntityNoSender(e entity.SenderTalk) dto.SenderTalkForm {
 	return dto.SenderTalkForm{
 		ID:         e.ID,
@@ -926,6 +1346,13 @@ func SenderTalkFromEntityNoSender(e entity.SenderTalk) dto.SenderTalkForm {
 	}
 }
 
+// SenderTalkToEntity は dto.SenderTalkForm を entity.SenderTalk に変換する。
+//
+// args:
+//   - f dto.SenderTalkForm: 変換元フォーム DTO
+//
+// return:
+//   - entity.SenderTalk: 送信者トークエンティティ
 func SenderTalkToEntity(f dto.SenderTalkForm) entity.SenderTalk {
 	e := entity.SenderTalk{
 		ID:         f.ID,

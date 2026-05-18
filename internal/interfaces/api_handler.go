@@ -18,6 +18,10 @@ const (
 	apiPath    = "/api/" + apiVersion
 )
 
+// setAPIHandler は JWT 保護下の REST API ルートグループを登録する。
+//
+// return:
+//   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setAPIHandler() (routeInfos []echo.RouteInfo) {
 	group := r.e.Group(apiPath, GetJWTConfig())
 	routeInfos = append(routeInfos, r.setupNoticeHandler(group)...)
@@ -27,12 +31,26 @@ func (r *Router) setAPIHandler() (routeInfos []echo.RouteInfo) {
 	return
 }
 
+// setupNoticeHandler は通知 API ルートを登録する。
+//
+// args:
+//   - group *echo.Group: /api/v1 グループ
+//
+// return:
+//   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setupNoticeHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/notice"
 	routeInfos = append(routeInfos, group.GET(uri, r.getNotice()))
 	return
 }
 
+// setupUserHandler はユーザー API ルートを登録する。
+//
+// args:
+//   - group *echo.Group: /api/v1 グループ
+//
+// return:
+//   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setupUserHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/user"
 	const uriWithID = uri + "/:id"
@@ -47,6 +65,13 @@ func (r *Router) setupUserHandler(group *echo.Group) (routeInfos []echo.RouteInf
 	return
 }
 
+// setupQuestionHandler は質問 API ルートを登録する。
+//
+// args:
+//   - group *echo.Group: /api/v1 グループ
+//
+// return:
+//   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setupQuestionHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/question"
 	const uriWithID = uri + "/:id"
@@ -60,6 +85,13 @@ func (r *Router) setupQuestionHandler(group *echo.Group) (routeInfos []echo.Rout
 	return
 }
 
+// setupTagHandler はタグ API ルートを登録する。
+//
+// args:
+//   - group *echo.Group: /api/v1 グループ
+//
+// return:
+//   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setupTagHandler(group *echo.Group) (routeInfos []echo.RouteInfo) {
 	const uri = "/tag"
 	const uriWithID = uri + "/:id"
@@ -72,6 +104,14 @@ func (r *Router) setupTagHandler(group *echo.Group) (routeInfos []echo.RouteInfo
 	return
 }
 
+// registerUser はユーザー登録 POST ハンドラを返す。成功時に SSE 作成イベントを送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: POST /user 用ハンドラ
 func (r *Router) registerUser(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
@@ -97,6 +137,14 @@ func (r *Router) registerUser(api string, sendEvent func(string, string)) echo.H
 	}
 }
 
+// registerQuestion は質問登録 POST ハンドラを返す。成功時に SSE 作成イベントを送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: POST /question 用ハンドラ
 func (r *Router) registerQuestion(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
@@ -122,6 +170,14 @@ func (r *Router) registerQuestion(api string, sendEvent func(string, string)) ec
 	}
 }
 
+// registerTag はタグ登録 POST ハンドラを返す。成功時に SSE 作成イベントを送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: POST /tag 用ハンドラ
 func (r *Router) registerTag(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
@@ -147,6 +203,14 @@ func (r *Router) registerTag(api string, sendEvent func(string, string)) echo.Ha
 	}
 }
 
+// updateTag はタグ更新 PUT ハンドラを返す。成功時に SSE 更新イベントを送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: PUT /tag 用ハンドラ
 func (r *Router) updateTag(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
@@ -167,6 +231,14 @@ func (r *Router) updateTag(api string, sendEvent func(string, string)) echo.Hand
 	}
 }
 
+// deleteTagByID はタグ削除 DELETE ハンドラを返す。成功時に SSE 削除イベントを送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: DELETE /tag/:id 用ハンドラ
 func (r *Router) deleteTagByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		idStr := c.Param("id")
@@ -182,6 +254,10 @@ func (r *Router) deleteTagByID(api string, sendEvent func(string, string)) echo.
 	}
 }
 
+// getUsers はユーザー一覧 GET ハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /user 用ハンドラ
 func (r *Router) getUsers() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		users, err := r.deps.User.GetAll(c.Request().Context())
@@ -192,6 +268,10 @@ func (r *Router) getUsers() echo.HandlerFunc {
 	}
 }
 
+// getQuestions は質問一覧 GET ハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /question 用ハンドラ
 func (r *Router) getQuestions() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		questions, err := r.deps.Question.GetAll(c.Request().Context())
@@ -202,6 +282,10 @@ func (r *Router) getQuestions() echo.HandlerFunc {
 	}
 }
 
+// getQuestionByID は ID 指定で質問を取得する GET ハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /question/:id 用ハンドラ
 func (r *Router) getQuestionByID() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		idStr := c.Param("id")
@@ -218,6 +302,10 @@ func (r *Router) getQuestionByID() echo.HandlerFunc {
 	}
 }
 
+// getTags はタグ一覧 GET ハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /tag 用ハンドラ
 func (r *Router) getTags() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		tags, err := r.deps.Tag.GetAll(c.Request().Context())
@@ -228,6 +316,14 @@ func (r *Router) getTags() echo.HandlerFunc {
 	}
 }
 
+// updateQuestionByID は質問更新 PUT ハンドラを返す。通知イベントと SSE 更新を送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: PUT /question 用ハンドラ
 func (r *Router) updateQuestionByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
@@ -255,6 +351,14 @@ func (r *Router) updateQuestionByID(api string, sendEvent func(string, string)) 
 	}
 }
 
+// deleteQuestionByID は質問削除 DELETE ハンドラを返す。通知イベントと SSE 削除を送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: DELETE /question/:id 用ハンドラ
 func (r *Router) deleteQuestionByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		idStr := c.Param("id")
@@ -272,6 +376,14 @@ func (r *Router) deleteQuestionByID(api string, sendEvent func(string, string)) 
 	}
 }
 
+// deleteUserByID はユーザー削除 DELETE ハンドラを返す。成功時に SSE 削除イベントを送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: DELETE /user/:id 用ハンドラ
 func (r *Router) deleteUserByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		idStr := c.Param("id")
@@ -287,6 +399,10 @@ func (r *Router) deleteUserByID(api string, sendEvent func(string, string)) echo
 	}
 }
 
+// getUserFromToken は JWT からユーザ ID を解決しユーザー情報を返す GET ハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /user/t 用ハンドラ
 func (r *Router) getUserFromToken() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		token := c.Get("user").(*jwt.Token)
@@ -314,6 +430,14 @@ func (r *Router) getUserFromToken() echo.HandlerFunc {
 	}
 }
 
+// updateUserByID はユーザー更新 PUT ハンドラを返す。成功時に SSE 更新イベントを送る。
+//
+// args:
+//   - api string: SSE イベント用 API 識別子
+//   - sendEvent func(string, string): SSE 配信コールバック
+//
+// return:
+//   - echo.HandlerFunc: PUT /user 用ハンドラ
 func (r *Router) updateUserByID(api string, sendEvent func(string, string)) echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)
@@ -334,6 +458,14 @@ func (r *Router) updateUserByID(api string, sendEvent func(string, string)) echo
 	}
 }
 
+// actorUserIDFromToken は JWT から操作者ユーザ ID を取り出す。
+//
+// args:
+//   - c *echo.Context: JWT ミドルウェア適用済みコンテキスト
+//
+// return:
+//   - int64: ユーザ ID（取得できない場合は 0）
+//   - bool: 取得できた場合 true
 func actorUserIDFromToken(c *echo.Context) (int64, bool) {
 	raw := c.Get("user")
 	if raw == nil {
@@ -359,6 +491,10 @@ func actorUserIDFromToken(c *echo.Context) (int64, bool) {
 	return id, true
 }
 
+// getNotice は通知一覧 GET ハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /notice 用ハンドラ
 func (r *Router) getNotice() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		models, err := r.deps.Notice.GetAll(c.Request().Context())

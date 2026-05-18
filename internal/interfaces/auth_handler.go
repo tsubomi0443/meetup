@@ -18,10 +18,13 @@ import (
 )
 
 const (
-	CookieNameToken          = "access_token"
-	ErrorRedirectCookieName  = "error-redirect"
+	// CookieNameToken は JWT アクセストークン用 Cookie 名。
+	CookieNameToken = "access_token"
+	// ErrorRedirectCookieName はログイン画面向けエラーフラッシュ用 Cookie 名。
+	ErrorRedirectCookieName = "error-redirect"
 )
 
+// CustomClaims は JWT に載せるユーザ識別・ロール情報。
 type CustomClaims struct {
 	UserID   int64  `json:"user_id"`
 	Email    string `json:"email"`
@@ -30,6 +33,11 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
+// SetErrorFlashCookie はエラーメッセージをフラッシュ Cookie に設定する。
+//
+// args:
+//   - c *echo.Context: リクエストコンテキスト
+//   - message string: 表示するエラーメッセージ
 func SetErrorFlashCookie(c *echo.Context, message string) {
 	c.SetCookie(&http.Cookie{
 		Name:     ErrorRedirectCookieName,
@@ -41,6 +49,10 @@ func SetErrorFlashCookie(c *echo.Context, message string) {
 	})
 }
 
+// clearAccessTokenCookie はアクセストークン Cookie を削除する。
+//
+// args:
+//   - c *echo.Context: リクエストコンテキスト
 func clearAccessTokenCookie(c *echo.Context) {
 	c.SetCookie(&http.Cookie{
 		Name:     CookieNameToken,
@@ -53,6 +65,10 @@ func clearAccessTokenCookie(c *echo.Context) {
 	})
 }
 
+// GetJWTConfig は Cookie ベース JWT 認証ミドルウェアを返す。
+//
+// return:
+//   - echo.MiddlewareFunc: JWT 検証ミドルウェア（失敗時は /login へリダイレクト）
 func GetJWTConfig() echo.MiddlewareFunc {
 	return echojwt.WithConfig(echojwt.Config{
 		NewClaimsFunc: func(c *echo.Context) jwt.Claims {
@@ -66,11 +82,19 @@ func GetJWTConfig() echo.MiddlewareFunc {
 	})
 }
 
+// setupAuthHandler は認証 API ルートを登録する。
+//
+// return:
+//   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setupAuthHandler() (routeInfos []echo.RouteInfo) {
 	routeInfos = append(routeInfos, r.e.POST("/login", r.loginHandler()))
 	return
 }
 
+// loginHandler はメール・パスワードでログインし JWT Cookie を発行するハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: POST /login 用ハンドラ
 func (r *Router) loginHandler() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		body, err := io.ReadAll(c.Request().Body)

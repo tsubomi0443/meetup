@@ -1,3 +1,4 @@
+// Package entity はアプリケーションの永続化モデル（GORM エンティティ）を定義する。
 package entity
 
 import (
@@ -7,8 +8,10 @@ import (
 )
 
 // =====================
-// ROLE
+// ロール
 // =====================
+
+// Role はユーザーのロール（権限）を表すエンティティ。
 type Role struct {
 	ID        int64          `gorm:"column:id;primaryKey" json:"id"`
 	Name      string         `gorm:"column:name" json:"name"`
@@ -19,13 +22,19 @@ type Role struct {
 	Users []User `gorm:"foreignKey:RoleID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: ロールテーブル名
 func (Role) TableName() string {
 	return "roles"
 }
 
 // =====================
-// USER
+// ユーザー
 // =====================
+
+// User はシステム利用者を表すエンティティ。
 type User struct {
 	ID        int64          `gorm:"column:id;primaryKey" json:"id"`
 	Name      string         `gorm:"column:name" json:"name"`
@@ -40,13 +49,19 @@ type User struct {
 	Role Role `gorm:"foreignKey:RoleID;references:ID" json:"role"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: ユーザーテーブル名
 func (User) TableName() string {
 	return "users"
 }
 
 // =====================
-// CATEGORY
+// カテゴリ
 // =====================
+
+// Category はタグの分類を表すエンティティ。
 type Category struct {
 	ID        int64          `gorm:"column:id;primaryKey"`
 	Name      string         `gorm:"column:name"`
@@ -57,13 +72,19 @@ type Category struct {
 	Tags []Tag `gorm:"foreignKey:CategoryID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: カテゴリテーブル名
 func (Category) TableName() string {
 	return "categories"
 }
 
 // =====================
-// TAG
+// タグ
 // =====================
+
+// Tag は質問に付与するタグを表すエンティティ。
 type Tag struct {
 	ID         int64          `gorm:"column:id;primaryKey"`
 	Name       string         `gorm:"column:name"`
@@ -77,13 +98,19 @@ type Tag struct {
 	TagManagers []TagManager `gorm:"foreignKey:TagID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: タグテーブル名
 func (Tag) TableName() string {
 	return "tags"
 }
 
 // =====================
-// QUESTION
+// 質問
 // =====================
+
+// Question は問い合わせ・相談案件を表すエンティティ。
 type Question struct {
 	ID               int64          `gorm:"column:id;primaryKey"`
 	OriginQuestionID *int64         `gorm:"column:origin_question_id"`
@@ -104,13 +131,19 @@ type Question struct {
 	Support          *Support          `gorm:"foreignKey:SupportID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 質問テーブル名
 func (Question) TableName() string {
 	return "questions"
 }
 
 // =====================
-// ANSWER
+// 回答
 // =====================
+
+// Answer は質問に対する回答を表すエンティティ。
 type Answer struct {
 	ID         int64          `gorm:"column:id;primaryKey"`
 	UserID     int64          `gorm:"column:user_id"`
@@ -126,13 +159,19 @@ type Answer struct {
 	ReferManagers []ReferManager `gorm:"foreignKey:AnswerID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 回答テーブル名
 func (Answer) TableName() string {
 	return "answers"
 }
 
 // =====================
-// MEMO
+// メモ
 // =====================
+
+// Memo は質問に紐づく内部メモを表すエンティティ。
 type Memo struct {
 	ID         int64          `gorm:"column:id;primaryKey"`
 	UserID     int64          `gorm:"column:user_id"`
@@ -146,13 +185,19 @@ type Memo struct {
 	Question *Question `gorm:"foreignKey:QuestionID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: メモテーブル名
 func (Memo) TableName() string {
 	return "memos"
 }
 
 // =====================
-// REFER
+// 参照資料
 // =====================
+
+// Refer は回答に添付する参照 URL を表すエンティティ。
 type Refer struct {
 	ID        int64          `gorm:"column:id;primaryKey"`
 	Title     string         `gorm:"column:title"`
@@ -164,13 +209,19 @@ type Refer struct {
 	ReferManagers []ReferManager `gorm:"foreignKey:ReferID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 参照資料テーブル名
 func (Refer) TableName() string {
 	return "refers"
 }
 
 // =====================
-// REFER_MANAGER
+// 参照資料紐付け
 // =====================
+
+// ReferManager は回答と参照資料の中間テーブルを表すエンティティ。
 type ReferManager struct {
 	ID        int64          `gorm:"column:id;primaryKey"`
 	AnswerID  int64          `gorm:"column:answer_id"`
@@ -183,13 +234,19 @@ type ReferManager struct {
 	Refer  Refer  `gorm:"foreignKey:ReferID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 参照資料紐付けテーブル名
 func (ReferManager) TableName() string {
 	return "refer_managers"
 }
 
 // =====================
-// TAG_MANAGER
+// タグ紐付け
 // =====================
+
+// TagManager は質問とタグの中間テーブルを表すエンティティ。
 type TagManager struct {
 	ID         int64          `gorm:"column:id;primaryKey"`
 	TagID      int64          `gorm:"column:tag_id"`
@@ -202,13 +259,19 @@ type TagManager struct {
 	Question Question `gorm:"foreignKey:QuestionID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: タグ紐付けテーブル名
 func (TagManager) TableName() string {
 	return "tag_managers"
 }
 
 // =====================
-// ESCALATION
+// エスカレーション
 // =====================
+
+// Escalation は質問のエスカレーション履歴を表すエンティティ。
 type Escalation struct {
 	ID             int64          `gorm:"column:id;primaryKey"`
 	FromQuestionID int64          `gorm:"column:from_question_id"`
@@ -222,13 +285,19 @@ type Escalation struct {
 	ToQuestion   Question `gorm:"foreignKey:ToQuestionID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: エスカレーションテーブル名
 func (Escalation) TableName() string {
 	return "escalations"
 }
 
 // =====================
-// SUPPORT_STATUS
+// サポートステータス
 // =====================
+
+// SupportStatus はサポート対応の状態マスタを表すエンティティ。
 type SupportStatus struct {
 	ID        int64          `gorm:"column:id;primaryKey"`
 	Name      string         `gorm:"column:name"`
@@ -239,13 +308,19 @@ type SupportStatus struct {
 	Supports []Support `gorm:"foreignKey:SupportStatusID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: サポートステータステーブル名
 func (SupportStatus) TableName() string {
 	return "support_statuses"
 }
 
 // =====================
-// SUPPORT
+// サポート
 // =====================
+
+// Support は質問に対する担当サポートを表すエンティティ。
 type Support struct {
 	ID              int64          `gorm:"column:id;primaryKey"`
 	UserID          int64          `gorm:"column:user_id"`
@@ -258,13 +333,19 @@ type Support struct {
 	SupportStatus SupportStatus `gorm:"foreignKey:SupportStatusID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: サポートテーブル名
 func (Support) TableName() string {
 	return "supports"
 }
 
 // =====================
-// NOTICE_TYPE
+// 通知種別
 // =====================
+
+// NoticeType は通知の種類マスタを表すエンティティ。
 type NoticeType struct {
 	ID        int64          `gorm:"column:id;primaryKey"`
 	Name      string         `gorm:"column:name"`
@@ -275,13 +356,19 @@ type NoticeType struct {
 	Notices []Notice `gorm:"foreignKey:TypeID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 通知種別テーブル名
 func (NoticeType) TableName() string {
 	return "notice_types"
 }
 
 // =====================
-// NOTICE
+// 通知
 // =====================
+
+// Notice は画面上に表示する通知を表すエンティティ。
 type Notice struct {
 	ID         int64          `gorm:"column:id;primaryKey"`
 	TypeID     int64          `gorm:"column:type_id"`
@@ -296,13 +383,19 @@ type Notice struct {
 	Question   *Question  `gorm:"foreignKey:QuestionID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 通知テーブル名
 func (Notice) TableName() string {
 	return "notices"
 }
 
 // =====================
-// RELATED_QUESTION
+// 関連質問
 // =====================
+
+// RelatedQuestion は質問同士の関連を表すエンティティ。
 type RelatedQuestion struct {
 	ID                int64          `gorm:"column:id;primaryKey"`
 	QuestionID        int64          `gorm:"column:question_id"`
@@ -315,13 +408,19 @@ type RelatedQuestion struct {
 	RelatedQuestion Question `gorm:"foreignKey:RelatedQuestionID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 関連質問テーブル名
 func (RelatedQuestion) TableName() string {
 	return "related_questions"
 }
 
 // =====================
-// SENDER
+// 送信者
 // =====================
+
+// Sender はトークルーム上の問い合わせ送信者を表すエンティティ。
 type Sender struct {
 	ID             int64  `gorm:"column:id;primaryKey"`
 	UID            string `gorm:"column:uid;uniqueIndex"`
@@ -331,13 +430,19 @@ type Sender struct {
 	SenderTalks []SenderTalk `gorm:"foreignKey:SenderID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 送信者テーブル名
 func (Sender) TableName() string {
 	return "senders"
 }
 
 // =====================
-// SENDER_TALK
+// 送信者トーク
 // =====================
+
+// SenderTalk は送信者の発言内容を表すエンティティ。
 type SenderTalk struct {
 	ID         int64          `gorm:"column:id;primaryKey"`
 	Content    string         `gorm:"column:content"`
@@ -352,6 +457,10 @@ type SenderTalk struct {
 	Question Question `gorm:"foreignKey:QuestionID;references:ID"`
 }
 
+// TableName は GORM のテーブル名を返す。
+//
+// return:
+//   - string: 送信者トークテーブル名
 func (SenderTalk) TableName() string {
 	return "sender_talks"
 }

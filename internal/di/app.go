@@ -17,11 +17,19 @@ import (
 	"gorm.io/gorm"
 )
 
-// App wires layers and exposes the HTTP router.
+// App は各レイヤを組み立て、HTTP ルータを公開する。
 type App struct {
 	Router *interfaces.Router
 }
 
+// NewApp は依存関係を注入しアプリケーションを構築する。
+//
+// args:
+//   - db *gorm.DB: データベース接続
+//   - e *echo.Echo: HTTP サーバ
+//
+// return:
+//   - *App: 組み立て済みアプリケーション
 func NewApp(db *gorm.DB, e *echo.Echo) *App {
 	hasher := crypto.NewHasherAdapter()
 

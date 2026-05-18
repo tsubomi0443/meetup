@@ -9,6 +9,10 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
+// setSSEHandler は SSE エンドポイントとハブのバックグラウンド処理を登録する。
+//
+// return:
+//   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setSSEHandler() (routeInfos []echo.RouteInfo) {
 	go r.deps.Hub.Run()
 	go r.deps.Hub.RunSSE()
@@ -18,6 +22,10 @@ func (r *Router) setSSEHandler() (routeInfos []echo.RouteInfo) {
 	return
 }
 
+// sseHandler は Server-Sent Events ストリームを返すハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /sse 用ハンドラ
 func (r *Router) sseHandler() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		client := &sse.Client{Send: make(chan sse.Event, 64)}

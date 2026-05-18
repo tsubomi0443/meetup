@@ -19,6 +19,7 @@ const (
 	keySupportStatuses = "supportStatuses"
 )
 
+// masterLoginDefaults はログイン画面表示用のマスタデータ初期値。
 var masterLoginDefaults = map[string]any{
 	keyIsAdmin:         true,
 	keyIsManager:       false,
@@ -27,6 +28,10 @@ var masterLoginDefaults = map[string]any{
 	keySupportStatuses: []dto.SupportStatusForm{},
 }
 
+// setPageHandler は静的ファイル・ログイン・アプリ画面のルートを登録する。
+//
+// return:
+//   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setPageHandler() (routeInfos []echo.RouteInfo) {
 	routeInfos = append(routeInfos, r.e.Static("/static", "static"))
 	routeInfos = append(routeInfos, r.e.GET("/login", r.loginPage()))
@@ -34,6 +39,10 @@ func (r *Router) setPageHandler() (routeInfos []echo.RouteInfo) {
 	return
 }
 
+// loginPage はログイン HTML を返すハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /login 用ハンドラ
 func (r *Router) loginPage() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		viewData := map[string]any{
@@ -61,6 +70,10 @@ func (r *Router) loginPage() echo.HandlerFunc {
 	}
 }
 
+// app は認証済みアプリ画面（app.html）を返すハンドラを返す。
+//
+// return:
+//   - echo.HandlerFunc: GET /mock/:id 用ハンドラ
 func (r *Router) app() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		viewData := map[string]any{}
@@ -103,6 +116,14 @@ func (r *Router) app() echo.HandlerFunc {
 	}
 }
 
+// getJWTCustomClaims はコンテキストから JWT の CustomClaims を取り出す。
+//
+// args:
+//   - c *echo.Context: リクエストコンテキスト（JWT ミドルウェア適用済み）
+//
+// return:
+//   - *CustomClaims: クレーム
+//   - error: トークン未取得・型変換失敗
 func (r *Router) getJWTCustomClaims(c *echo.Context) (claims *CustomClaims, err error) {
 	user, ok := c.Get("user").(*jwt.Token)
 	if !ok || user == nil {

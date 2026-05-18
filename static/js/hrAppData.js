@@ -92,11 +92,23 @@ function normalizeAnswersForViewModel(question) {
     }));
 }
 
+/**
+ * 質問から最初の送信者トーク情報を取得する。
+ *
+ * @param {Object} question - 質問オブジェクト
+ * @returns {Object|null} 最初の SenderTalk。存在しない場合は null
+ */
 function firstSenderTalk(question) {
     const talks = Array.isArray(question?.senderTalks) ? question.senderTalks : [];
     return talks.length > 0 ? talks[0] : null;
 }
 
+/**
+ * 質問から送信者名を解決する（senderTalks → sender → support.user の順）。
+ *
+ * @param {Object} question - 質問オブジェクト
+ * @returns {string} 送信者名。解決できない場合は「不明」
+ */
 function senderNameFromQuestion(question) {
     return firstSenderTalk(question)?.sender?.name
         ?? question?.sender
@@ -104,6 +116,12 @@ function senderNameFromQuestion(question) {
         ?? '不明';
 }
 
+/**
+ * 質問から送信者の部署名を解決する。
+ *
+ * @param {Object} question - 質問オブジェクト
+ * @returns {string} 部署名。未設定時は空文字
+ */
 function senderDepartmentFromQuestion(question) {
     return firstSenderTalk(question)?.sender?.departmentName
         ?? question?.department
@@ -115,6 +133,11 @@ const HR_NAV_VIEW_KEY = 'meetup.hr.currentView';
 const HR_NAV_DETAIL_Q_KEY = 'meetup.hr.detailQuestionId';
 const HR_NAV_VIEWS = ['home', 'detail', 'notice', 'users', 'tags', 'settings'];
 
+/**
+ * sessionStorage に保存した HR 画面ナビゲーション状態をクリアする。
+ *
+ * @returns {void}
+ */
 function clearHrNavSession() {
     try {
         sessionStorage.removeItem(HR_NAV_VIEW_KEY);

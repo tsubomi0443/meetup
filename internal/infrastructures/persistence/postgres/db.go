@@ -13,6 +13,16 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// GetUserByID は指定 ID のユーザーをロール込みで取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - id int64: ユーザー ID
+//
+// return:
+//   - entity.User: ユーザー
+//   - error: DB エラー
 func GetUserByID(ctx context.Context, db *gorm.DB, id int64) (model entity.User, err error) {
 	model, err = gorm.G[entity.User](db).Where("id = ?", id).Select("id, name, email, memo, role_id").
 		Preload("Role", commonPreloadBuilder()).
@@ -20,6 +30,16 @@ func GetUserByID(ctx context.Context, db *gorm.DB, id int64) (model entity.User,
 	return
 }
 
+// GetUserPasswordByEmail はメールアドレスに紐づく保存パスワードハッシュを取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - email string: メールアドレス
+//
+// return:
+//   - string: パスワードハッシュ
+//   - error: DB エラー
 func GetUserPasswordByEmail(ctx context.Context, db *gorm.DB, email string) (password string, err error) {
 	u, err := gorm.G[entity.User](db).Where("email = ?", email).Select("id, password").First(ctx)
 	if err != nil {
@@ -28,6 +48,18 @@ func GetUserPasswordByEmail(ctx context.Context, db *gorm.DB, email string) (pas
 	return u.Password, nil
 }
 
+// GetUserInfo はメールとパスワードハッシュでユーザーを取得する（Preload 指定可）。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - email string: メールアドレス
+//   - pass string: 保存済みパスワードハッシュ
+//   - preloads ...string: GORM Preload 名
+//
+// return:
+//   - entity.User: ユーザー
+//   - error: DB エラー
 func GetUserInfo(ctx context.Context, db *gorm.DB, email, pass string, preloads ...string) (model entity.User, err error) {
 	chain := gorm.G[entity.User](db).Where("email = ? AND password = ?", email, pass)
 	for _, preload := range preloads {
@@ -37,6 +69,15 @@ func GetUserInfo(ctx context.Context, db *gorm.DB, email, pass string, preloads 
 	return
 }
 
+// GetUsers は管理者（role_id=1）以外のユーザー一覧を取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//
+// return:
+//   - []entity.User: ユーザー一覧
+//   - error: DB エラー
 func GetUsers(ctx context.Context, db *gorm.DB) (models []entity.User, err error) {
 	models, err = gorm.G[entity.User](db).
 		Where("role_id <> ?", 1).
@@ -48,12 +89,30 @@ func GetUsers(ctx context.Context, db *gorm.DB) (models []entity.User, err error
 	return
 }
 
-// GetMasterData は entity.Role / entity.Category / entity.SupportStatus などマスタテーブルの一覧取得用。
+// GetMasterData は entity.Role / entity.Category / entity.SupportStatus などマスタテーブルの一覧を取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//
+// return:
+//   - []T: マスタ行の一覧
+//   - error: DB エラー
 func GetMasterData[T entity.Role | entity.Category | entity.SupportStatus](ctx context.Context, db *gorm.DB) (models []T, err error) {
 	models, err = gorm.G[T](db).Find(ctx)
 	return
 }
 
+// Register は任意型のモデルを新規登録する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - model T: 登録するモデル
+//   - preloads ...string: 作成後 Preload 名（未使用の場合あり）
+//
+// return:
+//   - error: DB エラー
 func Register[T any](ctx context.Context, db *gorm.DB, model T, preloads ...string) error {
 	var v = gorm.G[T](db)
 	for _, preload := range preloads {
@@ -62,6 +121,17 @@ func Register[T any](ctx context.Context, db *gorm.DB, model T, preloads ...stri
 	return v.Create(ctx, &model)
 }
 
+// Updates はモデルを一括更新する（WHERE なしの Updates）。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - model T: 更新内容
+//   - preloads ...string: Preload 名（未使用の場合あり）
+//
+// return:
+//   - int: 更新行数
+//   - error: DB エラー
 func Updates[T any](ctx context.Context, db *gorm.DB, model T, preloads ...string) (int, error) {
 	var v = gorm.G[T](db)
 	for _, preload := range preloads {
@@ -71,8 +141,18 @@ func Updates[T any](ctx context.Context, db *gorm.DB, model T, preloads ...strin
 }
 
 // UpdateByID は主キー id を WHERE に固定して単一モデルを更新する。
-// 他の更新系メソッドに合わせて gorm.G[T](db) の Updates を利用し、トランザクションは張らない。
-// omit は generic ビルダの Omit にそのまま渡す（関連名・列名どちらも可）。
+// gorm.G[T](db) の Updates を利用し、トランザクションは張らない。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - id int64: 主キー
+//   - model T: 更新内容
+//   - omit ...string: Omit に渡す関連名・列名
+//
+// return:
+//   - int: 更新行数
+//   - error: DB エラー
 func UpdateByID[T any](ctx context.Context, db *gorm.DB, id int64, model T, omit ...string) (int, error) {
 	return gorm.G[T](db.WithContext(ctx)).
 		Omit(omit...).
@@ -80,9 +160,18 @@ func UpdateByID[T any](ctx context.Context, db *gorm.DB, id int64, model T, omit
 		Updates(ctx, model)
 }
 
-// updateInTransaction は単一の DB トランザクション内で gorm.Updates を実行する。
-// omit に関連名を渡し、entity.Role/entity.Category など中間テーブル向けの関連を更新対象から外す。
-// 既存の updates と違い、こちらは更新用。事前読み込みは行わない。
+// UpdateInTransaction は単一トランザクション内で gorm.Updates を実行する。
+// omit に関連名を渡し、中間テーブル向け関連を更新対象から外す。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - model T: 更新内容
+//   - omit ...string: 更新から除外する関連名
+//
+// return:
+//   - int: 更新行数
+//   - error: DB エラー
 func UpdateInTransaction[T any](ctx context.Context, db *gorm.DB, model T, omit ...string) (rowsAffected int, err error) {
 	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		m := model
@@ -93,7 +182,15 @@ func UpdateInTransaction[T any](ctx context.Context, db *gorm.DB, model T, omit 
 	return
 }
 
-// postgresTableCoalesceMaxID returns COALESCE(MAX(id), 0) for a whitelisted table name.
+// postgresTableCoalesceMaxID はホワイトリスト上のテーブルで COALESCE(MAX(id), 0) を返す。
+//
+// args:
+//   - tx *gorm.DB: トランザクション
+//   - table string: テーブル名（memos, tag_managers 等）
+//
+// return:
+//   - int64: 最大 ID（行なしは 0）
+//   - error: 未対応テーブル・SQL エラー
 func postgresTableCoalesceMaxID(tx *gorm.DB, table string) (int64, error) {
 	switch table {
 	case "memos", "tag_managers", "related_questions", "answers", "refer_managers":
@@ -108,9 +205,17 @@ func postgresTableCoalesceMaxID(tx *gorm.DB, table string) (int64, error) {
 	return max, nil
 }
 
-// assignBulkInsertZeros assigns sequential explicit primary keys to rows with ID==0 before
-// GORM emits a multi-row INSERT. Otherwise one statement can mix RETURNING/Default nextval rows with rows
-// that reuse client ids already present in MAX(id)...nextval bracket, producing *_pkey duplicate key errors.
+// assignBulkInsertZeros は一括 INSERT 前に ID==0 の行へ連番の主キーを割り当てる。
+// 混在 INSERT による *_pkey 重複を防ぐ。
+//
+// args:
+//   - tx *gorm.DB: トランザクション
+//   - rows []T: 挿入行
+//   - table string: テーブル名
+//   - id func(*T) *int64: 行の ID フィールド参照
+//
+// return:
+//   - error: ID 採番・DB エラー
 func assignBulkInsertZeros[T any](tx *gorm.DB, rows []T, table string, id func(*T) *int64) error {
 	hasZero := false
 	batchMax := int64(0)
@@ -142,9 +247,23 @@ func assignBulkInsertZeros[T any](tx *gorm.DB, rows []T, table string, id func(*
 	return nil
 }
 
-// syncChildrenByKey は親 FK（parentColumn = parentID）配下の子行を、キーで突き合わせて
-// INSERT / UPDATE /（論理または物理）DELETE する。want は in-place で主キーが埋め戻される。
-// softDelete=true のとき削除は GORM の Delete（deleted_at）、false のとき Unscoped 物理削除。
+// syncChildrenByKey は親 FK 配下の子行をキーで突き合わせ INSERT / UPDATE / DELETE する。
+// want は in-place で主キーが埋め戻される。softDelete=true は論理削除、false は物理削除。
+//
+// args:
+//   - tx *gorm.DB: トランザクション
+//   - table string: 子テーブル名
+//   - parentColumn string: 親 FK 列名
+//   - parentID int64: 親 ID
+//   - want []T: 望ましい子行の集合
+//   - keyFn func(*T) K: 自然キー抽出
+//   - pkFn func(*T) *int64: 主キー参照
+//   - applyUpdate func(tx *gorm.DB, prev T, next *T) error: 更新時コールバック（nil 可）
+//   - softDelete bool: 論理削除かどうか
+//
+// return:
+//   - []int64: 削除した子行の ID
+//   - error: DB エラー
 func syncChildrenByKey[T any, K comparable](
 	tx *gorm.DB,
 	table string,
@@ -226,10 +345,16 @@ func syncChildrenByKey[T any, K comparable](
 	return deletedIDs, nil
 }
 
-// UpdateQuestionInTransaction は entity.Question の1行更新と、QuestionToEntity で組み立てた
-// 1対多の関連（entity.Answer, entity.Support, TagManagers, Memos, RelatedQuestions）を、差分同期（INSERT/UPDATE/DELETE）
-// で1トランザクションにまとめる。子の削除は原則論理削除（related_questions のみ物理削除。理由は該当コメント参照）。
-// フォーム上の下位の質問（SubQuestions）やエスカレーション等は本関数では永続化しない。
+// UpdateQuestionInTransaction は質問本体と1対多関連を差分同期で1トランザクション更新する。
+// related_questions のみ物理削除（ユニーク制約のため）。SubQuestions 等は永続化しない。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - q entity.Question: 更新後の質問エンティティ
+//
+// return:
+//   - error: DB エラー
 func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q entity.Question) error {
 	return db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1) entity.Support: 新規作成 or 既存更新、またはフォームに無ければ既存の support を detach
@@ -396,9 +521,14 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q entity.Ques
 	})
 }
 
-// DetachQuestionSupportTx は同一トランザクション内で、対象 question の support_id を NULL にし、
-// 直前まで紐づいていた supports 行を削除する。questions.support_id は UNIQUE であり、
-// 1 質問 1 サポートの 1:1 を前提とする。
+// DetachQuestionSupportTx は質問の support_id を NULL にし、紐づく supports 行を削除する（1:1 前提）。
+//
+// args:
+//   - tx *gorm.DB: トランザクション
+//   - questionID int64: 質問 ID
+//
+// return:
+//   - error: DB エラー
 func DetachQuestionSupportTx(tx *gorm.DB, questionID int64) error {
 	var current entity.Question
 	if err := tx.Select("id", "support_id").
@@ -421,6 +551,15 @@ func DetachQuestionSupportTx(tx *gorm.DB, questionID int64) error {
 	return nil
 }
 
+// DeleteQuestionByID は指定 ID の質問と関連行を削除する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - id int64: 質問 ID
+//
+// return:
+//   - error: DB エラー
 func DeleteQuestionByID(ctx context.Context, db *gorm.DB, id int64) error {
 	if err := db.WithContext(ctx).
 		Where("question_id = ? OR related_question_id = ?", id, id).
@@ -451,6 +590,15 @@ func DeleteQuestionByID(ctx context.Context, db *gorm.DB, id int64) error {
 	return nil
 }
 
+// DeleteUserByID は指定 ID のユーザーを削除する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - id int64: ユーザー ID
+//
+// return:
+//   - error: DB エラー
 func DeleteUserByID(ctx context.Context, db *gorm.DB, id int64) error {
 	if _, err := gorm.G[entity.User](db).
 		Preload("Role", commonPreloadBuilder()).
@@ -462,6 +610,16 @@ func DeleteUserByID(ctx context.Context, db *gorm.DB, id int64) error {
 	return nil
 }
 
+// GetQuestion は指定 ID の質問を関連込みで取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - id int64: 質問 ID
+//
+// return:
+//   - entity.Question: 質問
+//   - error: DB エラー
 func GetQuestion(ctx context.Context, db *gorm.DB, id int64) (model entity.Question, err error) {
 	model, err = gorm.G[entity.Question](db).
 		Preload("Answer", commonPreloadBuilder()).
@@ -488,6 +646,15 @@ func GetQuestion(ctx context.Context, db *gorm.DB, id int64) (model entity.Quest
 	return
 }
 
+// GetQuestions は質問一覧を関連込みで取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//
+// return:
+//   - []entity.Question: 質問一覧
+//   - error: DB エラー
 func GetQuestions(ctx context.Context, db *gorm.DB) (models []entity.Question, err error) {
 	models, err = gorm.G[entity.Question](db).
 		Preload("Answer", commonPreloadBuilder()).
@@ -514,6 +681,15 @@ func GetQuestions(ctx context.Context, db *gorm.DB) (models []entity.Question, e
 	return
 }
 
+// GetTags はタグ一覧をカテゴリ込みで取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//
+// return:
+//   - []entity.Tag: タグ一覧
+//   - error: DB エラー
 func GetTags(ctx context.Context, db *gorm.DB) (models []entity.Tag, err error) {
 	models, err = gorm.G[entity.Tag](db).
 		Preload("Category", commonPreloadBuilder()).
@@ -522,6 +698,16 @@ func GetTags(ctx context.Context, db *gorm.DB) (models []entity.Tag, err error) 
 	return
 }
 
+// GetTagByID は指定 ID のタグをカテゴリ込みで取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - id int64: タグ ID
+//
+// return:
+//   - entity.Tag: タグ
+//   - error: DB エラー
 func GetTagByID(ctx context.Context, db *gorm.DB, id int64) (models entity.Tag, err error) {
 	models, err = gorm.G[entity.Tag](db).
 		Preload("Category", commonPreloadBuilder()).
@@ -530,6 +716,15 @@ func GetTagByID(ctx context.Context, db *gorm.DB, id int64) (models entity.Tag, 
 	return
 }
 
+// DeleteTagByID は指定 ID のタグを削除する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - id int64: タグ ID
+//
+// return:
+//   - error: DB エラー
 func DeleteTagByID(ctx context.Context, db *gorm.DB, id int64) error {
 	if _, err := gorm.G[entity.Tag](db).Where("id = ?", id).Limit(1).Delete(ctx); err != nil {
 		return err
@@ -537,6 +732,16 @@ func DeleteTagByID(ctx context.Context, db *gorm.DB, id int64) error {
 	return nil
 }
 
+// GetNoticeByQuestionIDs は質問 ID 一覧に紐づく通知を取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - questionIDs []int64: 質問 ID 一覧
+//
+// return:
+//   - []entity.Notice: 通知一覧
+//   - error: DB エラー
 func GetNoticeByQuestionIDs(ctx context.Context, db *gorm.DB, questionIDs []int64) (models []entity.Notice, err error) {
 	if len(questionIDs) > 0 {
 		models, err = gorm.G[entity.Notice](db).Where("question_id IN ?", questionIDs).Order("id").Find(ctx)
@@ -544,11 +749,30 @@ func GetNoticeByQuestionIDs(ctx context.Context, db *gorm.DB, questionIDs []int6
 	return
 }
 
+// GetNoticeByQuestion は質問に紐づく通知を1件取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - question entity.Question: 対象質問
+//
+// return:
+//   - entity.Notice: 通知
+//   - error: DB エラー
 func GetNoticeByQuestion(ctx context.Context, db *gorm.DB, question entity.Question) (models entity.Notice, err error) {
 	models, err = gorm.G[entity.Notice](db).Where("question_id = ?", question.ID).First(ctx)
 	return
 }
 
+// GetNotice は通知一覧を関連込みで取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//
+// return:
+//   - []entity.Notice: 通知一覧
+//   - error: DB エラー
 func GetNotice(ctx context.Context, db *gorm.DB) (models []entity.Notice, err error) {
 	models, err = gorm.G[entity.Notice](db).
 		Preload("NoticeType", commonPreloadBuilder()).
@@ -562,6 +786,16 @@ func GetNotice(ctx context.Context, db *gorm.DB) (models []entity.Notice, err er
 	return
 }
 
+// GetNoticeByQuestionSilent は質問に紐づく通知をサイレントログで取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - question entity.Question: 対象質問
+//
+// return:
+//   - entity.Notice: 通知
+//   - error: DB エラー
 func GetNoticeByQuestionSilent(ctx context.Context, db *gorm.DB, question entity.Question) (model entity.Notice, err error) {
 	model, err = gorm.G[entity.Notice](db.Session(&gorm.Session{
 		Logger: db.Logger.LogMode(logger.Silent),
@@ -569,6 +803,15 @@ func GetNoticeByQuestionSilent(ctx context.Context, db *gorm.DB, question entity
 	return
 }
 
+// RegisterNoticeByQuestionID は回答期日接近の通知を質問 ID に紐づけて登録する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - questionID int64: 質問 ID
+//
+// return:
+//   - error: DB エラー
 func RegisterNoticeByQuestionID(ctx context.Context, db *gorm.DB, questionID int64) error {
 	var content = "質問の回答期日が近づいています。"
 	notice := entity.Notice{
@@ -579,6 +822,15 @@ func RegisterNoticeByQuestionID(ctx context.Context, db *gorm.DB, questionID int
 	return gorm.G[entity.Notice](db).Create(ctx, &notice)
 }
 
+// DeleteNoticeByID は指定 ID の通知を削除する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - id int64: 通知 ID
+//
+// return:
+//   - error: DB エラー
 func DeleteNoticeByID(ctx context.Context, db *gorm.DB, id int64) error {
 	if _, err := gorm.G[entity.Notice](db).Where("id = ?", id).Delete(ctx); err != nil {
 		return err
@@ -586,6 +838,16 @@ func DeleteNoticeByID(ctx context.Context, db *gorm.DB, id int64) error {
 	return nil
 }
 
+// DeleteNoticeByQuestion は質問に紐づく通知を削除する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - question entity.Question: 対象質問
+//
+// return:
+//   - int64: 削除した通知 ID
+//   - error: DB エラー
 func DeleteNoticeByQuestion(ctx context.Context, db *gorm.DB, question entity.Question) (noticeID int64, err error) {
 	n, err := GetNoticeByQuestionSilent(ctx, db, question)
 	if err != nil {
@@ -597,6 +859,16 @@ func DeleteNoticeByQuestion(ctx context.Context, db *gorm.DB, question entity.Qu
 	return n.ID, nil
 }
 
+// DeleteNoticeByQuestionID は質問 ID に紐づく通知を検索して削除する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - questionID int64: 質問 ID
+//
+// return:
+//   - int64: 削除した通知 ID（見つからない場合は -1）
+//   - error: DB エラー
 func DeleteNoticeByQuestionID(ctx context.Context, db *gorm.DB, questionID int64) (deletedID int64, err error) {
 	notices, err := GetNotice(ctx, db)
 	if err != nil {
@@ -613,6 +885,15 @@ func DeleteNoticeByQuestionID(ctx context.Context, db *gorm.DB, questionID int64
 	return -1, gorm.ErrRecordNotFound
 }
 
+// GetMaxByColumn は指定列の MAX 値を返す（無効・未存在時は -1）。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//   - db *gorm.DB: データベース接続
+//   - columnName string: 集計列名
+//
+// return:
+//   - int64: 最大値
 func GetMaxByColumn[T any](ctx context.Context, db *gorm.DB, columnName string) int64 {
 	var max sql.NullInt64
 	err := db.WithContext(ctx).Model(new(T)).
@@ -629,6 +910,10 @@ func GetMaxByColumn[T any](ctx context.Context, db *gorm.DB, columnName string) 
 
 }
 
+// commonPreloadBuilder は Preload 時に id 昇順で並べるビルダを返す。
+//
+// return:
+//   - func(db gorm.PreloadBuilder) error: Preload コールバック
 func commonPreloadBuilder() func(db gorm.PreloadBuilder) error {
 	return func(db gorm.PreloadBuilder) error {
 		db.Order("id")
@@ -636,6 +921,13 @@ func commonPreloadBuilder() func(db gorm.PreloadBuilder) error {
 	}
 }
 
+// userPreloadBuilder はユーザー Preload 用の Select・Order を返す。
+//
+// args:
+//   - includePassword bool: password 列を含めるか
+//
+// return:
+//   - func(db gorm.PreloadBuilder) error: Preload コールバック
 func userPreloadBuilder(includePassword bool) func(db gorm.PreloadBuilder) error {
 	return func(db gorm.PreloadBuilder) error {
 		if includePassword {

@@ -8,14 +8,30 @@ import (
 	"meetup/internal/usecases/dto"
 )
 
+// UseCase はマスタデータ（ロール・カテゴリ・支援ステータス）取得ユースケースを表す。
 type UseCase struct {
 	master domainmaster.Repository
 }
 
+// NewUseCase はマスタデータユースケースを生成する。
+//
+// args:
+//   - master domainmaster.Repository: マスタリポジトリ
+//
+// return:
+//   - *UseCase: 生成したユースケース
 func NewUseCase(master domainmaster.Repository) *UseCase {
 	return &UseCase{master: master}
 }
 
+// ListRoles は全ロールを DTO 一覧として取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//
+// return:
+//   - []dto.RoleForm: ロールフォームの一覧
+//   - error: 取得エラー
 func (u *UseCase) ListRoles(ctx context.Context) ([]dto.RoleForm, error) {
 	roles, err := u.master.GetRoles(ctx)
 	if err != nil {
@@ -28,6 +44,14 @@ func (u *UseCase) ListRoles(ctx context.Context) ([]dto.RoleForm, error) {
 	return roleForms, nil
 }
 
+// ListCategories は全カテゴリを DTO 一覧として取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//
+// return:
+//   - []dto.CategoryForm: カテゴリフォームの一覧
+//   - error: 取得エラー
 func (u *UseCase) ListCategories(ctx context.Context) ([]dto.CategoryForm, error) {
 	categories, err := u.master.GetCategories(ctx)
 	if err != nil {
@@ -40,6 +64,14 @@ func (u *UseCase) ListCategories(ctx context.Context) ([]dto.CategoryForm, error
 	return categoryForms, nil
 }
 
+// ListSupportStatuses は全支援ステータスを DTO 一覧として取得する。
+//
+// args:
+//   - ctx context.Context: リクエストコンテキスト
+//
+// return:
+//   - []dto.SupportStatusForm: 支援ステータスフォームの一覧
+//   - error: 取得エラー
 func (u *UseCase) ListSupportStatuses(ctx context.Context) ([]dto.SupportStatusForm, error) {
 	statuses, err := u.master.GetSupportStatuses(ctx)
 	if err != nil {
