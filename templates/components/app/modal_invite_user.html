@@ -1,4 +1,4 @@
-{{define "mock5_modal_invite_user"}}
+{{define "modal_invite_user"}}
 <div class="modal backdrop-blur-sm" :class="{'modal-open': showAddUserModal}"
     x-data="{ email: '', name: '', pass: '', role: '3', roleName: 'Staff', isValid: false, selectOptionTitle(event) {
         this.roleName = event.target.options[event.target.selectedIndex].text;

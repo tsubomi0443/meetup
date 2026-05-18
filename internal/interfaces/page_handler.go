@@ -30,8 +30,7 @@ var masterLoginDefaults = map[string]any{
 func (r *Router) setPageHandler() (routeInfos []echo.RouteInfo) {
 	routeInfos = append(routeInfos, r.e.Static("/static", "static"))
 	routeInfos = append(routeInfos, r.e.GET("/login", r.loginPage()))
-	routeInfos = append(routeInfos, r.e.GET("/", r.homePage()))
-	routeInfos = append(routeInfos, r.e.GET("/mock/:id", r.mockup(), GetJWTConfig()))
+	routeInfos = append(routeInfos, r.e.GET("/mock/:id", r.app(), GetJWTConfig()))
 	return
 }
 
@@ -62,17 +61,8 @@ func (r *Router) loginPage() echo.HandlerFunc {
 	}
 }
 
-func (r *Router) homePage() echo.HandlerFunc {
+func (r *Router) app() echo.HandlerFunc {
 	return func(c *echo.Context) error {
-		return c.Render(http.StatusOK, "index.html", map[string]any{
-			"Title": "Go + Echo + HTMX + Alpine.js",
-		})
-	}
-}
-
-func (r *Router) mockup() echo.HandlerFunc {
-	return func(c *echo.Context) error {
-		id := c.Param("id")
 		viewData := map[string]any{}
 
 		loginErr := func(errMsg string) error {
@@ -109,7 +99,7 @@ func (r *Router) mockup() echo.HandlerFunc {
 		}
 		viewData[keySupportStatuses] = supportStatusForms
 
-		return c.Render(http.StatusOK, fmt.Sprintf("mock%s.html", id), viewData)
+		return c.Render(http.StatusOK, "app.html", viewData)
 	}
 }
 

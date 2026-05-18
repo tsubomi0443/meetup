@@ -9,6 +9,8 @@ import (
 	"meetup/internal/di"
 	"meetup/internal/infrastructures/config"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -56,9 +58,26 @@ func setupEcho() *echo.Echo {
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 
+	tmpl := template.New("")
+	err := filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// .html ファイルのみを対象とする
+		if !info.IsDir() && strings.HasSuffix(path, ".html") {
+			if _, err := tmpl.ParseFiles(path); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
 	// テンプレートの設定
 	e.Renderer = &echo.TemplateRenderer{
-		Template: template.Must(template.ParseGlob("templates/**/*.html")),
+		Template: tmpl,
 	}
 
 	// ミドルウェア

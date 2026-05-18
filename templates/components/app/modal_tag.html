@@ -1,4 +1,4 @@
-{{define "mock5_modal_tag"}}
+{{define "modal_tag"}}
 <div class="modal backdrop-blur-sm" :class="{'modal-open': showTagModal}"
     x-data="{ title: '', categoryId: '0', categoryText: '', selectOptionTitle(event) {
         this.categoryText = event.target.options[event.target.selectedIndex].text;
