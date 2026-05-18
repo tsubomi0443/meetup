@@ -6,8 +6,8 @@ import (
 	"html/template"
 	"log"
 	"log/slog"
-	"meetup/env"
-	"meetup/handler"
+	"meetup/internal/di"
+	"meetup/internal/infrastructures/config"
 	"os"
 	"time"
 
@@ -34,12 +34,10 @@ func main() {
 	}
 
 	e := setupEcho()
-	hub := handler.NewHub()
-	ne := handler.NewNoticeEvent()
-	handlerManager := handler.NewHandlerManager(db, e, hub, ne)
-	hub.SetLogger(handlerManager.Logging)
-	go handlerManager.PollingStart(context.Background())
-	fmt.Println(handlerManager.SetupHandlers())
+	app := di.NewApp(db, e)
+	app.Router.SetHubLogger(app.Router.Logging)
+	go app.Router.PollingStart(context.Background())
+	fmt.Println(app.Router.SetupHandlers())
 
 	// サーバー起動
 	port := os.Getenv("PORT")
@@ -74,7 +72,7 @@ func setupDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	db, err := gorm.Open(postgres.Open(env.GetDSN()), &gorm.Config{
+	db, err := gorm.Open(postgres.Open(config.GetDSN()), &gorm.Config{
 		// GORMがレコード作成・更新時に使う時刻をJSTに固定
 		NowFunc: func() time.Time {
 			return time.Now().In(jst)

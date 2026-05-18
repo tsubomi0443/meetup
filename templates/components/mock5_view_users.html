@@ -4,15 +4,17 @@
         <div class="flex flex-wrap items-center gap-3 min-w-0 flex-1">
             <div class="relative w-full max-w-xs sm:w-80 shrink-0">
                 <i data-lucide="search" class="w-5 h-5 absolute left-3 top-2.5 text-gray-400"></i>
-                <input type="text" placeholder="ユーザー検索..."
-                    x-model="userSearchQuery"
+                <input type="text" placeholder="ユーザー検索..." x-model="userSearchQuery" @input="refreshIcons()"
                     class="input input-bordered w-full pl-10 h-10 text-sm focus:border-slate-800 shadow-sm" />
             </div>
             <select x-model="userRoleFilter"
-                class="select select-bordered h-10 min-w-[10rem] text-sm focus:border-slate-800 shadow-sm shrink-0">
+                class="select select-bordered h-10 min-w-[10rem] text-sm focus:border-slate-800 shadow-sm shrink-0" @change="refreshIcons()">
                 <option value="all">すべての役割</option>
-                <option value="2">Manager</option>
-                <option value="3">Staff</option>
+                {{range $index, $role := .roles}}
+                {{if ne $role.ID 1}}
+                <option value="{{$role.ID}}">{{$role.Name}}</option>
+                {{end}}
+                {{end}}
             </select>
         </div>
         <button class="btn btn-primary btn-sm bg-slate-800 border-none font-bold" @click="showAddUserModal = true">+

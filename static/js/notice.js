@@ -1,6 +1,6 @@
 /**
  * Mock5 画面上部用 Notice（Alpine.store + window.notice API）
- * DaisyUI alert + Lucide。duration はミリ秒。省略時 4000。null または 0 で自動消去なし。
+ * DaisyUI alert + Lucide。duration はミリ秒。省略時 4000（DEFAULT_WAIT_MSEC）。null または 0 で自動消去なし。
  * dismissible: false で閉じるボタンを出さない（window.notice.dismiss / clear は有効）。
  * widthClass: 各 Notice 行に付与する Tailwind の幅クラス（例: w-full, w-96, w-full max-w-md）。省略時は w-full。
  */
@@ -109,6 +109,8 @@ function enqueueOrRun(fn) {
 }
 
 document.addEventListener('alpine:init', () => {
+    const DEFAULT_WAIT_MSEC = 4000;
+
     Alpine.store(NOTICE_STORE_NAME, {
         items: [],
         _seq: 0,
@@ -125,7 +127,7 @@ document.addEventListener('alpine:init', () => {
             const icon = opts.icon ? String(opts.icon) : defaultIconForType(type);
             const rawDur = opts.duration;
             const duration =
-                rawDur === undefined ? 4000 : rawDur === null ? 0 : Number(rawDur);
+                rawDur === undefined ? DEFAULT_WAIT_MSEC : rawDur === null ? 0 : Number(rawDur);
             const dismissible = opts.dismissible !== false;
             const widthClass = normalizeWidthClass(opts.widthClass ?? opts.width);
 

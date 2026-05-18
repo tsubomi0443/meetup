@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"meetup/crypto"
+	"meetup/internal/infrastructures/crypto"
 
 	"github.com/joho/godotenv"
 )

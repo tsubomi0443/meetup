@@ -1,6 +1,9 @@
 import { Question, User, Tag, Notice } from '/static/js/model.js';
 
 export const SSE = {
+    error: {
+        authExpired: 'error-auth-expired',
+    },
     system: {
         timeTick: 'time-tick',
     },
@@ -100,6 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
     es.addEventListener(SSE.system.timeTick, (event) => {
         document.dispatchEvent(new CustomEvent(SSE.system.timeTick, {
             detail: new Date(event.data),
+        }));
+    });
+
+    es.addEventListener(SSE.error.authExpired, (event) => {
+        document.dispatchEvent(new CustomEvent(SSE.error.authExpired, {
+            detail: event.data,
         }));
     });
 

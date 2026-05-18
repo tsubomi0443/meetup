@@ -70,19 +70,22 @@
 
                 <div class="mt-0">
                     <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">対応情報</h4>
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 rounded-full" x-html="`${makeAvatar(activeQuestion.support.user.name)}`"></div>
-                        <div class="min-w-0">
-                            <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.support.user.name"></div>
+                    <template x-if="String(activeQuestion.support?.supportStatusId ?? '') !== '1'">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 rounded-full" x-html="`${makeAvatar(activeQuestion.support.user.name)}`"></div>
+                            <div class="min-w-0">
+                                <div class="text-sm font-bold text-gray-900 truncate" x-text="activeQuestion.support.user.name"></div>
+                            </div>
                         </div>
-                    </div>
+                    </template>
                 </div>
 
                 <div class="space-y-4" :disabled="loginUser.id === Number(activeQuestion.userId)">
                     <div>
                         <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">タイトル</h4>
                         <input type="text" @change="updateQuestion()" x-model="activeQuestion.title"
-                            class="input input-bordered input-sm w-full text-sm font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner" />
+                            class="input input-bordered input-sm w-full text-sm font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner"
+                            :class="!isSameSupportUser ? 'input-disabled':''" :disabled="!isSameSupportUser" />
                     </div>
 
                     <div>
@@ -90,9 +93,12 @@
                         <select
                             class="select select-bordered select-sm w-full text-sm font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner"
                             @change="updateQuestion()" x-model="activeQuestion.support.supportStatusId">
-                            <option value="1">未対応</option>
-                            <option value="2">対応中</option>
-                            <option value="3" :disabled="!hasActiveQuestionAnswers()" :title="!hasActiveQuestionAnswers() ? '「回答を送信」してから押下できるようになります。':''">完了</option>
+                            {{range $index, $status := .supportStatuses}}
+                            <option value="{{$status.ID}}"
+                                {{if eq $status.ID 3}}:disabled="!hasActiveQuestionAnswers() || !isSameSupportUser" :title="(!hasActiveQuestionAnswers() || !isSameSupportUser) ? '対応担当本人かつ回答送信後に選択できます。' : ''"{{end}}
+                                {{if eq $status.ID 2}}:disabled="!isSameSupportUser && !activeQuestion.support" :title="!isSameSupportUser && !activeQuestion.support ? '対応担当本人のみ変更できます。' : ''"{{end}}>
+                                {{$status.Name}}</option>
+                            {{end}}
                         </select>
                     </div>
 
@@ -101,7 +107,8 @@
                         <div class="relative w-full" x-data="{ isCategoryOpen: false }"
                             @click.outside="isCategoryOpen = false">
                             <button type="button" @click="isCategoryOpen = !isCategoryOpen"
-                                class="btn btn-outline btn-sm border-gray-300 normal-case w-full justify-between font-bold text-gray-700 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800 shadow-sm bg-gray-50">
+                                class="btn btn-outline btn-sm border-gray-300 normal-case w-full justify-between font-bold text-gray-700 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800 shadow-sm bg-gray-50"
+                                :class="!isSameSupportUser ? 'btn-disabled':''">
                                 <span class="truncate text-xs"
                                     x-text="activeQuestionTagButtonLabel()"></span>
                                 <i data-lucide="chevron-down" class="w-4 h-4 ml-2 shrink-0"></i>
@@ -136,7 +143,8 @@
                         <div class="col-span-full">
                             <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">期日</h4>
                             <input type="date" x-model="activeQuestion.dueDate" @change="updateQuestion()"
-                                class="input input-bordered input-sm w-full text-xs font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner px-2" />
+                                class="input input-bordered input-sm w-full text-xs font-bold focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 shadow-inner px-2"
+                                :class="!isSameSupportUser ? 'input-disabled':''" />
                         </div>
                     </div>
                 </div>
@@ -147,9 +155,9 @@
 
                 <div class="relative w-full" x-data="{ isRelatedOpen: false }" @click.outside="isRelatedOpen = false">
                     <button type="button" @click="isRelatedOpen = !isRelatedOpen"
-                        class="btn btn-outline btn-sm border-gray-300 normal-case w-full justify-between font-bold text-gray-700 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800 shadow-sm bg-gray-50">
-                        <span class="truncate text-xs" x-text="relatedQuestionPickerButtonLabel()">
-                        </span>
+                        class="btn btn-outline btn-sm border-gray-300 normal-case w-full justify-between font-bold text-gray-700 hover:bg-slate-50 hover:text-slate-800 hover:border-slate-800 shadow-sm bg-gray-50"
+                        :class="!isSameSupportUser ? 'btn-disabled':''">
+                        <span class="truncate text-xs" x-text="relatedQuestionPickerButtonLabel()"></span>
                         <i data-lucide="chevron-down" class="w-4 h-4 ml-2 shrink-0"></i>
                     </button>
 
@@ -158,7 +166,7 @@
                         <div class="card-body p-2 flex flex-col min-h-0 flex-1 gap-0">
                             <div class="relative mb-2 shrink-0">
                                 <i data-lucide="search" class="w-3 h-3 absolute left-2 top-2.5 text-gray-400"></i>
-                                <input type="text" x-model="relatedSearchQuery" placeholder="検索..."
+                                <input type="text" x-model="relatedSearchQuery" placeholder="タイトル検索..."
                                     class="input input-bordered input-sm w-full pl-7 text-xs focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800" />
                             </div>
 
@@ -187,7 +195,8 @@
                 </div>
 
                 <div class="mt-3 space-y-2"
-                    x-show="hasActiveRelatedQuestionIds()">
+                    x-show="hasActiveRelatedQuestionIds()"
+                    :hidden="!isSameSupportUser">
                     <template x-for="(rqRow, rqIdx) in activeQuestion.relatedQuestions" :key="relatedQuestionRowKey(rqRow, rqIdx)">
                         <div
                             class="p-2 bg-gray-50 rounded border text-xs font-bold hover:bg-slate-50 transition-colors flex justify-between items-center group">

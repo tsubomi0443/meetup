@@ -146,11 +146,13 @@ document.addEventListener('alpine:init', () => {
         loginUser: {},
         activeTag: {},
         isConnect: false,
+        connectionRetrying: false,
+        connectionAlertId: 0,
 
         /** 初回SSE接続〜初回 initData 成功まで true（リロード時も再度 true から始まる） */
         isInitialLoadingVisible: true,
         hasInitialLoadCompleted: false,
-        initialLoadTotal: 4,
+        initialLoadTotal: 5,
         initialLoadCompleted: 0,
         initialLoadLabel: '',
 
@@ -278,6 +280,16 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        get isSameSupportUser() {
+            const sup = this.activeQuestion?.support;
+            if (!sup) return false;
+            const uid = sup.userId != null && sup.userId !== ''
+                ? Number(sup.userId)
+                : Number(sup.user?.id);
+            if (!Number.isFinite(uid) || uid <= 0) return false;
+            return uid === Number(this.loginUser?.id);
+        },
+
         apiHeaders(withJSON = true) {
             const h = {};
             if (withJSON) h['Content-Type'] = 'application/json';
@@ -293,7 +305,7 @@ document.addEventListener('alpine:init', () => {
             if (blocking) {
                 this.isInitialLoadingVisible = true;
                 this.initialLoadCompleted = 0;
-                this.initialLoadTotal = 4;
+                this.initialLoadTotal = 5;
                 this.initialLoadLabel = 'サーバーに接続しています…';
             }
             const steps = [
@@ -301,6 +313,7 @@ document.addEventListener('alpine:init', () => {
                 { label: '質問一覧を読み込んでいます', fn: () => this.getQuestions() },
                 { label: 'ユーザーを読み込んでいます', fn: () => this.getUsers() },
                 { label: 'タグを読み込んでいます', fn: () => this.getTags() },
+                { label: '通知を読み込んでいます', fn: () => this.getNotices() },
             ];
             try {
                 if (blocking) {
@@ -337,11 +350,37 @@ document.addEventListener('alpine:init', () => {
 
             document.addEventListener('connect', (event) => {
                 this.isConnect = event.detail;
+                if (this.connectionRetrying && this.connectionAlertId) {
+                    window.notice.dismiss(this.connectionAlertId);
+                    window.notice.show({
+                        message: 'サーバに正常に接続できました。',
+                        type: 'success',
+                        duration: 5000,
+                    });
+                    this.connectionRetrying = false;
+                    this.connectionAlertId = 0;
+                }
                 void this.initData({ blocking: !this.hasInitialLoadCompleted });
                 this.refreshIcons();
             });
             document.addEventListener('disconnect', (event) => {
                 this.isConnect = event.detail;
+                if (!this.connectionRetrying) {
+                    this.connectionAlertId = window.notice.show({
+                        message: 'サーバとの接続が切断されました。接続が回復すると自動で再試行されます。\n５分以上待っても復旧しない場合は管理者へご連絡ください。',
+                        type: 'error',
+                        duration: 10000,
+                    });
+                    this.connectionRetrying = true;
+                }
+            });
+
+            document.addEventListener(SSE.error.authExpired, () => {
+                window.notice.show({
+                    message: '続けて操作をする場合は再ログインをしてください（認証情報の期限切れ）。',
+                    type: 'info',
+                    dismissible: false,
+                });
             });
 
             document.addEventListener(SSE.system.timeTick, (event) => {
@@ -452,6 +491,7 @@ document.addEventListener('alpine:init', () => {
                             ...this.users[index],
                             ...user,
                         });
+                        this.scrollBottom("question");
                         this.refreshIcons();
                     }
                 }
@@ -1352,6 +1392,14 @@ document.addEventListener('alpine:init', () => {
             const list = Array.isArray(json) ? json : [json];
             this.tags = list.map((t) => Tag.fromJSON(t));
             this.availableTags = list.map((t) => Tag.fromJSON(t));
+        },
+
+        async getNotices() {
+            const res = await fetch("/api/v1/notice", { headers: this.apiHeaders(false) });
+            if (!res.ok) return;
+            const json = await res.json();
+            const list = Array.isArray(json) ? json : [json];
+            this.notices = list.map((n) => Notice.fromJSON(n));
         },
 
         async registerTag(name, categoryId, categoryText) {
