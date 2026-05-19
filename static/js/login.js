@@ -36,7 +36,11 @@ document.addEventListener('alpine:init', () => {
         }),
       });
       if (!res.ok) {
-        console.log('Login error.');
+        window.notice.show({
+          message: 'メールアドレスかパスワードが間違っています。',
+          type: 'error',
+          duration: 1000,
+        });
         return;
       }
       const body = await res.json();

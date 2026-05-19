@@ -61,6 +61,7 @@ func (r *Router) SetHubLogger(logger func(ctx context.Context, level slog.Level,
 // return:
 //   - []echo.RouteInfo: 登録したルート情報の一覧
 func (r *Router) SetupHandlers() (routeInfos []echo.RouteInfo) {
+	routeInfos = append(routeInfos, r.setStaticHandler()...)
 	routeInfos = append(routeInfos, r.setupAuthHandler()...)
 	routeInfos = append(routeInfos, r.setPageHandler()...)
 	routeInfos = append(routeInfos, r.setSSEHandler()...)

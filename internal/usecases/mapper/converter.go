@@ -2,10 +2,12 @@
 package mapper
 
 import (
+	"strconv"
+	"strings"
+	"time"
+
 	"meetup/internal/domains/entity"
 	"meetup/internal/usecases/dto"
-	"strconv"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -732,6 +734,8 @@ func AnswerToEntity(f dto.AnswerForm) entity.Answer {
 		}
 		if rf.ID != 0 {
 			rm.Refer = entity.Refer{ID: rf.ID}
+		} else if strings.TrimSpace(rf.Title) != "" && strings.TrimSpace(rf.URL) != "" {
+			rm.Refer = ReferToEntity(rf)
 		}
 		e.ReferManagers = append(e.ReferManagers, rm)
 	}

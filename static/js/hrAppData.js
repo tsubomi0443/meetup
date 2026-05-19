@@ -77,6 +77,29 @@ function ensureSupportAssigneeForInProgressPut(payload, loginUser) {
     delete payload.supportId;
 }
 
+/** Question API/SSE から refers を view 用に正規化 */
+function normalizeRefersForViewModel(refers) {
+    const raw = Array.isArray(refers) ? refers : [];
+    return raw.map((r) => ({
+        id: r?.id != null ? Number(r.id) || 0 : 0,
+        title: r?.title != null ? String(r.title) : '',
+        url: r?.url != null ? String(r.url) : '',
+        createdAt: r?.createdAt ?? null,
+        updatedAt: r?.updatedAt ?? null,
+    }));
+}
+
+/** PUT 用 AnswerForm.refers を ReferForm 形に正規化 */
+function mapRefersForPut(refers) {
+    return normalizeRefersForViewModel(refers)
+        .map((r) => ({
+            ...r,
+            title: r.title.trim(),
+            url: r.url.trim(),
+        }))
+        .filter((r) => r.id > 0 || (r.title !== '' && r.url !== ''));
+}
+
 /** Question API/SSE から answers を view 用に正規化 */
 function normalizeAnswersForViewModel(question) {
     const raw = Array.isArray(question.answers) ? question.answers : [];
@@ -89,6 +112,7 @@ function normalizeAnswersForViewModel(question) {
         user: a.user && typeof a.user === 'object'
             ? { id: a.user.id, name: String(a.user.name ?? '') }
             : { id: a.userId, name: '' },
+        refers: normalizeRefersForViewModel(a.refers),
     }));
 }
 
@@ -158,6 +182,7 @@ document.addEventListener('alpine:init', () => {
         },
         currentView: 'home',
         viewMode: 'card',
+        showSubmitAnswer: false,
         showAddUserModal: false,
         showEditUserModal: false,
         showTagModal: false,
@@ -1114,6 +1139,27 @@ document.addEventListener('alpine:init', () => {
             this.setView('detail');
         },
 
+        /**
+         * 一覧再取得後、詳細表示中の質問をサーバ正（answers/refers/memos の ID 含む）へ同期する。
+         * @param {number} questionId
+         * @returns {boolean} 同期できたか
+         */
+        refreshActiveQuestionFromQuestionsList(questionId) {
+            const qid = Number(questionId);
+            if (!qid || this.currentView !== 'detail' || Number(this.activeQuestion?.id) !== qid) {
+                return false;
+            }
+            const fresh = this.questions.find((q) => Number(q.id) === qid);
+            if (!fresh) return false;
+            const draft = this.detailComposerDraft;
+            const v = _.cloneDeep(fresh);
+            v.support = ensureSupportForView(s.support);
+            this.activeQuestion = v;
+            this.originalQuestion = _.cloneDeep(v);
+            this.detailComposerDraft = draft;
+            return true;
+        },
+
         openDetailByID(id = 0) {
             if (id === 0) {
                 window.notice.show({ message: `invalid support id is ${id}.`, type: 'error' });
@@ -1215,8 +1261,11 @@ document.addEventListener('alpine:init', () => {
             this.refreshIcons();
         },
 
-        /** 詳細画面から回答を送信し、PUT で永続化する */
-        async submitAnswer() {
+        /**
+         * 詳細画面から回答を送信し、PUT で永続化する
+         * @param {Array<{idx?: number, title?: string, url?: string}>} [refers]
+         */
+        async submitAnswer(refers) {
             const text = String(this.detailComposerDraft ?? '').trim();
             if (!text) return;
 
@@ -1245,6 +1294,12 @@ document.addEventListener('alpine:init', () => {
                     id: uid,
                     name: String(this.loginUser?.name ?? ''),
                 },
+                refers: (refers ?? [])
+                    .filter((ref) => String(ref?.title ?? '').trim() && String(ref?.url ?? '').trim())
+                    .map((ref) => ({
+                        title: String(ref.title).trim(),
+                        url: String(ref.url).trim(),
+                    })),
                 createdAt: new Date(),
             };
             this.activeQuestion.answers.push(newAnswer);
@@ -1328,6 +1383,7 @@ document.addEventListener('alpine:init', () => {
                         isFinal: Boolean(a?.isFinal),
                         createdAt: a?.createdAt ?? null,
                         updatedAt: a?.updatedAt ?? null,
+                        refers: mapRefersForPut(a?.refers),
                     }))
                     : [];
 
@@ -1350,6 +1406,13 @@ document.addEventListener('alpine:init', () => {
                     const errText = await res.text().catch(() => '');
                     console.error('updateQuestion failed:', res.status, errText);
                     return false;
+                }
+                const savedQuestionId = Number(aq.id);
+                try {
+                    await this.getQuestions();
+                    this.refreshActiveQuestionFromQuestionsList(savedQuestionId);
+                } catch (err) {
+                    console.error('refresh question after PUT failed:', err);
                 }
                 return true;
             }

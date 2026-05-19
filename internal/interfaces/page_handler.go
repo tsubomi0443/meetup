@@ -28,14 +28,13 @@ var masterLoginDefaults = map[string]any{
 	keySupportStatuses: []dto.SupportStatusForm{},
 }
 
-// setPageHandler は静的ファイル・ログイン・アプリ画面のルートを登録する。
+// setPageHandler はログイン・アプリ画面のルートを登録する。
 //
 // return:
 //   - []echo.RouteInfo: 登録したルート情報
 func (r *Router) setPageHandler() (routeInfos []echo.RouteInfo) {
-	routeInfos = append(routeInfos, r.e.Static("/static", "static"))
 	routeInfos = append(routeInfos, r.e.GET("/login", r.loginPage()))
-	routeInfos = append(routeInfos, r.e.GET("/mock/:id", r.app(), GetJWTConfig()))
+	routeInfos = append(routeInfos, r.e.GET("/", r.app(), GetJWTConfig()))
 	return
 }
 
@@ -73,7 +72,7 @@ func (r *Router) loginPage() echo.HandlerFunc {
 // app は認証済みアプリ画面（app.html）を返すハンドラを返す。
 //
 // return:
-//   - echo.HandlerFunc: GET /mock/:id 用ハンドラ
+//   - echo.HandlerFunc: GET / 用ハンドラ
 func (r *Router) app() echo.HandlerFunc {
 	return func(c *echo.Context) error {
 		viewData := map[string]any{}

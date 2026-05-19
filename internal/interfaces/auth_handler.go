@@ -150,7 +150,7 @@ func (r *Router) loginHandler() echo.HandlerFunc {
 		})
 
 		return c.JSON(http.StatusOK, map[string]string{
-			"redirect": "/mock/5",
+			"redirect": "/",
 		})
 	}
 }

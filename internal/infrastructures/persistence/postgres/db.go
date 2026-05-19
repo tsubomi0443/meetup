@@ -1,13 +1,13 @@
 package postgres
 
 import (
-	"meetup/internal/domains/entity"
-
-	
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
+
+	"meetup/internal/domains/entity"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -345,6 +345,32 @@ func syncChildrenByKey[T any, K comparable](
 	return deletedIDs, nil
 }
 
+// resolveReferIDForSync は ReferManager から参照資料 ID を解決する。
+// ReferID / Refer.ID が無い場合は title+url で既存行を検索し、なければ新規作成する。
+func resolveReferIDForSync(tx *gorm.DB, rm entity.ReferManager) (int64, error) {
+	if rm.Refer.ID != 0 {
+		return rm.Refer.ID, nil
+	}
+	title := strings.TrimSpace(rm.Refer.Title)
+	url := strings.TrimSpace(rm.Refer.URL)
+	if title == "" || url == "" {
+		return 0, nil
+	}
+	var existing entity.Refer
+	err := tx.Where("title = ? AND url = ?", title, url).First(&existing).Error
+	if err == nil {
+		return existing.ID, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, err
+	}
+	newRefer := entity.Refer{Title: title, URL: url}
+	if err := tx.Create(&newRefer).Error; err != nil {
+		return 0, err
+	}
+	return newRefer.ID, nil
+}
+
 // UpdateQuestionInTransaction は質問本体と1対多関連を差分同期で1トランザクション更新する。
 // related_questions のみ物理削除（ユニーク制約のため）。SubQuestions 等は永続化しない。
 //
@@ -427,10 +453,14 @@ func UpdateQuestionInTransaction(ctx context.Context, db *gorm.DB, q entity.Ques
 			})
 			var refs []entity.ReferManager
 			for _, rm := range a.ReferManagers {
-				if rm.ReferID == 0 {
+				referID, err := resolveReferIDForSync(tx, rm)
+				if err != nil {
+					return err
+				}
+				if referID == 0 {
 					continue
 				}
-				refs = append(refs, entity.ReferManager{ReferID: rm.ReferID})
+				refs = append(refs, entity.ReferManager{ReferID: referID})
 			}
 			referRowsPerAnswer = append(referRowsPerAnswer, refs)
 		}
