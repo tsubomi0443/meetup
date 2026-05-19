@@ -1,0 +1,872 @@
+/**
+ * model.js
+ * Go の _mac_infrastructure（Form / entity）に対応するクライアント側クラス。
+ * サーバは camelCase の Form JSON を返す。SSE / API の JSON を fromJSON() で復元する。
+ *
+ * 使用例:
+ *   const es = new EventSource('/sse');
+ *   es.addEventListener('question', (e) => {
+ *     const q = Question.fromJSON(JSON.parse(e.data));
+ *     console.log(q.title);
+ *   });
+ */
+
+// ---------------------------------------------------------------------------
+// JSON helpers (camelCase + ISO8601)
+// ---------------------------------------------------------------------------
+
+/**
+ * API 送信用のプレーンオブジェクト（Date は ISO8601）。
+ * @param {object} form
+ * @returns {Object}
+ */
+export function formToApiJson(form) {
+  return JSON.parse(
+    JSON.stringify(form, (key, value) => {
+      if (key === 'uid' || key === 'talkroomId') return undefined;
+      return value instanceof Date ? value.toISOString() : value;
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Role
+// ---------------------------------------------------------------------------
+export class Role {
+  /**
+   * @param {number} id
+   * @param {string} roleName
+   * @param {User[]} [users]
+   * @param {string|null} createdAt ISO8601
+   * @param {string|null} updatedAt ISO8601
+   */
+  constructor(id, name, users = [], createdAt = null, updatedAt = null) {
+    this.id = id;
+    this.name = name;
+    this.roleName = name;
+    this.users = users;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {Role} */
+  static fromJSON(json) {
+    return new Role(
+      json.id,
+      json.name ?? json.roleName ?? '',
+      (json.users ?? []).map(User.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SupportStatus
+// ---------------------------------------------------------------------------
+export class SupportStatus {
+  /**
+   * @param {number} id
+   * @param {string} title
+   * @param {Support[]} [supports]
+   * @param {string|null} createdAt ISO8601
+   * @param {string|null} updatedAt ISO8601
+   */
+  constructor(id, name, supports = [], createdAt = null, updatedAt = null) {
+    this.id = id;
+    this.name = name;
+    this.title = name;
+    this.supports = supports;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {SupportStatus} */
+  static fromJSON(json) {
+    return new SupportStatus(
+      json.id,
+      json.name ?? json.title ?? '',
+      (json.supports ?? []).map(Support.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Support
+// ---------------------------------------------------------------------------
+export class Support {
+  /**
+   * @param {number}        id
+   * @param {number}        userId
+   * @param {string}        supportStatusId
+   * @param {User|null}     [user]
+   * @param {SupportStatus|null} [supportStatus]
+   * @param {Question|null} [question]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   */
+  constructor(
+    id,
+    userId,
+    supportStatusId,
+    user = null,
+    supportStatus = null,
+    question = null,
+    createdAt = null,
+    updatedAt = null,
+  ) {
+    this.id = id;
+    this.userId = userId;
+    this.supportStatusId = supportStatusId;
+    this.user = user;
+    this.supportStatus = supportStatus;
+    this.question = question;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {Support} */
+  static fromJSON(json) {
+    return new Support(
+      json.id,
+      json.userId,
+      json.supportStatusId,
+      json.user ? User.fromJSON(json.user) : null,
+      json.supportStatus ? SupportStatus.fromJSON(json.supportStatus) : null,
+      json.question ? Question.fromJSON(json.question) : null,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// User
+// ---------------------------------------------------------------------------
+export class User {
+  /**
+   * @param {number}   id
+   * @param {string}   name
+   * @param {string}   email
+   * @param {string}   memo
+   * @param {string}   pass
+   * @param {number}   roleId
+   * @param {Role|null} [role]
+   * @param {Support[]} [supports]
+   * @param {Answer[]}  [answers]
+   * @param {Memo[]}    [memos]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   */
+  constructor(
+    id,
+    name,
+    email,
+    memo,
+    pass,
+    roleId,
+    role = null,
+    supports = [],
+    answers = [],
+    memos = [],
+    createdAt = null,
+    updatedAt = null,
+  ) {
+    this.id = id;
+    this.name = name;
+    this.email = email;
+    this.memo = memo;
+    this.pass = pass;
+    this.roleId = roleId;
+    this.role = role;
+    this.supports = supports;
+    this.answers = answers;
+    this.memos = memos;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {User} */
+  static fromJSON(json) {
+    return new User(
+      json.id,
+      json.name ?? '',
+      json.email ?? '',
+      json.memo ?? '',
+      '',
+      json.roleId,
+      json.role ? Role.fromJSON(json.role) : null,
+      (json.supports ?? []).map(Support.fromJSON),
+      (json.answers ?? []).map(Answer.fromJSON),
+      (json.memos ?? []).map(Memo.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Category
+// ---------------------------------------------------------------------------
+export class Category {
+  /**
+   * @param {number} id
+   * @param {string} categoryName
+   * @param {Tag[]}  [tags]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   */
+  constructor(id, name, tags = [], createdAt = null, updatedAt = null) {
+    this.id = id;
+    this.name = name;
+    this.categoryName = name;
+    this.tags = tags;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {Category} */
+  static fromJSON(json) {
+    return new Category(
+      json.id,
+      json.name ?? json.categoryName ?? '',
+      (json.tags ?? []).map(Tag.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tag
+// ---------------------------------------------------------------------------
+export class Tag {
+  /**
+   * @param {number}      id
+   * @param {string}      title
+   * @param {number}      usage
+   * @param {number}      categoryId
+   * @param {Category|null} [category]
+   * @param {Question[]}  [questions]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   */
+  constructor(id, name, usage, categoryId, category = null, questions = [], createdAt = null, updatedAt = null) {
+    this.id = id;
+    this.name = name;
+    this.title = name;
+    this.usage = usage;
+    this.categoryId = categoryId;
+    this.category = category;
+    this.questions = questions;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {Tag} */
+  static fromJSON(json) {
+    return new Tag(
+      json.id,
+      json.name ?? json.title ?? '',
+      json.usage,
+      json.categoryId,
+      json.category ? Category.fromJSON(json.category) : null,
+      (json.questions ?? []).map(Question.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Refer
+// ---------------------------------------------------------------------------
+export class Refer {
+  /**
+   * @param {number}   id
+   * @param {string}   title
+   * @param {string}   url
+   * @param {Answer[]} [answers]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   */
+  constructor(id, title, url, answers = [], createdAt = null, updatedAt = null) {
+    this.id = id;
+    this.title = title;
+    this.url = url;
+    this.answers = answers;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {Refer} */
+  static fromJSON(json) {
+    return new Refer(
+      json.id,
+      json.title,
+      json.url,
+      (json.answers ?? []).map(Answer.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Memo
+// ---------------------------------------------------------------------------
+export class Memo {
+  /**
+   * @param {number}       id
+   * @param {number}       questionId
+   * @param {number}       userId
+   * @param {string}       content
+   * @param {Question|null} [question]
+   * @param {User|null}    [user]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   */
+  constructor(id, questionId, userId, content, question = null, user = null, createdAt = null, updatedAt = null) {
+    this.id = id;
+    this.questionId = questionId;
+    this.userId = userId;
+    this.content = content;
+    this.question = question;
+    this.user = user;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {Memo} */
+  static fromJSON(json) {
+    return new Memo(
+      json.id,
+      json.questionId,
+      json.userId,
+      json.content,
+      json.question ? Question.fromJSON(json.question) : null,
+      json.user ? User.fromJSON(json.user) : null,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Answer
+// ---------------------------------------------------------------------------
+export class Answer {
+  /**
+   * @param {number}       id
+   * @param {number|string} userId
+   * @param {string}       content
+   * @param {boolean}      isFinal
+   * @param {string}       createdAt   ISO8601 文字列
+   * @param {string|null}  updatedAt   ISO8601 文字列
+   * @param {User|null}    [user]
+   * @param {Refer[]}      [refers]
+   */
+  constructor(id, userId, content, isFinal, createdAt, updatedAt, user = null, refers = []) {
+    this.id = id;
+    this.userId = userId;
+    this.content = content;
+    this.isFinal = Boolean(isFinal);
+    this.createdAt = new Date(createdAt);
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+    this.user = user;
+    this.refers = refers;
+  }
+
+  /** @param {Object} json @returns {Answer} */
+  static fromJSON(json) {
+    return new Answer(
+      json.id,
+      json.userId,
+      json.content,
+      json.isFinal ?? false,
+      json.createdAt ?? new Date().toISOString(),
+      json.updatedAt ?? null,
+      json.user ? User.fromJSON(json.user) : null,
+      (json.refers ?? []).map(Refer.fromJSON),
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Escalation
+// ---------------------------------------------------------------------------
+export class Escalation {
+  /**
+   * @param {number}       id
+   * @param {number}       fromQuestionId
+   * @param {number}       toQuestionId
+   * @param {string}       escalatedAt    ISO8601 文字列
+   * @param {string|null}  createdAt
+   * @param {string|null}  updatedAt
+   * @param {Question|null} [fromQuestion]
+   * @param {Question|null} [toQuestion]
+   */
+  constructor(id, fromQuestionId, toQuestionId, escalatedAt, createdAt = null, updatedAt = null, fromQuestion = null, toQuestion = null) {
+    this.id = id;
+    this.fromQuestionId = fromQuestionId;
+    this.toQuestionId = toQuestionId;
+    this.escalatedAt = new Date(escalatedAt);
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+    this.fromQuestion = fromQuestion;
+    this.toQuestion = toQuestion;
+  }
+
+  /** @param {Object} json @returns {Escalation} */
+  static fromJSON(json) {
+    return new Escalation(
+      json.id,
+      json.fromQuestionId,
+      json.toQuestionId,
+      json.escalatedAt ?? new Date().toISOString(),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+      json.fromQuestion ? Question.fromJSON(json.fromQuestion) : null,
+      json.toQuestion ? Question.fromJSON(json.toQuestion) : null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// NoticeType
+// ---------------------------------------------------------------------------
+export class NoticeType {
+  /**
+   * @param {number} id
+   * @param {string} name
+   * @param {Notice[]} [notices]
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   */
+  constructor(id, name, notices = [], createdAt = null, updatedAt = null) {
+    this.id = id;
+    this.name = name;
+    this.notices = notices;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+  }
+
+  /** @param {Object} json @returns {NoticeType} */
+  static fromJSON(json) {
+    return new NoticeType(
+      json.id,
+      json.name,
+      (json.notices ?? []).map(Notice.fromJSON),
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Notice
+// ---------------------------------------------------------------------------
+export class Notice {
+  /**
+   * @param {number} id
+   * @param {number} typeId
+   * @param {number|null} questionId
+   * @param {string|null} content
+   * @param {string|null} displayDue ISO8601 or null
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   * @param {NoticeType|null} [noticeType]
+   * @param {Question|null} [question]
+   */
+  constructor(id, typeId, questionId, content, displayDue, createdAt = null, updatedAt = null, noticeType = null, question = null) {
+    this.id = id;
+    this.typeId = typeId;
+    this.questionId = questionId;
+    this.content = content;
+    this.displayDue = displayDue ? new Date(displayDue) : null;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+    this.noticeType = noticeType;
+    this.question = question;
+  }
+
+  /** @param {Object} json @returns {Notice} */
+  static fromJSON(json) {
+    return new Notice(
+      json.id,
+      json.typeId,
+      json.questionId ?? null,
+      json.content ?? null,
+      json.displayDue ?? null,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+      json.noticeType ? NoticeType.fromJSON(json.noticeType) : null,
+      json.question ? Question.fromJSON(json.question) : null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RelatedQuestion  (中間テーブル related_questions)
+// ---------------------------------------------------------------------------
+export class RelatedQuestion {
+  /**
+   * @param {number} id
+   * @param {string} questionId
+   * @param {string} relatedQuestionId
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   * @param {Question|null} [question]
+   * @param {Question|null} [relatedQuestion]
+   */
+  constructor(id, questionId, relatedQuestionId, createdAt = null, updatedAt = null, question = null, relatedQuestion = null) {
+    this.id = id;
+    this.questionId = questionId;
+    this.relatedQuestionId = relatedQuestionId;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+    this.question = question;
+    this.relatedQuestion = relatedQuestion;
+  }
+
+  /** @param {Object} json @returns {RelatedQuestion} */
+  static fromJSON(json) {
+    return new RelatedQuestion(
+      json.id ?? 0,
+      json.questionId != null ? String(json.questionId) : '',
+      json.relatedQuestionId != null ? String(json.relatedQuestionId) : '',
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+      json.question ? Question.fromJSON(json.question) : null,
+      json.relatedQuestion ? Question.fromJSON(json.relatedQuestion) : null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sender
+// ---------------------------------------------------------------------------
+export class Sender {
+  /**
+   * @param {number} id
+   * @param {string} name
+   * @param {string} departmentName
+   * @param {SenderTalk[]} [senderTalks]
+   */
+  constructor(id, name, departmentName, senderTalks = []) {
+    this.id = id;
+    this.name = name;
+    this.departmentName = departmentName;
+    this.senderTalks = senderTalks;
+  }
+
+  /** @param {Object} json @returns {Sender} */
+  static fromJSON(json) {
+    return new Sender(
+      json.id,
+      json.name ?? '',
+      json.departmentName ?? '',
+      (json.senderTalks ?? []).map(SenderTalk.fromJSON),
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SenderTalk
+// ---------------------------------------------------------------------------
+export class SenderTalk {
+  /**
+   * @param {number} id
+   * @param {string} content
+   * @param {string|number} senderId
+   * @param {string|number} questionId
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   * @param {Sender|null} [sender]
+   */
+  constructor(id, content, senderId, questionId, createdAt = null, updatedAt = null, sender = null) {
+    this.id = id;
+    this.content = content;
+    this.senderId = senderId != null ? String(senderId) : '';
+    this.questionId = questionId != null ? String(questionId) : '';
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+    this.sender = sender;
+  }
+
+  /** @param {Object} json @returns {SenderTalk} */
+  static fromJSON(json) {
+    return new SenderTalk(
+      json.id,
+      json.content ?? '',
+      json.senderId ?? '',
+      json.questionId ?? '',
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+      json.sender ? Sender.fromJSON(json.sender) : null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Question
+// ---------------------------------------------------------------------------
+export class Question {
+  /**
+   * @param {number}         id
+   * @param {number|null}    originQuestionId
+   * @param {number|null}    supportId
+   * @param {string}         title
+   * @param {string}         content
+   * @param {string|null}    due              ISO8601 文字列 or null
+   * @param {string}         createdAt        ISO8601 文字列
+   * @param {string|null}    updatedAt
+   * @param {Question|null}  [originQuestion]
+   * @param {Question[]}     [subQuestions]
+   * @param {Support|null}   [support]
+   * @param {Answer[]}       [answers]
+   * @param {Memo[]}         [memos]
+   * @param {Tag[]}          [tags]
+   * @param {Notice[]}       [notices]
+   * @param {Escalation[]}   [escalationsFrom]
+   * @param {Escalation[]}   [escalationsTo]
+   * @param {RelatedQuestion[]} [relatedQuestions]
+   * @param {SenderTalk[]} [senderTalks]
+   */
+  constructor(
+    id,
+    originQuestionId,
+    supportId,
+    title,
+    content,
+    due,
+    createdAt,
+    updatedAt,
+    originQuestion = null,
+    subQuestions = [],
+    support = null,
+    answers = [],
+    memos = [],
+    tags = [],
+    notices = [],
+    escalationsFrom = [],
+    escalationsTo = [],
+    relatedQuestions = [],
+    senderTalks = [],
+  ) {
+    this.id = id;
+    this.originQuestionId = originQuestionId;
+    this.supportId = supportId;
+    this.title = title;
+    this.content = content;
+    this.due = due ? new Date(due) : null;
+    this.createdAt = new Date(createdAt);
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+    this.originQuestion = originQuestion;
+    this.subQuestions = subQuestions;
+    this.support = support;
+    this.answers = answers;
+    this.memos = memos;
+    this.tags = tags;
+    this.notices = notices;
+    this.escalationsFrom = escalationsFrom;
+    this.escalationsTo = escalationsTo;
+    this.relatedQuestions = relatedQuestions;
+    this.senderTalks = senderTalks;
+  }
+
+  /** @param {Object} json @returns {Question} */
+  static fromJSON(json) {
+    let oid = json.originQuestionId ?? null;
+    if (oid !== null && typeof oid === 'string' && oid !== '') {
+      oid = parseInt(oid, 10);
+    }
+    return new Question(
+      json.id,
+      oid,
+      json.supportId ?? null,
+      json.title,
+      json.content,
+      json.due ?? null,
+      json.createdAt,
+      json.updatedAt ?? null,
+      json.originQuestion ? Question.fromJSON(json.originQuestion) : null,
+      (json.subQuestions ?? []).map(Question.fromJSON),
+      json.support ? Support.fromJSON(json.support) : null,
+      (json.answers ?? []).map(Answer.fromJSON),
+      (json.memos ?? []).map(Memo.fromJSON),
+      (json.tags ?? []).map(Tag.fromJSON),
+      (json.notices ?? []).map(Notice.fromJSON),
+      (json.escalationsFrom ?? []).map(Escalation.fromJSON),
+      (json.escalationsTo ?? []).map(Escalation.fromJSON),
+      (json.relatedQuestions ?? []).map(RelatedQuestion.fromJSON),
+      (json.senderTalks ?? []).map(SenderTalk.fromJSON),
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ReferManager  (中間テーブル refer_managers)
+// ---------------------------------------------------------------------------
+export class ReferManager {
+  /**
+   * @param {number}      id
+   * @param {number}      answerId
+   * @param {number}      referId
+   * @param {string|null} createdAt
+   * @param {string|null} updatedAt
+   * @param {Answer|null} [answer]
+   * @param {Refer|null}  [refer]
+   */
+  constructor(id, answerId, referId, createdAt = null, updatedAt = null, answer = null, refer = null) {
+    this.id = id;
+    this.answerId = answerId;
+    this.referId = referId;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+    this.answer = answer;
+    this.refer = refer;
+  }
+
+  /** @param {Object} json @returns {ReferManager} */
+  static fromJSON(json) {
+    return new ReferManager(
+      json.id,
+      json.answerId,
+      json.referId,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+      json.answer ? Answer.fromJSON(json.answer) : null,
+      json.refer ? Refer.fromJSON(json.refer) : null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TagManager  (中間テーブル tag_managers)
+// ---------------------------------------------------------------------------
+export class TagManager {
+  /**
+   * @param {number}       id
+   * @param {number}       tagId
+   * @param {number}       questionId
+   * @param {string|null}  createdAt
+   * @param {string|null}  updatedAt
+   * @param {Tag|null}     [tag]
+   * @param {Question|null} [question]
+   */
+  constructor(id, tagId, questionId, createdAt = null, updatedAt = null, tag = null, question = null) {
+    this.id = id;
+    this.tagId = tagId;
+    this.questionId = questionId;
+    this.createdAt = createdAt ? new Date(createdAt) : null;
+    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
+    this.tag = tag;
+    this.question = question;
+  }
+
+  /** @param {Object} json @returns {TagManager} */
+  static fromJSON(json) {
+    return new TagManager(
+      json.id,
+      json.tagId,
+      json.questionId,
+      json.createdAt ?? null,
+      json.updatedAt ?? null,
+      json.tag ? Tag.fromJSON(json.tag) : null,
+      json.question ? Question.fromJSON(json.question) : null,
+    );
+  }
+
+  /** @returns {Object} */
+  static toModel(form) {
+    return formToApiJson(form);
+  }
+}

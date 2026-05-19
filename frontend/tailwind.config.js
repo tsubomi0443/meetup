@@ -2,8 +2,7 @@
 export default {
   // HTMLとJSファイルをスキャン対象にする
   content: [
-    "./index.html",
-    "./src/**/*.{html,js,ts}",
+    "../static/js/**/*.js",
     "../templates/**/*.html",
   ],
   theme: {

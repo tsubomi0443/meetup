@@ -1,0 +1,78 @@
+{{define "view_settings"}}
+<div x-show="currentView === 'settings'" class="flex flex-1 min-h-0 flex-col max-w-3xl mx-auto w-full" style="display: none;" x-data="{ isEdited: false, isValid: true }">
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 flex flex-col min-h-0">
+        <div class="px-6 py-2 border-b border-gray-100 bg-gray-50/50 justify-between flex flex-row shrink-0">
+            <div class="flex items-center">
+                <h2 class="text-lg font-bold text-gray-800 tracking-tight">プロフィール設定</h2>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button class="btn btn-ghost font-bold text-gray-500" @click="setView('home')">キャンセル</button>
+                <button class="btn bg-slate-800 text-white border-none font-bold px-10 shadow-md"
+                    @click="updateLoginUser(); window.notice.show({ message: 'ユーザ情報を更新しました。', type: 'success' }); isEdited = false"
+                    :class="!(isEdited && isValid) ? 'btn-disabled' : ''"
+                    :disabled="!(isEdited && isValid)">保存する</button>
+            </div>
+        </div>
+        <div class="p-8 pt-4 space-y-6 flex-1 min-h-0 overflow-auto no-scrollbar" x-data="{ name: '', email: '', memo: '' }"
+            x-init="$watch('loginUser.name', (n) => {name = n});
+                    $watch('loginUser.email', (e) => {email = e});
+                    $watch('loginUser.memo', (m) => {memo = m});">
+            <div class="flex flex-col">
+                <div class="flex flex-col sm:flex-row items-center gap-8 justify-between">
+                    <div class="flex flex-col w-1/3 h-full items-center gap-8">
+                        <div class="w-full h-2/3 border-2 border-white shadow-lg rounded-full overflow-hidden" x-html="`${makeAvatar(name)}`"></div>
+                        <div class="tooltip transition-opacity duration-500 ease-in-out items-center h-1/3" data-tip="未実装です。今後のアップデートで追加予定です。">
+                            <button class="btn btn-sm btn-outline font-bold shadow-sm btn-disabled" disabled>画像をアップロード</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col w-2/3 items-end gap-4">
+                        <div class="flex flex-col w-full">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">氏名</label>
+                            <input type="text" class="input input-bordered w-full text-sm font-bold shadow-inner"
+                                x-model="name" @input="isEdited = loginUser.name !== name" @change="loginUser.name = name" />
+                        </div>
+                        <div class="flex flex-col w-full">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">メールアドレス</label>
+                            <input type="email"
+                                @input="email = emailCleansing(email); isValid = checkEmailFmt(email); isEdited = loginUser.email !== email"
+                                @change="loginUser.email = email"
+                                class="input input-bordered w-full text-sm font-bold shadow-inner"
+                                x-model="email"
+                                :class="!isValid ? 'input-error' : 'input-primary'" />
+                        </div>
+                        <div class="flex flex-col w-full" x-init="$watch('loginUser.pass', () => { isEdited = (loginUser.pass !== undefined && loginUser.pass !== '') })">
+                            <div class="flex flex-row justify-between w-full" x-data="{ length: 32 }">
+                                <div class="flex items-center">
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">新しいパスワード</label>
+                                </div>
+                                <div class="btn btn-sm cursor-pointer" @click="loginUser.pass = generatePassword(length)">
+                                    パスワードランダム生成
+                                    <input type="number" class="w-8 text-center" x-model.number="length" min="10" max="64" onclick="event.stopPropagation()">
+                                </div>
+                            </div>
+                            <div x-data="{ show: false }" class="relative flex items-center mt-2 w-full">
+                                <input type="password" placeholder="変更する場合のみ入力"
+                                    class="input input-bordered w-full text-sm shadow-inner" :type="show ? 'text' : 'password'"
+                                    x-model="loginUser.pass"
+                                    @input="loginUser.pass = passwordCleansing(loginUser.pass)" />
+                                <button type="button"
+                                    class="absolute right-2 bg-transparent flex items-center justify-center hover:text-blue-600"
+                                    @click="show = !show; refreshIconsByElement($el)">
+                                    <i :data-lucide="show ? 'eye':'eye-off'" class="w-5 h-5 ml-2 shrink-0"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-col w-full">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 mt-8">自己紹介・メモ</label>
+                    <textarea class="textarea textarea-bordered w-full h-80 text-sm font-bold shadow-inner whitespace-pre-wrap"
+                        placeholder="対応のメモなど..." x-model="memo"
+                        @input="isEdited = loginUser.memo !== memo"
+                        @change="loginUser.memo = memo"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

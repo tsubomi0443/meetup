@@ -1,0 +1,47 @@
+{{define "modal_submit_answer"}}
+<div class="modal backdrop-blur-sm" :class="{'modal-open': showSubmitAnswer}" x-data="{ refers: [{idx: 0, title: '', url: ''}] }">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl w-2/3 max-w-5xl">
+        <h3 class="font-bold text-lg mb-6 tracking-tight" x-text="`${activeQuestion.sender}さんへメッセージを送信します。この内容でよろしいでしょうか？`"></h3>
+        <div class="flex flex-col">
+            <div class="flex flex-1 flex-col items-start gap-8 h-full p-4">
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">送信内容</label>
+                <textarea x-text="detailComposerDraft" readonly class="whitespace-pre-wrap textarea-disabled bg-white w-full h-full textarea-bordered border-spacing-2 border-gray-400 shadow-sm px-4 text-gray-800"></textarea>
+            </div>
+            <div class="flex flex-col items-start gap-1 h-full p-4 mt-4 border-l-gray-400">
+                <div class="flex w-full justify-end">
+                    <button type="button" class="btn btn-sm shadow-lg" @click="refers.push({idx: refers.length, title: '', url: ''}); refreshIcons();">追加<i data-lucide="plus"></i></button>
+                </div>
+                <div class="flex w-full h-full justify-between">
+                    <div class="grid grid-cols-1 w-full">
+                        <div class="grid grid-cols-9 w-full">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 col-span-3 mr-4">タイトル</label>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 col-span-5 mx-4">URL</label>
+                        </div>
+                        <template x-for="refer in refers" :key="refer.idx">
+                            <div class="grid grid-cols-9 w-full">
+                                <div class="col-span-3 mr-4">
+                                    <input type="text" x-model="refer.title" class="input input-bordered text-[8px] w-full text-sm shadow-inner h-min">
+                                </div>
+                                <div class="col-span-5 mx-4">
+                                    <input type="text" x-model="refer.url" class="input input-bordered text-[8px] w-full text-sm shadow-inner h-min">
+                                </div>
+                                <div class="col-span-1">
+                                    <button type="button" @click="refers = refers.filter(ref => ref.idx !== refer.idx)"><i data-lucide="x"></i></button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-action">
+            <button type="button" class="btn btn-ghost font-bold" @click="showSubmitAnswer = false">キャンセル</button>
+            <button type="button" class="btn bg-slate-800 text-white border-none font-bold px-8 shadow-lg"
+                @click="submitAnswer(refers); showSubmitAnswer = false; refers = [{idx: 0, title: '', url: ''}]"
+                :class="!String(detailComposerDraft ?? '').trim() ? 'btn-disabled':''"
+                :disabled="!String(detailComposerDraft ?? '').trim()">送信</button>
+        </div>
+    </div>
+    <div class="modal-backdrop bg-opacity-100" @click="showSubmitAnswer = false"></div>
+</div>
+{{end}}

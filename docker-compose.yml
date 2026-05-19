@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: "app"
     build:
       context: .
       dockerfile: docker/app/Dockerfile
@@ -17,19 +18,21 @@ services:
     command: ["air"]
 
   postgresql:
+    container_name: "postgres"
     build:
       context: .
       dockerfile: docker/database/postgresql/Dockerfile
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-postgresdb}
+      POSTGRES_DB: ${POSTGRES_DB:-hrgafaqdb}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
-      - postgres_data:/var/lib/postgres
+      - postgres_data:/var/lib/postgresql
 
   dynamodb:
+    container_name: "dynamodb"
     build:
       context: .
       dockerfile: docker/database/dynamodb/Dockerfile

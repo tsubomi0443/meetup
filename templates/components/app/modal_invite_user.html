@@ -1,0 +1,72 @@
+{{define "modal_invite_user"}}
+<div class="modal backdrop-blur-sm" :class="{'modal-open': showAddUserModal}"
+    x-data="{ email: '', name: '', pass: '', role: '3', roleName: 'Staff', isValid: false, selectOptionTitle(event) {
+        this.roleName = event.target.options[event.target.selectedIndex].text;
+    }}">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl w-2/3 max-w-5xl">
+        <h3 class="font-bold text-lg mb-6 tracking-tight">ユーザーを登録</h3>
+        <div class="flex flex-row items-center gap-8">
+            <div class="space-y-4 w-1/3 h-full">
+                <div class="flex flex-col w-full h-full items-center gap-8">
+                    <div class="w-full h-full border-2 border-white shadow-lg rounded-full overflow-hidden" x-html="`${makeAvatar(name)}`"></div>
+                </div>
+            </div>
+            <div class="space-y-4 w-2/3">
+                <div class="flex flex-col w-full">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">氏名</label>
+                    <input name="text" type="text" placeholder="氏名" class="input input-bordered w-full text-sm shadow-inner" x-model="name" />
+                </div>
+                <div class="flex flex-col w-full">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">メールアドレス</label>
+                    <input name="email" type="email" placeholder="メールアドレス" class="input input-bordered w-full text-sm shadow-inner" x-model="email" @input="email = emailCleansing(email); isValid = checkEmailFmt(email)" />
+                </div>
+                <div x-data="{ show: false }" class="flex flex-col w-full">
+                    <div class="flex flex-row justify-between" x-data="{ length: 32 }">
+                        <div class="flex items-center">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">新しいパスワード</label>
+                        </div>
+                        <div class="btn btn-sm cursor-pointer" @click="pass = generatePassword(length)">
+                            パスワードランダム生成
+                            <input type="number" placeholder="パスワードの長さ" class="w-8 text-center" x-model.number="length" min="10" max="64" onclick="event.stopPropagation()">
+                        </div>
+                    </div>
+                    <div class="relative flex items-center mt-2">
+                        <input type="password" placeholder="初期パスワード" class="input input-bordered w-full text-sm shadow-inner" :type="show ? 'text' : 'password'" x-model="pass"
+                            @input="pass = passwordCleansing(pass)" />
+                        <button type="button"
+                            class="absolute right-2 bg-transparent flex items-center justify-center hover:text-blue-600"
+                            @click="show = !show; refreshIconsByElement($el)">
+                            <i :data-lucide="show ? 'eye':'eye-off'" class="w-5 h-5 ml-2 shrink-0"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex flex-col w-full">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">役割</label>
+                    <div class="flex flex-col w-full">
+                        <select class="select select-bordered w-full text-sm font-bold shadow-inner" x-model="role" @change="selectOptionTitle($event)">
+                            <option selected disabled>役割を選択</option>
+                            <option value="3">Staff</option>
+                            <option value="2">Manager</option>
+                        </select>
+                        <ul class="block w-full">
+                            <li class="p-4 pb-1 text-xs opacity-60 tracking-wide">役割設定について</li>
+                            <li class="list-row px-4">
+                                <div class="text-gray-500 text-[10px] font-bold uppercase mt-1 list-none">Staff: 質問の回答・メモ記載、タグの作成などが可能</div>
+                            </li>
+                            <li class="list-row px-4">
+                                <div class="text-gray-500 text-[10px] font-bold uppercase mt-1 list-none">Manager: Staffの機能＋ユーザの追加・削除・役割変更などが可能</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-action">
+            <button class="btn btn-ghost font-bold" @click="showAddUserModal = false">キャンセル</button>
+            <button class="btn bg-slate-400 border-none font-bold px-8 shadow-md" :disabled="!(name && pass && role && email && isValid)"
+                @click="showAddUserModal = false; registerUser(email, name, pass, role, roleName); email= ''; name= ''; pass= ''; role= '3'; roleName= 'Staff'; window.notice.show({ message: 'ユーザーを登録しました', type: 'success' })">登録</button>
+        </div>
+    </div>
+    <div class="modal-backdrop bg-opacity-100" @click="showAddUserModal = false"></div>
+</div>
+{{end}}
