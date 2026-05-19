@@ -1154,7 +1154,7 @@ document.addEventListener('alpine:init', () => {
             if (!fresh) return false;
             const draft = this.detailComposerDraft;
             const v = _.cloneDeep(fresh);
-            v.support = ensureSupportForView(s.support);
+            v.support = ensureSupportForView(fresh.support);
             this.activeQuestion = v;
             this.originalQuestion = _.cloneDeep(v);
             this.detailComposerDraft = draft;
