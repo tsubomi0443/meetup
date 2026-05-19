@@ -497,6 +497,7 @@ document.addEventListener('alpine:init', () => {
 											// support.supportStatusの更新が必ずLocalWinになってしまうため例外
 											case 'support':
 											case 'memos':
+											case 'answers':
 												return serverVal;
 										}
 										return localVal;
